@@ -1,0 +1,9 @@
+#!/usr/bin/env python3
+"""
+Wrapper script for the Fin CLI to avoid conflicts with existing fin command
+"""
+import sys
+from fin.cli.main import main
+
+if __name__ == '__main__':
+    main() 

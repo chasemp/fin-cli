@@ -1,0 +1,22 @@
+[
+  {
+    "task": "Finish sync script",
+    "labels": ["planning", "backend"]
+  },
+  {
+    "task": "Review PR",
+    "labels": ["review", "urgent"]
+  },
+  {
+    "task": "Buy groceries",
+    "labels": ["personal", "shopping"]
+  },
+  {
+    "task": "Write documentation",
+    "labels": ["docs"]
+  },
+  {
+    "task": "Fix bug in cron task",
+    "labels": ["automation", "bug"]
+  }
+] 

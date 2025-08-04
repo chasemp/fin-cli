@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Add Task Functionality</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f8fafc;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .test-button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background: #2563eb;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .status.success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+        .status.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+        .status.info {
+            background: #dbeafe;
+            color: #1e40af;
+            border: 1px solid #bfdbfe;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test Add Task Functionality</h1>
+    
+    <div class="test-section">
+        <h2>✅ Feature Verification</h2>
+        <p>This page tests the "Add New Task Modal + Hotkey (n)" functionality:</p>
+        
+        <h3>🎯 Required Features:</h3>
+        <ul>
+            <li><strong>✅ Hotkey 'n' Opens Modal</strong> - Press 'n' to open the add task modal</li>
+            <li><strong>✅ Insert New Task into SQLite</strong> - Tasks are saved to in-browser SQLite instance</li>
+            <li><strong>✅ Task Appears in UI Immediately</strong> - New tasks show up in the correct section</li>
+            <li><strong>✅ Modal Design</strong> - Lightweight styling with autofocus</li>
+            <li><strong>✅ Keyboard Support</strong> - Enter to submit, Esc to close</li>
+        </ul>
+    </div>
+    
+    <div class="test-section">
+        <h2>🎹 Keyboard Shortcuts</h2>
+        <div class="status info">
+            <strong>Test these shortcuts:</strong><br>
+            • <kbd>N</kbd> - Open new task modal<br>
+            • <kbd>Enter</kbd> - Submit task form<br>
+            • <kbd>Esc</kbd> - Close modal<br>
+            • <kbd>S</kbd> - Save database<br>
+            • <kbd>/</kbd> - Focus search<br>
+            • <kbd>⌘⇧R</kbd> - Hard reload (clear cache)
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>🧪 Test Steps</h2>
+        <ol>
+            <li><strong>Load Database:</strong> Click "📁 Open DB" and select your <code>~/fin/tasks.db</code> file</li>
+            <li><strong>Open Modal:</strong> Press <kbd>N</kbd> or click the floating "+" button</li>
+            <li><strong>Add Task:</strong> Enter task description and optional labels</li>
+            <li><strong>Submit:</strong> Press <kbd>Enter</kbd> or click "Save Task"</li>
+            <li><strong>Verify:</strong> Task should appear immediately in the UI</li>
+            <li><strong>Save:</strong> Press <kbd>S</kbd> to save the database to disk</li>
+        </ol>
+    </div>
+    
+    <div class="test-section">
+        <h2>🔗 Open Dashboard</h2>
+        <p>Click the button below to open the dashboard in a new tab:</p>
+        <button class="test-button" onclick="window.open('index.html', '_blank')">
+            🚀 Open Fin Dashboard
+        </button>
+    </div>
+    
+    <div class="test-section">
+        <h2>📋 Expected Behavior</h2>
+        <div class="status success">
+            <strong>✅ When working correctly:</strong><br>
+            • Modal opens with autofocus on task description<br>
+            • Enter key submits the form<br>
+            • Task appears immediately in the "Today" section<br>
+            • Labels are rendered as clickable pills<br>
+            • Database is updated in memory (not on disk until saved)<br>
+            • Success notification appears
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>🐛 Troubleshooting</h2>
+        <div class="status error">
+            <strong>❌ If not working:</strong><br>
+            • Check browser console for JavaScript errors<br>
+            • Ensure SQL.js is loading properly<br>
+            • Try the hard reload shortcut <kbd>⌘⇧R</kbd><br>
+            • Verify the database file is valid SQLite format
+        </div>
+    </div>
+    
+    <script>
+        // Add some helpful keyboard shortcuts for testing
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'n' || e.key === 'N') {
+                e.preventDefault();
+                window.open('index.html', '_blank');
+            }
+        });
+        
+        console.log('🧪 Test page loaded. Press "N" to open dashboard in new tab.');
+    </script>
+</body>
+</html> 
