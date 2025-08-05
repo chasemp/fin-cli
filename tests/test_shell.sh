@@ -118,7 +118,7 @@ export FIN_DB_PATH="$TEMP_DB"
 
 # Function to run fin command with proper environment
 run_fin() {
-    FIN_DB_PATH="$TEMP_DB" python -m fin.cli.main "$@" 2>/dev/null
+    FIN_DB_PATH="$TEMP_DB" python -m fincli.cli "$@" 2>/dev/null
 }
 
 echo "🧪 Starting shell tests for Fin CLI..."
@@ -159,7 +159,7 @@ check_database "$TEMP_DB" 4
 # Test 5: Missing argument (should fail)
 run_test_fail \
     "Missing argument" \
-    "FIN_DB_PATH=\"$TEMP_DB\" python -m fin.cli.main" \
+    "FIN_DB_PATH=\"$TEMP_DB\" python -m fincli.cli" \
     "Missing argument"
 
 check_database "$TEMP_DB" 4  # Should still have 4 tasks

@@ -1,4 +1,4 @@
-.PHONY: test test-unit test-integration test-shell test-coverage install clean help
+.PHONY: test test-cov test-fail-fast test-unit test-integration test-cli test-analytics lint clean install
 
 # Default target
 all: test
@@ -6,68 +6,89 @@ all: test
 # Install dependencies
 install:
 	pip install -e .
-	pip install -r requirements.txt
+	pip install pytest pytest-cov flake8 black isort pre-commit
 
 # Run all tests
-test: test-unit test-integration test-shell
+test:
+	python -m pytest tests/ -v
 
-# Run unit tests only
+# Run tests with coverage
+test-cov:
+	python -m pytest tests/ --cov=fincli --cov-report=html --cov-report=term-missing
+
+# Run tests and fail fast
+test-fail-fast:
+	python -m pytest tests/ -x --tb=short
+
+# Run specific test categories
 test-unit:
-	python -m pytest tests/ -m "unit or not (integration or cli or database)"
+	python -m pytest tests/ -m unit -v
 
-# Run integration tests
 test-integration:
-	python -m pytest tests/ -m integration
+	python -m pytest tests/ -m integration -v
 
-# Run CLI tests
 test-cli:
-	python -m pytest tests/ -m cli
+	python -m pytest tests/ -m cli -v
 
-# Run database tests
-test-database:
-	python -m pytest tests/ -m database
+test-analytics:
+	python -m pytest tests/test_analytics.py -v
 
-# Run shell tests
-test-shell:
-	bash tests/test_shell.sh
+# Linting and formatting
+lint:
+	flake8 fincli/ tests/
+	black --check fincli/ tests/
+	isort --check-only fincli/ tests/
 
-# Run with coverage
-test-coverage:
-	python -m pytest tests/ --cov=fin --cov-report=term-missing --cov-report=html:htmlcov
-
-# Run performance tests
-test-performance:
-	python tests/run_tests.py --performance
-
-# Run comprehensive test suite
-test-all:
-	python tests/run_tests.py --type all --shell --performance --coverage
-
-# Quick test (unit tests only)
-test-quick:
-	python -m pytest tests/test_database.py tests/test_cli.py -v
+format:
+	black fincli/ tests/
+	isort fincli/ tests/
 
 # Clean up
 clean:
 	find . -type f -name "*.pyc" -delete
 	find . -type d -name "__pycache__" -delete
-	find . -type d -name "*.egg-info" -exec rm -rf {} +
+	rm -rf .pytest_cache/
 	rm -rf htmlcov/
 	rm -rf .coverage
+	rm -f ~/fin/tasks.db
 
-# Show help
+# Install pre-commit hooks
+install-hooks:
+	pre-commit install
+
+# Run pre-commit on all files
+pre-commit:
+	pre-commit run --all-files
+
+# Development setup
+dev-setup: install install-hooks
+	@echo "Development environment setup complete!"
+	@echo "Run 'make test' to run tests"
+	@echo "Run 'make test-cov' to check coverage"
+
+# Quick test run (for development)
+quick-test:
+	python -m pytest tests/ -x --tb=short --maxfail=3
+
+# Test with coverage threshold
+test-cov-threshold:
+	python -m pytest tests/ --cov=fincli --cov-fail-under=90
+
+# Help
 help:
-	@echo "Available targets:"
-	@echo "  install        - Install dependencies"
-	@echo "  test           - Run all tests"
-	@echo "  test-unit      - Run unit tests only"
-	@echo "  test-integration - Run integration tests"
-	@echo "  test-cli       - Run CLI tests"
-	@echo "  test-database  - Run database tests"
-	@echo "  test-shell     - Run shell tests"
-	@echo "  test-coverage  - Run tests with coverage"
-	@echo "  test-performance - Run performance tests"
-	@echo "  test-all       - Run comprehensive test suite"
-	@echo "  test-quick     - Run quick tests only"
-	@echo "  clean          - Clean up generated files"
-	@echo "  help           - Show this help" 
+	@echo "Available commands:"
+	@echo "  test              - Run all tests"
+	@echo "  test-cov          - Run tests with coverage report"
+	@echo "  test-fail-fast    - Run tests and stop on first failure"
+	@echo "  test-unit         - Run unit tests only"
+	@echo "  test-integration  - Run integration tests only"
+	@echo "  test-cli          - Run CLI tests only"
+	@echo "  test-analytics    - Run analytics tests only"
+	@echo "  lint              - Run linting checks"
+	@echo "  format            - Format code with black and isort"
+	@echo "  clean             - Clean up cache and temporary files"
+	@echo "  install-hooks     - Install pre-commit hooks"
+	@echo "  pre-commit        - Run pre-commit on all files"
+	@echo "  dev-setup         - Set up development environment"
+	@echo "  quick-test        - Quick test run for development"
+	@echo "  test-cov-threshold - Test with 90% coverage threshold" 
