@@ -53,8 +53,8 @@ fin list-tasks
 # List tasks with labels
 fin list-tasks --label work
 
-# List tasks from the past week
-fin list-tasks --week
+# List tasks from the past 7 days
+fin list-tasks --days 7
 ```
 
 #### Editing Tasks
@@ -205,7 +205,7 @@ fin/
 ### Command Options
 
 - `--label, -l`: Add labels to tasks
-- `--week`: Show tasks from past 7 days
+- `--days`: Show tasks from past N days (default: 1)
 - `--format`: Output format (text, markdown, html, csv)
 - `--date`: Filter by specific date
 

@@ -15,6 +15,7 @@ from fincli.intake import get_available_sources, import_from_source
 from fincli.labels import LabelManager
 from fincli.tasks import TaskManager
 from fincli.utils import filter_tasks_by_date_range, format_task_for_display
+from fincli.backup import DatabaseBackup
 
 
 def add_task(content: str, labels: tuple, source: str = "cli"):
@@ -146,7 +147,7 @@ def init(db_path: str):
 
 
 @cli.command(name="list-tasks")
-@click.option("--week", is_flag=True, help="Show tasks from the past week")
+@click.option("--days", default=1, help="Show tasks from the past N days (default: 1)")
 @click.option("--label", "-l", multiple=True, help="Filter by labels")
 @click.option(
     "--status",
@@ -154,7 +155,7 @@ def init(db_path: str):
     default="open",
     help="Filter by status",
 )
-def list_tasks(week, label, status):
+def list_tasks(days, label, status):
     """Query and display tasks based on time and status criteria."""
     db_manager = DatabaseManager()
     task_manager = TaskManager(db_manager)
@@ -162,9 +163,8 @@ def list_tasks(week, label, status):
     # Get tasks
     tasks = task_manager.list_tasks(include_completed=(status in ["completed", "all"]))
 
-    # Apply week filtering if requested
-    if week:
-        tasks = filter_tasks_by_date_range(tasks, include_week=True)
+    # Apply date filtering
+    tasks = filter_tasks_by_date_range(tasks, days=days)
 
     # Apply label filtering if requested
     if label:
@@ -187,32 +187,302 @@ def list_tasks(week, label, status):
     for task in tasks:
         formatted_task = format_task_for_display(task)
         click.echo(formatted_task)
-    # Get tasks for editing
-    # For now, use the first label if multiple provided
 
 
 @cli.command(name="open-editor")
 @click.option("--label", "-l", multiple=True, help="Filter by labels")
 @click.option("--date", help="Filter by date (YYYY-MM-DD)")
-def open_editor(label, date):
-    """Open tasks in your editor."""
+@click.option("--all-tasks", is_flag=True, help="Show all tasks (including completed)")
+@click.option("--dry-run", is_flag=True, help="Show what would be edited without opening editor")
+def open_editor(label, date, all_tasks, dry_run):
+    """Open tasks in your editor for editing completion status."""
+    
     db_manager = DatabaseManager()
     editor_manager = EditorManager(db_manager)
 
-    # Get tasks for editing
-    # For now, use the first label if multiple provided
-
-    # Check if tasks exist before opening editor
-    tasks = editor_manager.get_tasks_for_editing(label=label[0] if label else None, target_date=date)
+    # Get tasks for editing (without opening editor)
+    label_filter = label[0] if label else None
+    tasks = editor_manager.get_tasks_for_editing(label=label_filter, target_date=date, all_tasks=all_tasks)
+    
     if not tasks:
         click.echo("📝 No tasks found for editing.")
         return
 
-    # Open in editor
-    click.echo("Opening tasks in editor...")
-    completed_count, reopened_count = editor_manager.edit_tasks(
-        label=label[0] if label else None, target_date=date
-    )
+    if dry_run:
+        # Show what would be edited without opening the editor
+        click.echo(f"📝 Found {len(tasks)} tasks for editing:")
+        for task in tasks:
+            status = "✓" if task.get("completed_at") else "□"
+            click.echo(f"  {status} {task['content']}")
+        click.echo("\nUse 'fin open-editor' (without --dry-run) to actually open the editor.")
+        click.echo("💡 Tip: You can add new tasks by adding lines without #ref:task_XXX")
+        return
+
+    # Show what will be opened
+    click.echo(f"📝 Opening {len(tasks)} tasks in editor...")
+    click.echo("⚠️  This will open your default editor. Close the editor to save changes.")
+    click.echo("💡 Tip: You can add new tasks by adding lines without #ref:task_XXX")
+    
+    # Only open editor at the very last moment when user explicitly requests it
+    try:
+        # Get the state before editing for comparison
+        original_tasks = editor_manager.get_tasks_for_editing(label=label_filter, target_date=date, all_tasks=all_tasks)
+        original_completed = [t for t in original_tasks if t.get("completed_at")]
+        original_open = [t for t in original_tasks if not t.get("completed_at")]
+        
+        completed_count, reopened_count, new_tasks_count, deleted_count = editor_manager.edit_tasks(
+            label=label_filter, target_date=date, all_tasks=all_tasks
+        )
+        
+        # Get the state after editing for detailed comparison
+        updated_tasks = editor_manager.get_tasks_for_editing(label=label_filter, target_date=date, all_tasks=all_tasks)
+        updated_completed = [t for t in updated_tasks if t.get("completed_at")]
+        updated_open = [t for t in updated_tasks if not t.get("completed_at")]
+        
+        changes_made = completed_count > 0 or reopened_count > 0 or new_tasks_count > 0 or deleted_count > 0
+        
+        if changes_made:
+            click.echo("\n📊 Summary of Changes:")
+            click.echo("=" * 40)
+            
+            # Show completed tasks
+            if completed_count > 0:
+                click.echo(f"✅ Completed ({completed_count}):")
+                original_completed_ids = {t['id'] for t in original_completed}
+                newly_completed = [t for t in updated_completed if t['id'] not in original_completed_ids]
+                for task in newly_completed:
+                    click.echo(f"  • {task['content']}")
+                click.echo()
+            
+            # Show reopened tasks
+            if reopened_count > 0:
+                click.echo(f"🔄 Reopened ({reopened_count}):")
+                newly_reopened = [t for t in updated_open if t['id'] in original_completed_ids]
+                for task in newly_reopened:
+                    click.echo(f"  • {task['content']}")
+                click.echo()
+            
+            # Show new tasks
+            if new_tasks_count > 0:
+                click.echo(f"📝 Added ({new_tasks_count}):")
+                # Get the most recent tasks that weren't in the original list
+                all_tasks = editor_manager.task_manager.list_tasks(include_completed=True)
+                original_ids = {t['id'] for t in original_tasks}
+                new_tasks = [t for t in all_tasks if t['id'] not in original_ids]
+                # Sort by creation time (newest first) and take the most recent ones
+                new_tasks.sort(key=lambda x: x['created_at'], reverse=True)
+                for task in new_tasks[:new_tasks_count]:
+                    labels_str = f" [{', '.join(task['labels'])}]" if task['labels'] else ""
+                    click.echo(f"  • {task['content']}{labels_str}")
+                click.echo()
+            
+            # Show deleted tasks
+            if deleted_count > 0:
+                click.echo(f"🗑️  Deleted ({deleted_count}):")
+                click.echo(f"  • {deleted_count} tasks removed from database")
+                click.echo()
+            
+            # Show overall summary
+            total_changes = completed_count + reopened_count + new_tasks_count + deleted_count
+            click.echo(f"📈 Total changes: {total_changes}")
+            
+        else:
+            click.echo("📝 No changes were made to tasks.")
+            
+    except RuntimeError as e:
+        click.echo(f"❌ Error: {e}")
+    except Exception as e:
+        click.echo(f"❌ Unexpected error: {e}")
+
+
+def fine_command():
+    """
+    Fine command - alias for 'fin open-editor' that allows passing through arguments.
+    
+    This function creates a standalone command that acts as an alias for the open-editor
+    functionality, allowing users to run 'fine' directly with the same options.
+    """
+    import click
+    
+    # Create a standalone Click command
+    @click.command()
+    @click.option("--label", "-l", multiple=True, help="Filter by labels")
+    @click.option("--date", help="Filter by date (YYYY-MM-DD)")
+    @click.option("--days", default=1, help="Show tasks from the past N days (default: 1)")
+    @click.option("--dry-run", is_flag=True, help="Show what would be edited without opening editor")
+    def fine_cli(label, date, days, dry_run):
+        """Edit tasks in your editor (alias for fin open-editor)."""
+        # Call the original open_editor function directly
+        db_manager = DatabaseManager()
+        editor_manager = EditorManager(db_manager)
+
+        # Get tasks for editing (without opening editor)
+        label_filter = label[0] if label else None
+        
+        # If no specific date is provided, use days filtering
+        if not date:
+            # Get all tasks and apply days filtering
+            all_tasks = editor_manager.task_manager.list_tasks(include_completed=True)
+            from fincli.utils import filter_tasks_by_date_range
+            tasks = filter_tasks_by_date_range(all_tasks, days=days)
+            
+            # Convert back to the format expected by editor_manager
+            task_ids = [task['id'] for task in tasks]
+            tasks = editor_manager.get_tasks_for_editing(all_tasks=True)
+            # Filter to only include tasks from our date range
+            tasks = [task for task in tasks if task['id'] in task_ids]
+        else:
+            tasks = editor_manager.get_tasks_for_editing(label=label_filter, target_date=date, all_tasks=True)
+        
+        if not tasks:
+            click.echo("📝 No tasks found for editing.")
+            return
+
+        if dry_run:
+            # Show what would be edited without opening the editor
+            click.echo(f"📝 Found {len(tasks)} tasks for editing:")
+            for task in tasks:
+                status = "✓" if task.get("completed_at") else "□"
+                click.echo(f"  {status} {task['content']}")
+            click.echo("\nUse 'fine' (without --dry-run) to actually open the editor.")
+            click.echo("💡 Tip: You can add new tasks by adding lines without #ref:task_XXX")
+            return
+
+        # Show what will be opened
+        click.echo(f"📝 Opening {len(tasks)} tasks in editor...")
+        click.echo("⚠️  This will open your default editor. Close the editor to save changes.")
+        click.echo("💡 Tip: You can add new tasks by adding lines without #ref:task_XXX")
+        
+        # Only open editor at the very last moment when user explicitly requests it
+        try:
+            # Get the state before editing for comparison
+            original_tasks = tasks.copy()
+            original_completed = [t for t in original_tasks if t.get("completed_at")]
+            original_open = [t for t in original_tasks if not t.get("completed_at")]
+            
+            completed_count, reopened_count, new_tasks_count, deleted_count = editor_manager.edit_tasks(
+                label=label_filter, target_date=date, all_tasks=True
+            )
+            
+            # Get the state after editing for detailed comparison
+            updated_tasks = editor_manager.get_tasks_for_editing(label=label_filter, target_date=date, all_tasks=True)
+            updated_completed = [t for t in updated_tasks if t.get("completed_at")]
+            updated_open = [t for t in updated_tasks if not t.get("completed_at")]
+            
+            changes_made = completed_count > 0 or reopened_count > 0 or new_tasks_count > 0 or deleted_count > 0
+            
+            if changes_made:
+                click.echo("\n📊 Summary of Changes:")
+                click.echo("=" * 40)
+                
+                # Show completed tasks
+                if completed_count > 0:
+                    click.echo(f"✅ Completed ({completed_count}):")
+                    original_completed_ids = {t['id'] for t in original_completed}
+                    newly_completed = [t for t in updated_completed if t['id'] not in original_completed_ids]
+                    for task in newly_completed:
+                        click.echo(f"  • {task['content']}")
+                    click.echo()
+                
+                # Show reopened tasks
+                if reopened_count > 0:
+                    click.echo(f"🔄 Reopened ({reopened_count}):")
+                    newly_reopened = [t for t in updated_open if t['id'] in original_completed_ids]
+                    for task in newly_reopened:
+                        click.echo(f"  • {task['content']}")
+                    click.echo()
+                
+                # Show new tasks
+                if new_tasks_count > 0:
+                    click.echo(f"📝 Added ({new_tasks_count}):")
+                    # Get the most recent tasks that weren't in the original list
+                    all_tasks = editor_manager.task_manager.list_tasks(include_completed=True)
+                    original_ids = {t['id'] for t in original_tasks}
+                    new_tasks = [t for t in all_tasks if t['id'] not in original_ids]
+                    # Sort by creation time (newest first) and take the most recent ones
+                    new_tasks.sort(key=lambda x: x['created_at'], reverse=True)
+                    for task in new_tasks[:new_tasks_count]:
+                        labels_str = f" [{', '.join(task['labels'])}]" if task['labels'] else ""
+                        click.echo(f"  • {task['content']}{labels_str}")
+                    click.echo()
+                
+                # Show deleted tasks
+                if deleted_count > 0:
+                    click.echo(f"🗑️  Deleted ({deleted_count}):")
+                    click.echo(f"  • {deleted_count} tasks removed from database")
+                    click.echo()
+                
+                # Show overall summary
+                total_changes = completed_count + reopened_count + new_tasks_count + deleted_count
+                click.echo(f"📈 Total changes: {total_changes}")
+                
+            else:
+                click.echo("📝 No changes were made to tasks.")
+                
+        except RuntimeError as e:
+            click.echo(f"❌ Error: {e}")
+        except Exception as e:
+            click.echo(f"❌ Unexpected error: {e}")
+    
+    # Run the fine CLI
+    fine_cli()
+
+
+def fins_command():
+    """
+    Fins command - standalone command that shows tasks with defaults optimized for viewing completed tasks.
+    
+    This function creates a standalone command that shows tasks with a default behavior
+    of showing completed tasks from the past week, which is useful for reviewing recent activity.
+    """
+    import sys
+    import click
+    
+    # Create a standalone Click command
+    @click.command()
+    @click.option("--days", default=7, help="Show tasks from the past N days (default: 7)")
+    @click.option("--label", "-l", multiple=True, help="Filter by labels")
+    @click.option("--today", is_flag=True, help="Show only today's tasks (overrides default days behavior)")
+    def fins_cli(days, label, today):
+        """Query and display completed tasks (defaults to completed tasks from past 7 days)."""
+        db_manager = DatabaseManager()
+        task_manager = TaskManager(db_manager)
+
+        # Get tasks - fins only shows completed tasks
+        tasks = task_manager.list_tasks(include_completed=True)
+
+        # Apply date filtering
+        if today:
+            # Override to show only today's completed tasks
+            tasks = filter_tasks_by_date_range(tasks, days=0)
+        else:
+            # Default: show completed tasks from past N days
+            tasks = filter_tasks_by_date_range(tasks, days=days)
+
+        # Apply label filtering if requested
+        if label:
+            # Simple label filtering - could be enhanced
+            filtered_tasks = []
+            for task in tasks:
+                if task.get("labels"):
+                    task_labels = [l.lower() for l in task["labels"]]
+                    for requested_label in label:
+                        if requested_label.lower() in task_labels:
+                            filtered_tasks.append(task)
+                            break
+            tasks = filtered_tasks
+
+        # Display tasks
+        if not tasks:
+            click.echo("📝 No tasks found matching your criteria.")
+            return
+
+        for task in tasks:
+            formatted_task = format_task_for_display(task)
+            click.echo(formatted_task)
+    
+    # Run the fins CLI
+    fins_cli()
 
 
 @cli.command(name="list-labels")
@@ -230,6 +500,87 @@ def list_labels():
     click.echo("Known labels:")
     for label in sorted(labels):
         click.echo(f"- {label}")
+
+
+@cli.command(name="backup")
+@click.option("--description", "-d", help="Description of what changed")
+def create_backup(description):
+    """Create a backup of the current database."""
+    db_manager = DatabaseManager()
+    backup_manager = DatabaseBackup(db_manager.db_path)
+    
+    backup_id = backup_manager.create_backup(description or "Manual backup")
+    
+    if backup_id > 0:
+        click.echo(f"✅ Backup created: backup_{backup_id:03d}")
+    else:
+        click.echo("❌ No database found to backup")
+
+
+@cli.command(name="list-backups")
+def list_backups():
+    """List all available backups."""
+    db_manager = DatabaseManager()
+    backup_manager = DatabaseBackup(db_manager.db_path)
+    
+    backups = backup_manager.list_backups()
+    
+    if not backups:
+        click.echo("No backups found")
+        return
+    
+    click.echo("Available backups:")
+    for backup in backups:
+        timestamp = backup["timestamp"][:19]  # Truncate to seconds
+        click.echo(f"  backup_{backup['backup_id']:03d}: {timestamp} ({backup['task_count']} tasks)")
+        if backup.get("description"):
+            click.echo(f"    Description: {backup['description']}")
+
+
+@cli.command(name="restore")
+@click.argument("backup_id", type=int)
+@click.option("--force", is_flag=True, help="Skip confirmation prompt")
+def restore_backup(backup_id, force):
+    """Restore database from a backup."""
+    db_manager = DatabaseManager()
+    backup_manager = DatabaseBackup(db_manager.db_path)
+    
+    if not force:
+        click.echo(f"⚠️  This will overwrite your current database with backup_{backup_id:03d}")
+        click.echo("   This action cannot be undone!")
+        if not click.confirm("Do you want to continue?"):
+            click.echo("Restore cancelled")
+            return
+    
+    if backup_manager.rollback(backup_id):
+        click.echo(f"✅ Successfully restored from backup_{backup_id:03d}")
+    else:
+        click.echo(f"❌ Failed to restore from backup_{backup_id:03d}")
+
+
+@cli.command(name="restore-latest")
+@click.option("--force", is_flag=True, help="Skip confirmation prompt")
+def restore_latest_backup(force):
+    """Restore database from the latest backup."""
+    db_manager = DatabaseManager()
+    backup_manager = DatabaseBackup(db_manager.db_path)
+    
+    latest_id = backup_manager.get_latest_backup_id()
+    if latest_id is None:
+        click.echo("❌ No backups found")
+        return
+    
+    if not force:
+        click.echo(f"⚠️  This will overwrite your current database with backup_{latest_id:03d}")
+        click.echo("   This action cannot be undone!")
+        if not click.confirm("Do you want to continue?"):
+            click.echo("Restore cancelled")
+            return
+    
+    if backup_manager.restore_latest():
+        click.echo(f"✅ Successfully restored from backup_{latest_id:03d}")
+    else:
+        click.echo(f"❌ Failed to restore from backup_{latest_id:03d}")
 
 
 @cli.command(name="import")

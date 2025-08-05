@@ -40,71 +40,54 @@ def format_task_for_display(task: Dict[str, Any]) -> str:
     return f"{status} {formatted_time}  {task['content']}{labels_display}"
 
 
-def get_date_range(include_week: bool = False) -> tuple:
+def get_date_range(days: int = 1) -> tuple:
     """
     Get date ranges for task filtering.
 
     Args:
-        include_week: If True, include completed tasks from past 7 days
+        days: Number of days to look back (default: 1 for today and yesterday)
 
     Returns:
-        Tuple of (today, yesterday, week_ago) dates
+        Tuple of (today, lookback_date) dates
     """
     today = date.today()
-    yesterday = today - timedelta(days=1)
-    week_ago = today - timedelta(days=7)
+    lookback_date = today - timedelta(days=days)
 
-    return today, yesterday, week_ago
+    return today, lookback_date
 
 
 def filter_tasks_by_date_range(
-    tasks: List[Dict[str, Any]], include_week: bool = False
+    tasks: List[Dict[str, Any]], days: int = 1
 ) -> List[Dict[str, Any]]:
     """
     Filter tasks based on time and status criteria.
 
     Args:
         tasks: List of task dictionaries
-        include_week: If True, include completed tasks from past 7 days
+        days: Number of days to look back for completed tasks (default: 1)
 
     Returns:
         List of filtered tasks
     """
-    today, yesterday, week_ago = get_date_range(include_week)
+    today, lookback_date = get_date_range(days)
 
     # Filter tasks based on criteria
     filtered_tasks = []
 
     for task in tasks:
-        task_date = None
-
-        # Determine the relevant date for this task
-        if task["completed_at"]:
-            # For completed tasks, use completed_at date
+        # Always include open tasks regardless of creation date
+        if task["completed_at"] is None:
+            filtered_tasks.append(task)
+        else:
+            # For completed tasks, apply date filtering
             completed_dt = datetime.fromisoformat(
                 task["completed_at"].replace("Z", "+00:00")
             )
             task_date = completed_dt.date()
-        else:
-            # For open tasks, use created_at date
-            created_dt = datetime.fromisoformat(
-                task["created_at"].replace("Z", "+00:00")
-            )
-            task_date = created_dt.date()
 
-        # Apply filtering criteria
-        if task["completed_at"] is None:
-            # Open tasks: show only today's
-            if task_date == today:
+            # Include completed tasks from the lookback period
+            if lookback_date <= task_date <= today:
                 filtered_tasks.append(task)
-        else:
-            # Completed tasks: show yesterday's, or past week if --week flag
-            if include_week:
-                if week_ago <= task_date <= today:
-                    filtered_tasks.append(task)
-            else:
-                if task_date == yesterday:
-                    filtered_tasks.append(task)
 
     # Sort by created_at ascending
     filtered_tasks.sort(key=lambda x: x["created_at"])

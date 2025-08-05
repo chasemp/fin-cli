@@ -35,7 +35,7 @@ setup(
         "console_scripts": [
             "fin=fincli.cli:cli",
             "fins=fincli.cli:list_tasks",
-            "fine=fincli.cli:open_editor",
+            "fine=fincli.cli:fine_command",
             "fin-labels=fincli.cli:list_labels",
             "fin-import=fincli.cli:import_tasks",
         ],

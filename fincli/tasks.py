@@ -184,3 +184,25 @@ class TaskManager:
             conn.commit()
 
         return True
+
+    def delete_task(self, task_id: int) -> bool:
+        """
+        Delete a task by ID.
+
+        Args:
+            task_id: Task ID to delete
+
+        Returns:
+            True if deleted, False if not found
+        """
+        with self.db_manager.get_connection() as conn:
+            cursor = conn.cursor()
+
+            cursor.execute(
+                "DELETE FROM tasks WHERE id = ?",
+                (task_id,),
+            )
+
+            conn.commit()
+
+            return cursor.rowcount > 0
