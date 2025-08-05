@@ -1,0 +1,12 @@
+    def _format_label_summary_html(self, label_counts: List[tuple]) -> str:
+        """Format label summary for HTML output."""
+        if not label_counts:
+            return "<p><em>No labels found</em></p>"
+
+        lines = ["<ul>"]
+        for label, count in list(label_counts.items())[:5]:
+            lines.append(f"<li><span class='label'>#{label}</span>: {count} tasks</li>")
+        lines.append("</ul>")
+
+        return "\n".join(lines)
+
