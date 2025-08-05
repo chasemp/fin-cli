@@ -158,10 +158,6 @@ def list_tasks(week, label, status):
         include_completed=(status in ["completed", "all"])
     )
     
-    if not tasks:
-        click.echo("🎉 Nothing pending today. You're all caught up!")
-        return
-    
     # Apply week filtering if requested
     if week:
         tasks = filter_tasks_by_date_range(tasks, include_week=True)
@@ -172,23 +168,24 @@ def list_tasks(week, label, status):
         filtered_tasks = []
         for task in tasks:
             if task.get("labels"):
-                task_labels = [l.strip().lower() for l in task["labels"].split(",")]
+                task_labels = [l.lower() for l in task["labels"]]
                 for requested_label in label:
                     if requested_label.lower() in task_labels:
                         filtered_tasks.append(task)
                         break
         tasks = filtered_tasks
     
+    # Display tasks
     if not tasks:
-        click.echo("🎉 Nothing pending today. You're all caught up!")
+        click.echo("📝 No tasks found matching your criteria.")
         return
     
-    # Display tasks
     for task in tasks:
         formatted_task = format_task_for_display(task)
         click.echo(formatted_task)
-
-
+    # Get tasks for editing
+    # For now, use the first label if multiple provided
+    label_filter = label[0] if label else None
 @cli.command(name="open-editor")
 @click.option("--label", "-l", multiple=True, help="Filter by labels")
 @click.option("--date", help="Filter by date (YYYY-MM-DD)")
@@ -200,16 +197,16 @@ def open_editor(label, date):
     # Get tasks for editing
     # For now, use the first label if multiple provided
     label_filter = label[0] if label else None
-    tasks = editor_manager.get_tasks_for_editing(label=label_filter, target_date=date)
     
+    # Check if tasks exist before opening editor
+    tasks = editor_manager.get_tasks_for_editing(label=label_filter, target_date=date)
     if not tasks:
         click.echo("📝 No tasks found for editing.")
         return
     
     # Open in editor
-    editor_manager.open_tasks_in_editor(tasks)
-
-
+    click.echo("Opening tasks in editor...")
+    completed_count, reopened_count = editor_manager.edit_tasks(label=label_filter, target_date=date)
 @cli.command(name="list-labels")
 def list_labels():
     """List all known labels."""
