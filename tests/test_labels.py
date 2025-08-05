@@ -337,6 +337,6 @@ class TestLabelFilteringInCommands:
             result = cli_runner.invoke(open_editor, ["--label", "work"])
             monkeypatch.undo()
             assert result.exit_code == 0
-            assert "Opening tasks in editor..." in result.output
+            assert "📝 Opening 1 tasks in editor..." in result.output
         finally:
             os.unlink(db_path)

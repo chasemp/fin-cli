@@ -13,6 +13,10 @@ setup(
     entry_points={
         "console_scripts": [
             "fin=fincli.cli:cli",
+            "fins=fincli.cli:fins_command",
+            "fine=fincli.cli:fine_command",
+            "fin-labels=fincli.cli:list_labels",
+            "fin-import=fincli.cli:import_tasks",
         ],
     },
     python_requires=">=3.9",

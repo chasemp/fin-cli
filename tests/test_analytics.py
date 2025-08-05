@@ -43,23 +43,25 @@ class TestAnalyticsManager:
                 UPDATE tasks
                 SET completed_at = CURRENT_TIMESTAMP
                 WHERE content = 'Completed today task'
+                """
             )
             conn.commit()
-            """
-            )
 
-        # Add an overdue task (created 10 days ago)
-        task_manager.add_task("Overdue task", labels=["urgent", "recurring"])
+        # Add an overdue task (created 40 days ago to be within 60-day window but overdue for 30 days)
+        from datetime import datetime, timedelta
+        overdue_date = (datetime.now() - timedelta(days=40)).strftime("%Y-%m-%d %H:%M:%S")
+        
+        # Create the task with the overdue date directly
         with analytics_manager.db_manager.get_connection() as conn:
             cursor = conn.cursor()
-            # Use a specific date that's definitely in the past
             cursor.execute(
                 """
-                UPDATE tasks
-                SET created_at = '2025-05-25 10:00:00'
-                WHERE content = 'Overdue task'
-            """
+                INSERT INTO tasks (content, created_at, labels, source)
+                VALUES (?, ?, ?, ?)
+                """,
+                ("Overdue task", overdue_date, "urgent,recurring", "cli")
             )
+            conn.commit()
 
         # Add a recurring task
         task_manager.add_task("Daily routine", labels=["recurring", "daily"])

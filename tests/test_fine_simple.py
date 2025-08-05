@@ -30,6 +30,33 @@ class TestFineCommandSimple:
         assert result.exit_code == 0
         assert "📝 No tasks found for editing." in result.output
 
+    def test_fine_command_dry_run(self, temp_db_path, monkeypatch):
+        """Test fine command with dry-run option."""
+        # Mock the database path
+        monkeypatch.setattr(
+            "fincli.db.DatabaseManager.__init__",
+            lambda self, db_path=None: self._init_mock_db(temp_db_path),
+        )
+
+        # Add tasks
+        db_manager = DatabaseManager(temp_db_path)
+        task_manager = TaskManager(db_manager)
+        task_manager.add_task("Work task", labels=["work"])
+        task_manager.add_task("Personal task", labels=["personal"])
+
+        # Test dry-run functionality
+        from click.testing import CliRunner
+        from fincli.cli import open_editor
+
+        runner = CliRunner()
+        result = runner.invoke(open_editor, ["--dry-run"])
+
+        assert result.exit_code == 0
+        assert "📝 Found 2 tasks for editing:" in result.output
+        assert "Work task" in result.output
+        assert "Personal task" in result.output
+        assert "Use 'fin open-editor' (without --dry-run) to actually open the editor." in result.output
+
     def test_fine_command_task_filtering(self, temp_db_path, monkeypatch):
         """Test fine command task filtering logic."""
         # Mock the database path
@@ -86,9 +113,10 @@ class TestFineCommandSimple:
         result = runner.invoke(open_editor, ["--help"])
 
         assert result.exit_code == 0
-        assert "Open tasks in your editor" in result.output
+        assert "Open tasks in your editor for editing completion status" in result.output
         assert "--label" in result.output
         assert "--date" in result.output
+        assert "--dry-run" in result.output
 
     def test_fine_command_label_filtering(self, temp_db_path, monkeypatch):
         """Test fine command with label filtering."""
@@ -119,3 +147,29 @@ class TestFineCommandSimple:
         # Test non-existent label
         nonexistent_tasks = editor_manager.get_tasks_for_editing(label="nonexistent")
         assert len(nonexistent_tasks) == 0
+
+    def test_fine_command_with_dry_run_and_label(self, temp_db_path, monkeypatch):
+        """Test fine command with dry-run and label filtering."""
+        # Mock the database path
+        monkeypatch.setattr(
+            "fincli.db.DatabaseManager.__init__",
+            lambda self, db_path=None: self._init_mock_db(temp_db_path),
+        )
+
+        # Add tasks with different labels
+        db_manager = DatabaseManager(temp_db_path)
+        task_manager = TaskManager(db_manager)
+        task_manager.add_task("Work task", labels=["work"])
+        task_manager.add_task("Personal task", labels=["personal"])
+
+        # Test dry-run with label filtering
+        from click.testing import CliRunner
+        from fincli.cli import open_editor
+
+        runner = CliRunner()
+        result = runner.invoke(open_editor, ["--label", "work", "--dry-run"])
+
+        assert result.exit_code == 0
+        assert "📝 Found 1 tasks for editing:" in result.output
+        assert "Work task" in result.output
+        assert "Personal task" not in result.output
