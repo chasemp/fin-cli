@@ -74,9 +74,7 @@ def import_csv_tasks(file_path: str = None, **kwargs) -> Dict[str, Any]:
                     labels.append("source:csv")
 
                     # Add task to database
-                    task_manager.add_task(
-                        task_content, labels, source="csv-import"
-                    )
+                    task_manager.add_task(task_content, labels, source="csv-import")
                     imported_count += 1
 
                 except Exception as e:

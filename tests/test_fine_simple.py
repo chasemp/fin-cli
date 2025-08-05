@@ -28,7 +28,7 @@ class TestFineCommandSimple:
         result = runner.invoke(open_editor, [])
 
         assert result.exit_code == 0
-        assert "🎉 No tasks found matching your criteria!" in result.output
+        assert "📝 No tasks found for editing." in result.output
 
     def test_fine_command_task_filtering(self, temp_db_path, monkeypatch):
         """Test fine command task filtering logic."""

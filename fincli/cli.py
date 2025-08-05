@@ -4,8 +4,9 @@ CLI module for FinCLI
 Main entry point for all CLI commands.
 """
 
-import click
 import sys
+
+import click
 
 from fincli.analytics import AnalyticsManager
 from fincli.db import DatabaseManager
@@ -20,13 +21,12 @@ def add_task(content: str, labels: tuple, source: str = "cli"):
     """Add a task to the database."""
     db_manager = DatabaseManager()
     task_manager = TaskManager(db_manager)
-    
+
     # Convert labels tuple to list for TaskManager
     labels_list = list(labels) if labels else None
-    
+
     # Add the task with labels (TaskManager handles normalization)
-    task_id = task_manager.add_task(content, source=source, labels=labels_list)
-    
+
     # Get normalized labels for display (sorted alphabetically)
     normalized_labels = []
     if labels_list:
@@ -36,7 +36,7 @@ def add_task(content: str, labels: tuple, source: str = "cli"):
                 normalized_labels.append(label.lower().strip())
         # Sort alphabetically to match test expectations
         normalized_labels.sort()
-    
+
     # Format output to match test expectations
     if normalized_labels:
         click.echo(f'✅ Task added: "{content}" [{", ".join(normalized_labels)}]')
@@ -49,12 +49,12 @@ def handle_direct_task(args):
     if not args:
         click.echo("Missing argument")
         sys.exit(1)
-    
+
     # Parse arguments for labels
     task_content = []
     labels = []
     i = 0
-    
+
     while i < len(args):
         if args[i] == "--label" or args[i] == "-l":
             if i + 1 < len(args):
@@ -76,11 +76,11 @@ def handle_direct_task(args):
         else:
             task_content.append(args[i])
             i += 1
-    
+
     if not task_content:
         click.echo("Missing task content")
         sys.exit(1)
-    
+
     content = " ".join(task_content)
     add_task(content, tuple(labels), "cli")
 
@@ -91,7 +91,7 @@ def cli():
     FinCLI - A lightweight task tracking system
 
     Manage your local task database with simple commands.
-    
+
     Examples:
         fin "my new task"                    # Add a task directly
         fin add-task "my new task"           # Add a task explicitly
@@ -147,21 +147,24 @@ def init(db_path: str):
 @cli.command(name="list-tasks")
 @click.option("--week", is_flag=True, help="Show tasks from the past week")
 @click.option("--label", "-l", multiple=True, help="Filter by labels")
-@click.option("--status", type=click.Choice(["open", "completed", "all"]), default="open", help="Filter by status")
+@click.option(
+    "--status",
+    type=click.Choice(["open", "completed", "all"]),
+    default="open",
+    help="Filter by status",
+)
 def list_tasks(week, label, status):
     """Query and display tasks based on time and status criteria."""
     db_manager = DatabaseManager()
     task_manager = TaskManager(db_manager)
-    
+
     # Get tasks
-    tasks = task_manager.list_tasks(
-        include_completed=(status in ["completed", "all"])
-    )
-    
+    tasks = task_manager.list_tasks(include_completed=(status in ["completed", "all"]))
+
     # Apply week filtering if requested
     if week:
         tasks = filter_tasks_by_date_range(tasks, include_week=True)
-    
+
     # Apply label filtering if requested
     if label:
         # Simple label filtering - could be enhanced
@@ -174,18 +177,19 @@ def list_tasks(week, label, status):
                         filtered_tasks.append(task)
                         break
         tasks = filtered_tasks
-    
+
     # Display tasks
     if not tasks:
         click.echo("📝 No tasks found matching your criteria.")
         return
-    
+
     for task in tasks:
         formatted_task = format_task_for_display(task)
         click.echo(formatted_task)
     # Get tasks for editing
     # For now, use the first label if multiple provided
-    label_filter = label[0] if label else None
+
+
 @cli.command(name="open-editor")
 @click.option("--label", "-l", multiple=True, help="Filter by labels")
 @click.option("--date", help="Filter by date (YYYY-MM-DD)")
@@ -193,32 +197,35 @@ def open_editor(label, date):
     """Open tasks in your editor."""
     db_manager = DatabaseManager()
     editor_manager = EditorManager(db_manager)
-    
+
     # Get tasks for editing
     # For now, use the first label if multiple provided
-    label_filter = label[0] if label else None
-    
+
     # Check if tasks exist before opening editor
     tasks = editor_manager.get_tasks_for_editing(label=label_filter, target_date=date)
     if not tasks:
         click.echo("📝 No tasks found for editing.")
         return
-    
+
     # Open in editor
     click.echo("Opening tasks in editor...")
-    completed_count, reopened_count = editor_manager.edit_tasks(label=label_filter, target_date=date)
+    completed_count, reopened_count = editor_manager.edit_tasks(
+        label=label_filter, target_date=date
+    )
+
+
 @cli.command(name="list-labels")
 def list_labels():
     """List all known labels."""
     db_manager = DatabaseManager()
     label_manager = LabelManager(db_manager)
-    
+
     labels = label_manager.get_all_labels()
-    
+
     if not labels:
         click.echo("No labels found in any tasks")
         return
-    
+
     click.echo("Known labels:")
     for label in sorted(labels):
         click.echo(f"- {label}")
@@ -232,12 +239,12 @@ def list_labels():
 def import_tasks(source, file_path, label, remove_rows):
     """Import tasks from external sources."""
     available_sources = get_available_sources()
-    
+
     if source not in available_sources:
         click.echo(f"❌ Error: Unknown source '{source}'")
         click.echo(f"Available sources: {', '.join(available_sources)}")
         raise click.Abort()
-    
+
     try:
         imported_count = import_from_source(source, file_path, label, remove_rows)
         click.echo(f"✅ Successfully imported {imported_count} tasks from {source}")
@@ -247,35 +254,57 @@ def import_tasks(source, file_path, label, remove_rows):
 
 
 @cli.command(name="digest")
-@click.option("--format", "output_format", type=click.Choice(["text", "markdown", "html", "csv"]), default="text", help="Output format")
-@click.option("--period", type=click.Choice(["daily", "weekly", "monthly"]), default="daily", help="Report period")
+@click.option(
+    "--format",
+    "output_format",
+    type=click.Choice(["text", "markdown", "html", "csv"]),
+    default="text",
+    help="Output format",
+)
+@click.option(
+    "--period",
+    type=click.Choice(["daily", "weekly", "monthly"]),
+    default="daily",
+    help="Report period",
+)
 def digest(output_format, period):
     """Generate a digest report."""
     db_manager = DatabaseManager()
     analytics_manager = AnalyticsManager(db_manager)
-    
+
     report = analytics_manager.generate_digest(period, output_format)
     click.echo(report)
 
 
 @cli.command(name="report")
-@click.option("--format", "output_format", type=click.Choice(["text", "markdown", "html", "csv"]), default="text", help="Output format")
-@click.option("--period", type=click.Choice(["daily", "weekly", "monthly"]), default="weekly", help="Report period")
+@click.option(
+    "--format",
+    "output_format",
+    type=click.Choice(["text", "markdown", "html", "csv"]),
+    default="text",
+    help="Output format",
+)
+@click.option(
+    "--period",
+    type=click.Choice(["daily", "weekly", "monthly"]),
+    default="weekly",
+    help="Report period",
+)
 @click.option("--output", help="Output file path")
 @click.option("--overdue", is_flag=True, help="Show only overdue tasks")
 def report(output_format, period, output, overdue):
     """Generate a detailed analytics report."""
     db_manager = DatabaseManager()
     analytics_manager = AnalyticsManager(db_manager)
-    
+
     if overdue:
         # For now, use digest with overdue flag
         report_content = analytics_manager.generate_digest("daily", output_format)
     else:
         report_content = analytics_manager.generate_digest(period, output_format)
-    
+
     if output:
-        with open(output, 'w') as f:
+        with open(output, "w") as f:
             f.write(report_content)
     else:
         click.echo(report_content)
@@ -284,9 +313,28 @@ def report(output_format, period, output, overdue):
 def main():
     """Main entry point that handles direct task addition."""
     args = sys.argv[1:]
-    
+
     # Check if this is a direct task addition (no subcommand)
-    if args and not args[0].startswith("-") and args[0] not in ["add-task", "add", "init", "list-tasks", "open-editor", "list-labels", "import", "digest", "report", "--help", "-h", "--version", "-v"]:
+    if (
+        args
+        and not args[0].startswith("-")
+        and args[0]
+        not in [
+            "add-task",
+            "add",
+            "init",
+            "list-tasks",
+            "open-editor",
+            "list-labels",
+            "import",
+            "digest",
+            "report",
+            "--help",
+            "-h",
+            "--version",
+            "-v",
+        ]
+    ):
         # This looks like a direct task addition
         handle_direct_task(args)
     else:
