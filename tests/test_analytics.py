@@ -43,6 +43,8 @@ class TestAnalyticsManager:
                 UPDATE tasks
                 SET completed_at = CURRENT_TIMESTAMP
                 WHERE content = 'Completed today task'
+            )
+            conn.commit()
             """
             )
 
@@ -54,7 +56,7 @@ class TestAnalyticsManager:
             cursor.execute(
                 """
                 UPDATE tasks
-                SET created_at = '2025-06-25 10:00:00'
+                SET created_at = '2025-05-25 10:00:00'
                 WHERE content = 'Overdue task'
             """
             )
