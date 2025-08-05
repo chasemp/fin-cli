@@ -64,7 +64,7 @@ def filter_tasks_by_date_range(
 
     Args:
         tasks: List of task dictionaries
-        days: Number of days to look back for completed tasks (default: 1)
+        days: Number of days to look back (default: 1 for today and yesterday)
 
     Returns:
         List of filtered tasks

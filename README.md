@@ -50,8 +50,14 @@ fin "Complete project documentation"
 
 #### Listing Tasks
 ```bash
-# List all tasks
+# List today and yesterday's open tasks (default)
 fin list-tasks
+
+# List today and yesterday's completed tasks
+fin list-tasks --status completed
+
+# List today and yesterday's all tasks (open + completed)
+fin list-tasks --status all
 
 # List tasks with labels
 fin list-tasks --label work
