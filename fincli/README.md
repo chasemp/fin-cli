@@ -87,19 +87,19 @@ fin "Task with MIXED case LABELS" --label "WORK, urgent Personal"
 fins
 
 # Include completed tasks from past 7 days
-fins --days 7
+fins -d 7
 
 # List open tasks from past week
-fins --status open
+fins -s open
 
 # List all tasks from past 10 days
-fins --status all --days 10
+fins -s all -d 10
 
 # List today and yesterday's open tasks (default)
 fin list-tasks
 
 # List today and yesterday's completed tasks
-fin list-tasks --status completed
+fin list-tasks -s completed
 
 # Filter by label
 fins --label work
@@ -173,25 +173,25 @@ CREATE TABLE tasks (
 fin "Refactor database schema for better performance" --label "planning, infra, urgent"
 
 # List all work tasks from the past week
-fins --label work --days 7
+fins --label work -d 7
 
 # List open tasks from past week
-fins --status open
+fins -s open
 
 # List all tasks from past 10 days
-fins --status all --days 10
+fins -s all -d 10
 
 # List today and yesterday's open tasks (default)
 fin list-tasks
 
 # List today and yesterday's completed tasks
-fin list-tasks --status completed
+fin list-tasks -s completed
 
 # Edit today and yesterday's open tasks (default)
 fine
 
 # Edit completed tasks from past week
-fine --status completed --days 7
+fine -s completed -d 7
 
 # Edit all automation tasks
 fine --label automation
