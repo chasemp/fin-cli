@@ -43,6 +43,9 @@ fin "Review pull requests" --label work --label urgent
 
 # Add a task with multiple labels (shorthand)
 fin "Update dependencies" -l maintenance -l backend
+
+# Add a task directly (shortcut for add-task)
+fin "Complete project documentation"
 ```
 
 #### Listing Tasks
@@ -53,8 +56,11 @@ fin list-tasks
 # List tasks with labels
 fin list-tasks --label work
 
-# List tasks from the past 7 days
-fin list-tasks --days 7
+# List tasks from the past 30 days
+fin list-tasks --days 30
+
+# List completed tasks from the past week
+fin list-tasks --status completed --days 7
 ```
 
 #### Editing Tasks
@@ -64,6 +70,9 @@ fin open-editor
 
 # Edit only work tasks
 fin open-editor --label work
+
+# Edit tasks from the past week
+fin open-editor --days 7
 
 # Edit tasks from a specific date
 fin open-editor --date 2025-01-15
@@ -195,8 +204,11 @@ fin/
 |---------|-------------|
 | `fin init` | Initialize the database |
 | `fin add-task <content>` | Add a new task |
+| `fin <content>` | Add a new task (shortcut) |
 | `fin list-tasks` | List all tasks |
 | `fin open-editor` | Edit tasks in external editor |
+| `fine` | Edit tasks in external editor (shortcut) |
+| `fins` | List completed tasks from past week |
 | `fin list-labels` | List all known labels |
 | `fin digest <period>` | Generate digest report |
 | `fin report <period>` | Generate detailed report |
@@ -205,7 +217,8 @@ fin/
 ### Command Options
 
 - `--label, -l`: Add labels to tasks
-- `--days`: Show tasks from past N days (default: 1)
+- `--days`: Show tasks from past N days (default: 1 for today and yesterday)
+- `--status`: Filter by status (open, completed)
 - `--format`: Output format (text, markdown, html, csv)
 - `--date`: Filter by specific date
 
