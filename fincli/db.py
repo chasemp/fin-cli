@@ -61,7 +61,15 @@ class DatabaseManager:
 
     def get_connection(self):
         """Get a database connection."""
-        return sqlite3.connect(self.db_path)
+        import contextlib
+        @contextlib.contextmanager
+        def connection_context():
+            conn = sqlite3.connect(self.db_path)
+            try:
+                yield conn
+            finally:
+                conn.close()
+        return connection_context()
 
     def _init_mock_db(self, db_path):
         """Helper method for testing - initialize with custom path."""
