@@ -317,7 +317,13 @@ def fine_command():
     @click.option("--date", help="Filter by date (YYYY-MM-DD)")
     @click.option("--days", default=1, help="Show tasks from the past N days (default: 1)")
     @click.option("--dry-run", is_flag=True, help="Show what would be edited without opening editor")
-    def fine_cli(label, date, days, dry_run):
+    @click.option(
+        "--status",
+        type=click.Choice(["open", "completed", "all"]),
+        default="open",
+        help="Filter by status (default: open)",
+    )
+    def fine_cli(label, date, days, dry_run, status):
         """Edit tasks in your editor (alias for fin open-editor)."""
         # Call the original open_editor function directly
         db_manager = DatabaseManager()
@@ -333,13 +339,38 @@ def fine_command():
             from fincli.utils import filter_tasks_by_date_range
             tasks = filter_tasks_by_date_range(all_tasks, days=days)
             
+            # Apply status filtering
+            if status == "open":
+                tasks = [task for task in tasks if task["completed_at"] is None]
+            elif status == "completed":
+                tasks = [task for task in tasks if task["completed_at"] is not None]
+            # For "all", we keep all tasks (both open and completed)
+            
             # Convert back to the format expected by editor_manager
             task_ids = [task['id'] for task in tasks]
             tasks = editor_manager.get_tasks_for_editing(all_tasks=True)
-            # Filter to only include tasks from our date range
+            # Filter to only include tasks from our date range and status
             tasks = [task for task in tasks if task['id'] in task_ids]
         else:
-            tasks = editor_manager.get_tasks_for_editing(label=label_filter, target_date=date, all_tasks=True)
+            # For date-based filtering, we need to handle status filtering differently
+            # since editor_manager.get_tasks_for_editing doesn't support status filtering
+            all_tasks = editor_manager.task_manager.list_tasks(include_completed=True)
+            from fincli.utils import filter_tasks_by_date_range
+            
+            # Apply date filtering
+            tasks = filter_tasks_by_date_range(all_tasks, days=0)  # Use 0 for specific date
+            
+            # Apply status filtering
+            if status == "open":
+                tasks = [task for task in tasks if task["completed_at"] is None]
+            elif status == "completed":
+                tasks = [task for task in tasks if task["completed_at"] is not None]
+            # For "all", we keep all tasks (both open and completed)
+            
+            # Convert to editor format
+            task_ids = [task['id'] for task in tasks]
+            tasks = editor_manager.get_tasks_for_editing(all_tasks=True)
+            tasks = [task for task in tasks if task['id'] in task_ids]
         
         if not tasks:
             click.echo("📝 No tasks found for editing.")
@@ -450,21 +481,34 @@ def fins_command():
     @click.option("--days", default=7, help="Show tasks from the past N days (default: 7)")
     @click.option("--label", "-l", multiple=True, help="Filter by labels")
     @click.option("--today", is_flag=True, help="Show only today's tasks (overrides default days behavior)")
-    def fins_cli(days, label, today):
+    @click.option(
+        "--status",
+        type=click.Choice(["open", "completed", "all"]),
+        default="completed",
+        help="Filter by status (default: completed)",
+    )
+    def fins_cli(days, label, today, status):
         """Query and display completed tasks (defaults to completed tasks from past 7 days)."""
         db_manager = DatabaseManager()
         task_manager = TaskManager(db_manager)
 
-        # Get tasks - fins only shows completed tasks
+        # Get tasks (include completed tasks for status filtering)
         tasks = task_manager.list_tasks(include_completed=True)
 
-        # Apply date filtering
+        # Apply date filtering first
         if today:
-            # Override to show only today's completed tasks
+            # Override to show only today's tasks
             tasks = filter_tasks_by_date_range(tasks, days=0)
         else:
-            # Default: show completed tasks from past N days
+            # Default: show tasks from past N days
             tasks = filter_tasks_by_date_range(tasks, days=days)
+
+        # Apply status filtering
+        if status == "open":
+            tasks = [task for task in tasks if task["completed_at"] is None]
+        elif status == "completed":
+            tasks = [task for task in tasks if task["completed_at"] is not None]
+        # For "all", we keep all tasks (both open and completed)
 
         # Apply label filtering if requested
         if label:

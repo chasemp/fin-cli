@@ -59,6 +59,21 @@ fin list-tasks --status completed
 # List today and yesterday's all tasks (open + completed)
 fin list-tasks --status all
 
+# List completed tasks from past week (shortcut)
+fins
+
+# List open tasks from past week
+fins --status open
+
+# List all tasks from past 10 days
+fins --status all --days 10
+
+# Edit today and yesterday's open tasks (default)
+fine
+
+# Edit completed tasks from past week
+fine --status completed --days 7
+
 # List tasks with labels
 fin list-tasks --label work
 
@@ -214,7 +229,7 @@ fin/
 | `fin list-tasks` | List all tasks |
 | `fin open-editor` | Edit tasks in external editor |
 | `fine` | Edit tasks in external editor (shortcut) |
-| `fins` | List completed tasks from past week |
+| `fins` | List completed tasks from past week (shortcut) |
 | `fin list-labels` | List all known labels |
 | `fin digest <period>` | Generate digest report |
 | `fin report <period>` | Generate detailed report |
@@ -224,7 +239,7 @@ fin/
 
 - `--label, -l`: Add labels to tasks
 - `--days`: Show tasks from past N days (default: 1 for today and yesterday)
-- `--status`: Filter by status (open, completed)
+- `--status`: Filter by status (open, completed, all)
 - `--format`: Output format (text, markdown, html, csv)
 - `--date`: Filter by specific date
 
