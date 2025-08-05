@@ -202,7 +202,7 @@ def open_editor(label, date):
     # For now, use the first label if multiple provided
 
     # Check if tasks exist before opening editor
-    tasks = editor_manager.get_tasks_for_editing(label=label_filter, target_date=date)
+    tasks = editor_manager.get_tasks_for_editing(label=label[0] if label else None, target_date=date)
     if not tasks:
         click.echo("📝 No tasks found for editing.")
         return
@@ -210,7 +210,7 @@ def open_editor(label, date):
     # Open in editor
     click.echo("Opening tasks in editor...")
     completed_count, reopened_count = editor_manager.edit_tasks(
-        label=label_filter, target_date=date
+        label=label[0] if label else None, target_date=date
     )
 
 
