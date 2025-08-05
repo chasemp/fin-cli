@@ -94,14 +94,26 @@ class EditorManager:
             pattern_without_ref = r"^(\[ \]|\[x\]) (\d{4}-\d{2}-\d{2} \d{2}:\d{2})  (.+?)(  #.+)?$"
             match = re.match(pattern_without_ref, line.strip())
             
-            if not match:
-                return None
-            
-            status = match.group(1)
-            timestamp = match.group(2)
-            content = match.group(3)
-            labels_part = match.group(4) or ""
-            reference_part = ""
+            if match:
+                # Line has timestamp but no reference
+                status = match.group(1)
+                timestamp = match.group(2)
+                content = match.group(3)
+                labels_part = match.group(4) or ""
+                reference_part = ""
+            else:
+                # Try to match new tasks without timestamp (just checkbox and content)
+                pattern_new_task = r"^(\[ \]|\[\]|\[x\]) (.+?)(  #.+)?$"
+                match = re.match(pattern_new_task, line.strip())
+                
+                if not match:
+                    return None
+                
+                status = match.group(1)
+                timestamp = ""  # No timestamp for new tasks
+                content = match.group(2)
+                labels_part = match.group(3) or ""
+                reference_part = ""
 
         # Extract labels from hashtags (excluding the reference)
         labels = []
@@ -109,7 +121,10 @@ class EditorManager:
             hashtags = re.findall(r"#([^,#]+)", labels_part)
             labels = [tag.strip() for tag in hashtags]
 
+        # Normalize status - handle both [] and [ ] as incomplete
         is_completed = status == "[x]"
+        if status == "[]":
+            status = "[ ]"  # Normalize to standard format
         task_id = self._extract_task_id_from_reference(reference_part)
 
         return {
