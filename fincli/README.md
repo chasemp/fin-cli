@@ -89,6 +89,12 @@ fins
 # Include completed tasks from past 7 days
 fins --days 7
 
+# List open tasks from past week
+fins --status open
+
+# List all tasks from past 10 days
+fins --status all --days 10
+
 # List today and yesterday's open tasks (default)
 fin list-tasks
 
@@ -169,14 +175,23 @@ fin "Refactor database schema for better performance" --label "planning, infra, 
 # List all work tasks from the past week
 fins --label work --days 7
 
+# List open tasks from past week
+fins --status open
+
+# List all tasks from past 10 days
+fins --status all --days 10
+
 # List today and yesterday's open tasks (default)
 fin list-tasks
 
 # List today and yesterday's completed tasks
 fin list-tasks --status completed
 
-# Edit tasks from the past week
-fine --days 7
+# Edit today and yesterday's open tasks (default)
+fine
+
+# Edit completed tasks from past week
+fine --status completed --days 7
 
 # Edit all automation tasks
 fine --label automation
