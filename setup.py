@@ -4,15 +4,15 @@ setup(
     name="fin",
     version="0.1.0",
     description="A lightweight, macOS-first local task-tracking system",
-    author="Fin Team",
+    author="Chase Pettet (+AI)",
+    author_email="chase@owasp.org",
     packages=find_packages(),
     install_requires=[
         "click>=8.0.0",
     ],
     entry_points={
         "console_scripts": [
-            "fin=fin.cli.main:main",
-            "fin-legacy=fin.cli.legacy:legacy_main",
+            "fin=fincli.cli:cli",
         ],
     },
     python_requires=">=3.9",
@@ -26,4 +26,4 @@ setup(
         "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
     ],
-) 
+)

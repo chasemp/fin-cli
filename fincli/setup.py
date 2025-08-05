@@ -1,7 +1,8 @@
 """
 Setup configuration for FinCLI package.
 """
-from setuptools import setup, find_packages
+
+from setuptools import find_packages, setup
 
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
@@ -31,14 +32,14 @@ setup(
         "click>=8.0.0",
     ],
     entry_points={
-        'console_scripts': [
-            'fin=fincli.cli:cli',
-            'fins=fincli.cli:list_tasks',
-            'fine=fincli.cli:open_editor',
-            'fin-labels=fincli.cli:list_labels',
-            'fin-import=fincli.cli:import_tasks',
+        "console_scripts": [
+            "fin=fincli.cli:cli",
+            "fins=fincli.cli:list_tasks",
+            "fine=fincli.cli:open_editor",
+            "fin-labels=fincli.cli:list_labels",
+            "fin-import=fincli.cli:import_tasks",
         ],
     },
     include_package_data=True,
     zip_safe=False,
-) 
+)

@@ -1,200 +1,302 @@
-# Fin Dashboard
+# Fin - Task Management System
 
-A local-first, offline-capable task management dashboard that runs entirely in the browser using SQLite via WebAssembly.
+A lightweight, modular task tracking system with a powerful CLI interface and web dashboard.
 
 ## Features
 
-- **🔒 Local-First**: All data stays on your device
-- **📱 PWA**: Installable as a native app
-- **⌨️ Keyboard-Centric**: Full keyboard navigation and shortcuts
-- **🔍 Smart Filtering**: Search and filter by status, labels, dates
-- **📊 SQLite Integration**: Direct database file loading/saving
-- **🌙 Dark Mode**: Automatic dark mode support
-- **📱 Responsive**: Works on desktop and mobile
+- **CLI Interface**: Add, list, and manage tasks from the command line
+- **Web Dashboard**: Browser-based interface with SQLite via WebAssembly
+- **Label Management**: Organize tasks with tags and labels
+- **Analytics**: Track productivity with detailed reports and digests
+- **Import System**: Import tasks from CSV, JSON, and text files
+- **Offline Support**: Works entirely offline with local SQLite storage
 
 ## Quick Start
 
-### Option 1: Quick Launch (Recommended)
+### Installation
+
+1. **Clone the repository:**
+   ```bash
+   git clone <repository-url>
+   cd fin
+   ```
+
+2. **Install the package:**
+   ```bash
+   pip install -e .
+   ```
+
+3. **Initialize the database:**
+   ```bash
+   fin init
+   ```
+
+### Basic Usage
+
+#### Adding Tasks
+```bash
+# Add a simple task
+fin "Complete project documentation"
+
+# Add a task with labels
+fin "Review pull requests" --label work --label urgent
+
+# Add a task with multiple labels (shorthand)
+fin "Update dependencies" -l maintenance -l backend
+```
+
+#### Listing Tasks
+```bash
+# List all tasks
+fin list-tasks
+
+# List tasks with labels
+fin list-tasks --label work
+
+# List tasks from the past week
+fin list-tasks --week
+```
+
+#### Editing Tasks
+```bash
+# Open tasks in your default editor
+fin open-editor
+
+# Edit only work tasks
+fin open-editor --label work
+
+# Edit tasks from a specific date
+fin open-editor --date 2025-01-15
+```
+
+#### Managing Labels
+```bash
+# List all known labels
+fin list-labels
+
+# Filter tasks by label
+fin list-tasks --label urgent
+```
+
+### Web Dashboard
+
+1. **Open the dashboard:**
+   ```bash
+   # Navigate to the web directory
+   cd fin-web
+   
+   # Open index.html in your browser
+   open index.html
+   ```
+
+2. **Dashboard Features:**
+   - View tasks grouped by date
+   - Add new tasks with the `n` key
+   - Search and filter tasks
+   - Toggle task completion
+   - Keyboard shortcuts for quick navigation
+
+### Analytics and Reports
 
 ```bash
-# Open dashboard with default database (~/fin/tasks.db)
-./open_dashboard.sh
+# Generate daily digest
+fin digest daily
 
-# Open dashboard with specific database
-./open_dashboard.sh ~/fin/tasks.db
+# Generate weekly report in Markdown
+fin report weekly --format markdown
 
-# Or use the function (add to your shell profile)
-source fin_dashboard.sh
-fin ~/fin/tasks.db
+# Export analytics to CSV
+fin report monthly --format csv
 ```
 
-### Option 2: Simple HTTP Server
+## Advanced Features
+
+### Importing Tasks
 
 ```bash
-# Navigate to the dashboard directory
-cd fin-web/dashboard
+# Import from CSV file
+fin import csv sample_tasks.csv
 
-# Start a simple HTTP server
-python -m http.server 8000
+# Import from JSON file
+fin import json sample_tasks.json
 
-# Open in browser
-open http://localhost:8000
+# Import from text file
+fin import text sample_tasks.txt
 ```
 
-### Option 3: Direct File Access
+### Database Management
 
-```bash
-# Open index.html directly in your browser
-open index.html
-```
+The system uses SQLite for data storage. By default, the database is located at:
+- **CLI**: `~/fin/tasks.db`
+- **Web Dashboard**: Uses the same database location
 
-## Usage
+### Configuration
 
-### Loading Your Database
-
-**Automatic (when using scripts):**
-- The dashboard will show the database path in the URL
-- Click **"📁 Open DB"** to load the specified database
-- The path will be displayed in the empty state
-
-**Manual:**
-1. Click **"📁 Open DB"** or press `Ctrl+S` to load your SQLite database
-2. Select your `~/fin/tasks.db` file
-3. Your tasks will appear grouped by date
-
-### Adding Tasks
-
-- **Click**: Floating "+" button
-- **Keyboard**: Press `N` to open add task modal
-- **Submit**: Press `Enter` or click "Save Task"
-- **Cancel**: Press `Esc` or click "Cancel"
-- **Labels**: Add comma-separated labels (e.g., "work, urgent")
-- **Auto-save**: Changes are saved to browser storage automatically
-
-### Managing Tasks
-
-- **Toggle Completion**: Click checkbox or press `Space` on selected task
-- **Search**: Press `/` to focus search, type to filter by content or labels
-- **Status Filter**: Use "All", "Open", "Completed" buttons
-- **Label Filters**: Click any label pill to filter by it (multi-select)
-- **Clear Filters**: Press `Esc` to clear all filters
-
-### Saving Changes
-
-- **Auto-save**: Changes are automatically saved to browser storage
-- **Export**: Click "💾 Save DB" to download updated database file
-- **Sync**: Replace your `~/fin/tasks.db` with the downloaded file
-
-## Keyboard Shortcuts
-
-| Key | Action |
-|-----|--------|
-| `N` | Add new task |
-| `S` | Save database |
-| `/` | Focus search |
-| `↑/↓` | Navigate tasks |
-| `Space` | Toggle task completion |
-| `Esc` | Clear filters or close modals |
-| `?` | Show help |
-| `⌘⇧R` | Hard reload (clear cache) |
-
-## File Structure
-
-```
-dashboard/
-├── index.html          # Main HTML file
-├── style.css           # Styling and responsive design
-├── app.js              # Main application logic
-├── manifest.json       # PWA manifest
-├── serviceWorker.js    # Offline functionality
-└── README.md          # This file
-```
-
-## Database Integration
-
-The dashboard works with the same SQLite database used by the Fin CLI:
-
-```sql
-CREATE TABLE tasks (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    content TEXT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    completed_at TIMESTAMP NULL,
-    labels TEXT,
-    source TEXT DEFAULT 'cli'
-);
-```
-
-### Import Workflow
-
-1. **CLI Import**: Use `fin-import` to import tasks from external sources
-2. **Load in Dashboard**: Open the resulting `tasks.db` file
-3. **Manage Tasks**: Use the web interface to organize and complete tasks
-4. **Export**: Save the database and sync back to your system
-
-## PWA Features
-
-- **Installable**: Add to home screen on mobile/desktop
-- **Offline**: Works without internet connection
-- **Auto-update**: Service worker handles caching and updates
-
-## Browser Compatibility
-
-- **Chrome/Edge**: Full support
-- **Firefox**: Full support
-- **Safari**: Full support (iOS 11.3+)
-- **Mobile**: Works on all modern mobile browsers
+Environment variables:
+- `FIN_DB_PATH`: Custom database path
+- `EDITOR`: Default editor for task editing
 
 ## Development
 
-### Local Development
+### Running Tests
 
 ```bash
-# Start development server
-python -m http.server 8000
+# Run all tests
+pytest
 
-# Or use any other local server
-npx serve .
+# Run with coverage
+pytest --cov=fincli --cov-report=html
+
+# Run specific test categories
+pytest -m unit
+pytest -m integration
+pytest -m cli
 ```
 
-### Customization
+### Code Quality
 
-- **Styling**: Modify `style.css` for custom themes
-- **Features**: Extend `app.js` for additional functionality
-- **Database**: Modify SQL queries in `loadTasks()` method
+```bash
+# Format code
+black fincli/ tests/
+
+# Sort imports
+isort fincli/ tests/
+
+# Lint code
+flake8 fincli/ tests/
+```
+
+### Project Structure
+
+```
+fin/
+├── fincli/                 # Main Python package
+│   ├── fincli/
+│   │   ├── cli.py        # CLI commands
+│   │   ├── db.py         # Database management
+│   │   ├── tasks.py      # Task operations
+│   │   ├── labels.py     # Label management
+│   │   ├── editor.py     # Editor integration
+│   │   ├── analytics.py  # Analytics and reporting
+│   │   ├── utils.py      # Utility functions
+│   │   └── intake/       # Import modules
+│   └── setup.py          # Package configuration
+├── fin-web/              # Web dashboard
+│   ├── index.html        # Main dashboard
+│   ├── app.js           # Dashboard logic
+│   └── style.css        # Styling
+├── tests/               # Test suite
+└── README.md           # This file
+```
+
+## CLI Commands
+
+| Command | Description |
+|---------|-------------|
+| `fin init` | Initialize the database |
+| `fin add-task <content>` | Add a new task |
+| `fin list-tasks` | List all tasks |
+| `fin open-editor` | Edit tasks in external editor |
+| `fin list-labels` | List all known labels |
+| `fin digest <period>` | Generate digest report |
+| `fin report <period>` | Generate detailed report |
+| `fin import <format> <file>` | Import tasks from file |
+
+### Command Options
+
+- `--label, -l`: Add labels to tasks
+- `--week`: Show tasks from past 7 days
+- `--format`: Output format (text, markdown, html, csv)
+- `--date`: Filter by specific date
+
+## Keyboard Shortcuts (Web Dashboard)
+
+| Key | Action |
+|-----|--------|
+| `n` | Add new task |
+| `s` | Search tasks |
+| `/` | Focus search |
+| `↑/↓` | Navigate tasks |
+| `Space` | Toggle completion |
+| `Esc` | Close modal/cancel |
+| `Cmd+Shift+R` | Hard reload |
+| `?` | Show help |
+
+## Examples
+
+### Workflow Examples
+
+**Daily Task Management:**
+```bash
+# Add today's tasks
+fin "Review email backlog" -l work
+fin "Update project documentation" -l docs
+fin "Call client about requirements" -l urgent
+
+# List today's work tasks
+fin list-tasks --label work
+
+# Edit tasks in editor
+fin open-editor
+```
+
+**Weekly Planning:**
+```bash
+# Add weekly goals
+fin "Plan sprint tasks" -l planning
+fin "Review team performance" -l management
+fin "Update dependencies" -l maintenance
+
+# Generate weekly report
+fin report weekly --format markdown
+```
+
+**Import from External Sources:**
+```bash
+# Import from CSV
+fin import csv tasks.csv
+
+# Import from project management tool
+fin import json jira_export.json
+```
 
 ## Troubleshooting
 
-### Database Won't Load
-- Ensure the file is a valid SQLite database
-- Check that the database has the correct schema
-- Try creating a new database with the CLI first
+### Common Issues
 
-### PWA Not Installing
-- Use HTTPS in production (required for PWA)
-- Ensure manifest.json is accessible
-- Check browser console for service worker errors
-
-### Performance Issues
-- Large databases (>1000 tasks) may be slow
-- Consider filtering to recent tasks only
-- Use browser dev tools to monitor memory usage
-
-## Integration with Fin CLI
-
-The dashboard is designed to work seamlessly with the Fin CLI:
-
+**Database not found:**
 ```bash
-# Import tasks from external sources
-fin-import --source csv --file tasks.csv
-
-# Load the database in the dashboard
-# (Open dashboard and load the tasks.db file)
-
-# Export changes back to your system
-# (Save the database from dashboard and replace ~/fin/tasks.db)
+fin init
 ```
+
+**Editor not opening:**
+```bash
+export EDITOR=nano  # or vim, code, etc.
+```
+
+**Web dashboard not loading:**
+- Ensure you're opening `fin-web/index.html` in a modern browser
+- Check that the database file exists at `~/fin/tasks.db`
+
+### Getting Help
+
+- Run `fin --help` for command overview
+- Run `fin <command> --help` for specific command help
+- Check the test suite for usage examples
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests for new functionality
+5. Ensure all tests pass
+6. Submit a pull request
 
 ## License
 
-MIT License - see LICENSE file for details. 
+[Add your license information here]
+
+---
+
+**Fin** - Simple, powerful task management for developers and teams. 

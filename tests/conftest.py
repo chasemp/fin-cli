@@ -1,18 +1,19 @@
 """
 Pytest configuration and fixtures for Fin test suite
 """
-import pytest
-import tempfile
-import sqlite3
+
 import os
-from pathlib import Path
-from fin.database.manager import DatabaseManager
+import tempfile
+
+import pytest
+
+from fincli.db import DatabaseManager
 
 
 @pytest.fixture
 def temp_db_path():
     """Create a temporary database path for testing."""
-    with tempfile.NamedTemporaryFile(suffix='.db', delete=False) as tmp:
+    with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as tmp:
         return tmp.name
 
 
@@ -31,36 +32,36 @@ def sample_tasks():
     """Sample tasks for testing."""
     return [
         {
-            'content': 'Write documentation',
-            'labels': ['docs', 'work'],
-            'source': 'cli'
+            "content": "Write documentation",
+            "labels": ["docs", "work"],
+            "source": "cli",
         },
         {
-            'content': 'Buy groceries',
-            'labels': ['personal', 'shopping'],
-            'source': 'cli'
+            "content": "Buy groceries",
+            "labels": ["personal", "shopping"],
+            "source": "cli",
         },
         {
-            'content': 'Review pull request',
-            'labels': ['work', 'urgent'],
-            'source': 'cli'
+            "content": "Review pull request",
+            "labels": ["work", "urgent"],
+            "source": "cli",
         },
-        {
-            'content': 'Call mom',
-            'labels': None,
-            'source': 'cli'
-        }
+        {"content": "Call mom", "labels": None, "source": "cli"},
     ]
 
 
 @pytest.fixture
 def populated_db(db_manager, sample_tasks):
     """Create a database populated with sample tasks."""
+    from fincli.tasks import TaskManager
+
+    task_manager = TaskManager(db_manager)
+
     for task in sample_tasks:
-        db_manager.add_task(
-            content=task['content'],
-            labels=task['labels'],
-            source=task['source']
+        task_manager.add_task(
+            content=task["content"],
+            labels=task["labels"],
+            source=task["source"],
         )
     return db_manager
 
@@ -69,6 +70,7 @@ def populated_db(db_manager, sample_tasks):
 def cli_runner():
     """Create a Click CLI runner for testing."""
     from click.testing import CliRunner
+
     return CliRunner()
 
 
@@ -76,5 +78,5 @@ def cli_runner():
 def mock_home_dir(monkeypatch):
     """Mock home directory for testing."""
     with tempfile.TemporaryDirectory() as tmp_dir:
-        monkeypatch.setenv('HOME', tmp_dir)
-        yield tmp_dir 
+        monkeypatch.setenv("HOME", tmp_dir)
+        yield tmp_dir

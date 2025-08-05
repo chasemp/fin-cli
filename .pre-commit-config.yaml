@@ -1,0 +1,41 @@
+repos:
+  - repo: local
+    hooks:
+      - id: pytest
+        name: pytest
+        entry: pytest
+        language: system
+        pass_filenames: false
+        always_run: true
+        args: [tests/, --tb=short]
+        stages: [pre-commit]
+        
+      - id: pytest-cov
+        name: pytest-coverage
+        entry: pytest
+        language: system
+        pass_filenames: false
+        always_run: true
+        args: [tests/, --cov=fincli, --cov-report=term-missing, --cov-fail-under=90]
+        stages: [pre-push]
+        
+      - id: flake8
+        name: flake8
+        entry: flake8
+        language: system
+        args: [fincli/, tests/]
+        stages: [pre-commit]
+        
+      - id: black-check
+        name: black
+        entry: black
+        language: system
+        args: [--check, fincli/, tests/]
+        stages: [pre-commit]
+        
+      - id: isort-check
+        name: isort
+        entry: isort
+        language: system
+        args: [--check-only, fincli/, tests/]
+        stages: [pre-commit] 
