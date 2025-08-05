@@ -89,6 +89,9 @@ fins
 # Include completed tasks from past 7 days
 fins --days 7
 
+# List all open tasks (regardless of age)
+fin list-tasks --status open
+
 # Filter by label
 fins --label work
 fins --label infra
@@ -105,6 +108,9 @@ fine
 
 # Filter by label
 fine --label work
+
+# Filter by days
+fine --days 7
 
 # Filter by date
 fine --date 2025-07-28
@@ -159,6 +165,12 @@ fin "Refactor database schema for better performance" --label "planning, infra, 
 
 # List all work tasks from the past week
 fins --label work --days 7
+
+# List all open tasks (regardless of age)
+fin list-tasks --status open
+
+# Edit tasks from the past week
+fine --days 7
 
 # Edit all automation tasks
 fine --label automation
