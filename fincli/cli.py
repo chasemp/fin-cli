@@ -160,11 +160,18 @@ def list_tasks(days, label, status):
     db_manager = DatabaseManager()
     task_manager = TaskManager(db_manager)
 
-    # Get tasks
-    tasks = task_manager.list_tasks(include_completed=(status in ["completed", "all"]))
+    # Get tasks (include completed tasks if we need them for status filtering)
+    tasks = task_manager.list_tasks(include_completed=True)
 
-    # Apply date filtering
+    # Apply date filtering first
     tasks = filter_tasks_by_date_range(tasks, days=days)
+
+    # Apply status filtering
+    if status == "open":
+        tasks = [task for task in tasks if task["completed_at"] is None]
+    elif status == "completed":
+        tasks = [task for task in tasks if task["completed_at"] is not None]
+    # For "all", we keep all tasks (both open and completed)
 
     # Apply label filtering if requested
     if label:
