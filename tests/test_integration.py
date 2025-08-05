@@ -2,6 +2,7 @@
 Integration tests for Fin task tracking system
 """
 
+import os
 import subprocess
 import sys
 import tempfile
@@ -34,6 +35,7 @@ class TestIntegration:
             ],
             capture_output=True,
             text=True,
+            env={"FIN_DB_PATH": temp_db_path, **os.environ},
         )
 
         assert result.returncode == 0
@@ -72,7 +74,7 @@ class TestIntegration:
             for label in labels:
                 cmd.extend(["--label", label])
 
-            result = subprocess.run(cmd, capture_output=True, text=True)
+            result = subprocess.run(cmd, capture_output=True, text=True, env={"FIN_DB_PATH": temp_db_path, **os.environ})
             assert result.returncode == 0
 
         # Verify all tasks in database
@@ -98,6 +100,7 @@ class TestIntegration:
             [sys.executable, "-m", "fincli.cli", "add-task"],
             capture_output=True,
             text=True,
+            env={"FIN_DB_PATH": temp_db_path, **os.environ},
         )
 
         assert result.returncode != 0
@@ -117,6 +120,7 @@ class TestIntegration:
         # Add task via CLI
         subprocess.run(
             [sys.executable, "-m", "fincli.cli", "add-task", "Persistent task"],
+            env={"FIN_DB_PATH": temp_db_path, **os.environ},
             capture_output=True,
             text=True,
         )
@@ -141,6 +145,7 @@ class TestIntegration:
             ],
             capture_output=True,
             text=True,
+            env={"FIN_DB_PATH": temp_db_path, **os.environ},
         )
 
         # Verify both tasks exist
@@ -165,6 +170,7 @@ class TestIntegration:
             [sys.executable, "-m", "fincli.cli", "add-task", special_content],
             capture_output=True,
             text=True,
+            env={"FIN_DB_PATH": temp_db_path, **os.environ},
         )
 
         assert result.returncode == 0
@@ -198,6 +204,7 @@ class TestIntegration:
             ],
             capture_output=True,
             text=True,
+            env={"FIN_DB_PATH": temp_db_path, **os.environ},
         )
 
         assert result.returncode == 0
