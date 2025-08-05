@@ -296,11 +296,25 @@ class EditorManager:
             if task_info["task_id"] is None:
                 # This is a new task
                 if task_info["content"].strip():  # Only add if content is not empty
-                    self.task_manager.add_task(
+                    # Add current timestamp for new tasks that don't have one
+                    current_time = datetime.now().strftime("%Y-%m-%d %H:%M")
+                    
+                    # Add the task to the database
+                    task_id = self.task_manager.add_task(
                         task_info["content"], 
                         labels=task_info["labels"] if task_info["labels"] else None
                     )
                     new_tasks_count += 1
+                    
+                    # Update the task with the current timestamp if it didn't have one
+                    if not task_info.get("timestamp"):
+                        with self.db_manager.get_connection() as conn:
+                            cursor = conn.cursor()
+                            cursor.execute(
+                                "UPDATE tasks SET created_at = ? WHERE id = ?",
+                                (current_time, task_id)
+                            )
+                            conn.commit()
                 continue
 
 
