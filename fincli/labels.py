@@ -76,7 +76,7 @@ class LabelManager:
             query += " ORDER BY created_at DESC"
 
             # Use case-insensitive pattern matching
-            pattern = f"%{label.lower()}%"
+            pattern = f"%{str(label).lower()}%"
             cursor.execute(query, (pattern,))
 
             tasks = []
@@ -84,7 +84,8 @@ class LabelManager:
                 task_labels = row[4].split(",") if row[4] else []
                 # Additional check for exact label match (case-insensitive)
                 if any(
-                    label.lower() in task_label.lower() for task_label in task_labels
+                    str(label).lower() in task_label.lower()
+                    for task_label in task_labels
                 ):
                     tasks.append(
                         {

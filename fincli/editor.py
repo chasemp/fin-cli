@@ -14,7 +14,8 @@ from typing import Any, Dict, List, Optional
 from .db import DatabaseManager
 from .labels import LabelManager
 from .tasks import TaskManager
-from .utils import filter_tasks_by_date_range, format_task_for_display, get_editor
+from .utils import (filter_tasks_by_date_range, format_task_for_display,
+                    get_editor)
 
 
 class EditorManager:
@@ -122,9 +123,10 @@ class EditorManager:
             List of tasks to edit
         """
         if label:
-            # Filter by label
+            # Filter by label - handle both string and tuple
+            label_str = label[0] if isinstance(label, (tuple, list)) else label
             return self.label_manager.filter_tasks_by_label(
-                label, include_completed=True
+                label_str, include_completed=True
             )
         elif target_date:
             # Filter by date

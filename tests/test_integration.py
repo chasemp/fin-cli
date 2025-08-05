@@ -223,7 +223,17 @@ class TestRealDatabase:
         # Use a temporary home directory
         with tempfile.TemporaryDirectory() as tmp_home:
             monkeypatch.setenv("HOME", tmp_home)
+            monkeypatch.delenv("FIN_DB_PATH", raising=False)
 
+            # Create database manager (should create ~/.fin/tasks.db)
+            db_manager = DatabaseManager()
+
+            # Verify directory and file exist
+            fin_dir = Path(tmp_home) / "fin"
+            db_path = fin_dir / "tasks.db"
+
+            assert fin_dir.exists()
+            assert db_path.exists()
             # Create database manager (should create ~/.fin/tasks.db)
             db_manager = DatabaseManager()
 

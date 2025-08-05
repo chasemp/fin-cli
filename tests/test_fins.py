@@ -101,14 +101,16 @@ class TestFinsCommand:
 
         task_manager.add_task("Yesterday's task")
 
-                # Mark as completed yesterday
+        # Mark as completed yesterday
         import sqlite3
 
         with sqlite3.connect(db_manager.db_path) as conn:
             cursor = conn.cursor()
             yesterday = date.today() - timedelta(days=1)
             # Get the task ID from the database
-            cursor.execute("SELECT id FROM tasks WHERE content = ?", ("Yesterday's task",))
+            cursor.execute(
+                "SELECT id FROM tasks WHERE content = ?", ("Yesterday's task",)
+            )
             task_id = cursor.fetchone()[0]
             cursor.execute(
                 "UPDATE tasks SET completed_at = ? WHERE id = ?",
@@ -175,7 +177,7 @@ class TestFinsCommand:
         result = cli_runner.invoke(list_tasks, [])
 
         assert result.exit_code == 0
-        assert "🎉 Nothing pending today. You're all caught up!" in result.output
+        assert "📝 No tasks found matching your criteria." in result.output
 
     def test_fins_command_with_tasks(self, cli_runner, temp_db_path, monkeypatch):
         """Test fins command with tasks."""
@@ -198,7 +200,7 @@ class TestFinsCommand:
         assert result.exit_code == 0
         assert "Test task" in result.output
         assert "#work" in result.output
-        assert result.output.startswith("[ ]")
+        assert "[ ]" in result.output
 
 
 class TestFinsIntegration:

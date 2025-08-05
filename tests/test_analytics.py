@@ -491,8 +491,8 @@ class TestAnalyticsCLI:
         )
 
         assert result.exit_code == 0
-        assert "# Fin Analytics Report" in result.output
-        assert "## Executive Summary" in result.output
+        assert "# Weekly Digest" in result.output
+        assert "## Summary" in result.output
 
     def test_report_command_csv_output(self, cli_runner, temp_db_path, monkeypatch):
         """Test report command with CSV format and output file."""

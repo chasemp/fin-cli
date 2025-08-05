@@ -86,9 +86,7 @@ def import_text_tasks(file_path: str = None, **kwargs) -> Dict[str, Any]:
                     labels.append("source:text")
 
                     # Add task to database
-                    task_manager.add_task(
-                        task_content, labels, source="text-import"
-                    )
+                    task_manager.add_task(task_content, labels, source="text-import")
                     imported_count += 1
 
                 except Exception as e:
