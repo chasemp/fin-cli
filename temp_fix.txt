@@ -1,9 +1,0 @@
-            cursor = conn.cursor()
-            cursor.execute(
-                """
-                UPDATE tasks
-                SET completed_at = CURRENT_TIMESTAMP
-                WHERE content = 'Completed today task'
-            """
-            )
-            conn.commit()
