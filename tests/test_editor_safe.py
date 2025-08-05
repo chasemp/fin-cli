@@ -177,6 +177,153 @@ class TestEditorSafe:
         new_tasks = [t for t in all_tasks if t["content"] == "New task"]
         assert len(new_tasks) == 1
 
+    def test_parse_edited_content_add_new_task_without_timestamp(self, temp_db_path):
+        """Test parsing edited content with a new task added without timestamp."""
+        db_manager = DatabaseManager(temp_db_path)
+        task_manager = TaskManager(db_manager)
+        editor_manager = EditorManager(db_manager)
+
+        # Add an existing task
+        task_manager.add_task("Existing task", labels=["test"])
+        
+        # Create original content
+        tasks = editor_manager.get_tasks_for_editing(label="test")
+        original_content = editor_manager.create_edit_file_content(tasks)
+        
+        # Add a new task line without timestamp (new format)
+        new_task_line = "[] New task without timestamp  #test"
+        modified_content = original_content + "\n" + new_task_line
+        
+        # Parse the modified content
+        completed_count, reopened_count, new_tasks_count, deleted_count = editor_manager.parse_edited_content(modified_content)
+        
+        assert completed_count == 0
+        assert reopened_count == 0
+        assert new_tasks_count == 1
+        
+        # Verify the new task was actually added to the database with timestamp
+        all_tasks = task_manager.list_tasks(include_completed=True)
+        new_tasks = [t for t in all_tasks if t["content"] == "New task without timestamp"]
+        assert len(new_tasks) == 1
+        
+        # Verify the task has a timestamp (should be automatically added)
+        new_task = new_tasks[0]
+        assert new_task["created_at"] is not None
+        assert new_task["created_at"] != ""
+
+    def test_parse_edited_content_add_new_task_with_labels(self, temp_db_path):
+        """Test parsing edited content with a new task added without timestamp but with labels."""
+        db_manager = DatabaseManager(temp_db_path)
+        task_manager = TaskManager(db_manager)
+        editor_manager = EditorManager(db_manager)
+
+        # Add an existing task
+        task_manager.add_task("Existing task", labels=["test"])
+        
+        # Create original content
+        tasks = editor_manager.get_tasks_for_editing(label="test")
+        original_content = editor_manager.create_edit_file_content(tasks)
+        
+        # Add a new task line without timestamp but with labels
+        new_task_line = "[] New task with labels  #work #urgent"
+        modified_content = original_content + "\n" + new_task_line
+        
+        # Parse the modified content
+        completed_count, reopened_count, new_tasks_count, deleted_count = editor_manager.parse_edited_content(modified_content)
+        
+        assert completed_count == 0
+        assert reopened_count == 0
+        assert new_tasks_count == 1
+        
+        # Verify the new task was actually added to the database with labels
+        all_tasks = task_manager.list_tasks(include_completed=True)
+        new_tasks = [t for t in all_tasks if t["content"] == "New task with labels"]
+        assert len(new_tasks) == 1
+        
+        # Verify the task has labels and timestamp
+        new_task = new_tasks[0]
+        assert new_task["created_at"] is not None
+        assert new_task["created_at"] != ""
+        assert "work" in new_task["labels"]
+        assert "urgent" in new_task["labels"]
+
+    def test_parse_edited_content_add_new_task_with_space_format(self, temp_db_path):
+        """Test parsing edited content with a new task using [ ] format."""
+        db_manager = DatabaseManager(temp_db_path)
+        task_manager = TaskManager(db_manager)
+        editor_manager = EditorManager(db_manager)
+
+        # Add an existing task
+        task_manager.add_task("Existing task", labels=["test"])
+        
+        # Create original content
+        tasks = editor_manager.get_tasks_for_editing(label="test")
+        original_content = editor_manager.create_edit_file_content(tasks)
+        
+        # Add a new task line with [ ] format (with space)
+        new_task_line = "[ ] New task with space format  #test"
+        modified_content = original_content + "\n" + new_task_line
+        
+        # Parse the modified content
+        completed_count, reopened_count, new_tasks_count, deleted_count = editor_manager.parse_edited_content(modified_content)
+        
+        assert completed_count == 0
+        assert reopened_count == 0
+        assert new_tasks_count == 1
+        
+        # Verify the new task was actually added to the database
+        all_tasks = task_manager.list_tasks(include_completed=True)
+        new_tasks = [t for t in all_tasks if t["content"] == "New task with space format"]
+        assert len(new_tasks) == 1
+        
+        # Verify the task has a timestamp
+        new_task = new_tasks[0]
+        assert new_task["created_at"] is not None
+        assert new_task["created_at"] != ""
+
+    def test_parse_task_line_new_format(self, temp_db_path):
+        """Test that parse_task_line correctly handles new task formats without timestamps."""
+        db_manager = DatabaseManager(temp_db_path)
+        editor_manager = EditorManager(db_manager)
+
+        # Test parsing new task without timestamp
+        result = editor_manager.parse_task_line("[] New task without timestamp")
+        assert result is not None
+        assert result["content"] == "New task without timestamp"
+        assert result["status"] == "[ ]"  # Should be normalized
+        assert result["timestamp"] == ""  # No timestamp
+        assert result["task_id"] is None  # New task
+        assert result["is_completed"] is False
+
+        # Test parsing new task with labels
+        result = editor_manager.parse_task_line("[] New task with labels  #work #urgent")
+        assert result is not None
+        assert result["content"] == "New task with labels"
+        assert result["status"] == "[ ]"  # Should be normalized
+        assert result["timestamp"] == ""  # No timestamp
+        assert result["task_id"] is None  # New task
+        assert result["is_completed"] is False
+        assert "work" in result["labels"]
+        assert "urgent" in result["labels"]
+
+        # Test parsing new task with space format
+        result = editor_manager.parse_task_line("[ ] New task with space format")
+        assert result is not None
+        assert result["content"] == "New task with space format"
+        assert result["status"] == "[ ]"
+        assert result["timestamp"] == ""  # No timestamp
+        assert result["task_id"] is None  # New task
+        assert result["is_completed"] is False
+
+        # Test that existing format still works
+        result = editor_manager.parse_task_line("[ ] 2024-01-01 10:00  Existing task  #ref:task_123")
+        assert result is not None
+        assert result["content"] == "Existing task"
+        assert result["status"] == "[ ]"
+        assert result["timestamp"] == "2024-01-01 10:00"
+        assert result["task_id"] == 123
+        assert result["is_completed"] is False
+
     def test_parse_edited_content_reword_task(self, temp_db_path):
         """Test parsing edited content with a task reworded."""
         db_manager = DatabaseManager(temp_db_path)
