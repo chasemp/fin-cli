@@ -54,25 +54,25 @@ fin "Complete project documentation"
 fin list-tasks
 
 # List today and yesterday's completed tasks
-fin list-tasks --status completed
+fin list-tasks -s completed
 
 # List today and yesterday's all tasks (open + completed)
-fin list-tasks --status all
+fin list-tasks -s all
 
 # List completed tasks from past week (shortcut)
 fins
 
 # List open tasks from past week
-fins --status open
+fins -s open
 
 # List all tasks from past 10 days
-fins --status all --days 10
+fins -s all -d 10
 
 # Edit today and yesterday's open tasks (default)
 fine
 
 # Edit completed tasks from past week
-fine --status completed --days 7
+fine -s completed -d 7
 
 # List tasks with labels
 fin list-tasks --label work
@@ -81,7 +81,7 @@ fin list-tasks --label work
 fin list-tasks --days 30
 
 # List completed tasks from the past week
-fin list-tasks --status completed --days 7
+fin list-tasks -s completed -d 7
 ```
 
 #### Editing Tasks
@@ -238,8 +238,8 @@ fin/
 ### Command Options
 
 - `--label, -l`: Add labels to tasks
-- `--days`: Show tasks from past N days (default: 1 for today and yesterday)
-- `--status`: Filter by status (open, completed, all)
+- `--days, -d`: Show tasks from past N days (default: 1 for today and yesterday)
+- `--status, -s`: Filter by status (open, completed, all)
 - `--format`: Output format (text, markdown, html, csv)
 - `--date`: Filter by specific date
 

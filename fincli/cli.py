@@ -147,10 +147,10 @@ def init(db_path: str):
 
 
 @cli.command(name="list-tasks")
-@click.option("--days", default=1, help="Show tasks from the past N days (default: 1)")
+@click.option("--days", "-d", default=1, help="Show tasks from the past N days (default: 1)")
 @click.option("--label", "-l", multiple=True, help="Filter by labels")
 @click.option(
-    "--status",
+    "--status", "-s",
     type=click.Choice(["open", "completed", "all"]),
     default="open",
     help="Filter by status",
@@ -315,10 +315,10 @@ def fine_command():
     @click.command()
     @click.option("--label", "-l", multiple=True, help="Filter by labels")
     @click.option("--date", help="Filter by date (YYYY-MM-DD)")
-    @click.option("--days", default=1, help="Show tasks from the past N days (default: 1)")
+    @click.option("--days", "-d", default=1, help="Show tasks from the past N days (default: 1)")
     @click.option("--dry-run", is_flag=True, help="Show what would be edited without opening editor")
     @click.option(
-        "--status",
+        "--status", "-s",
         type=click.Choice(["open", "completed", "all"]),
         default="open",
         help="Filter by status (default: open)",
@@ -478,11 +478,11 @@ def fins_command():
     
     # Create a standalone Click command
     @click.command()
-    @click.option("--days", default=7, help="Show tasks from the past N days (default: 7)")
+    @click.option("--days", "-d", default=7, help="Show tasks from the past N days (default: 7)")
     @click.option("--label", "-l", multiple=True, help="Filter by labels")
     @click.option("--today", is_flag=True, help="Show only today's tasks (overrides default days behavior)")
     @click.option(
-        "--status",
+        "--status", "-s",
         type=click.Choice(["open", "completed", "all"]),
         default="completed",
         help="Filter by status (default: completed)",
