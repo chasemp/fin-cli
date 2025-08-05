@@ -315,7 +315,7 @@ class TestLabelFilteringInCommands:
             task_manager = TaskManager(db_manager)
             task_manager.add_task("Work task", labels=["work"])
             task_manager.add_task("Personal task", labels=["personal"])
-            db_manager.get_connection().close()
+            pass
             del db_manager
             del task_manager
             from fincli.cli import open_editor

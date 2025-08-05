@@ -26,6 +26,7 @@ def add_task(content: str, labels: tuple, source: str = "cli"):
     labels_list = list(labels) if labels else None
 
     # Add the task with labels (TaskManager handles normalization)
+    task_id = task_manager.add_task(content, labels_list, source)
 
     # Get normalized labels for display (sorted alphabetically)
     normalized_labels = []

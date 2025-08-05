@@ -147,7 +147,7 @@ class TestFineCommand:
             db_manager = DatabaseManager()
             task_manager = TaskManager(db_manager)
             task_manager.add_task("Test task", labels=["work"])
-            db_manager.get_connection().close()
+            pass
             del db_manager
             del task_manager
             from fincli.cli import open_editor
