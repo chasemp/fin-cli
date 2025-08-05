@@ -12,7 +12,7 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "fin=fincli.cli:cli",
+            "fin=fincli.cli:main",
             "fins=fincli.cli:fins_command",
             "fine=fincli.cli:fine_command",
             "fin-labels=fincli.cli:list_labels",
