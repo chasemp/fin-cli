@@ -109,6 +109,36 @@ Open
 [ ] 2025-08-06 15:00  routine task
 ```
 
+### Configuration
+
+FinCLI uses a configuration file at `~/fin/config.json` to customize behavior:
+
+```bash
+# View current configuration
+fin config
+
+# Enable auto-today for important tasks (default)
+fin config --auto-today true
+
+# Disable auto-today for important tasks
+fin config --auto-today false
+
+# Set default days for task lists
+fin config --default-days 7
+
+# Set default editor
+fin config --default-editor vim
+```
+
+#### Auto-Today for Important Tasks
+
+By default, important tasks (`#i`) automatically get the today label (`#t`) added. This helps with backlog management by ensuring important tasks appear in today's list.
+
+- **Enabled** (default): Important tasks automatically get `#t` label
+- **Disabled**: Important tasks only get `#i` label
+
+Tasks with both `#i` and `#t` appear only in the Important section, not duplicated in Today.
+
 ### Task Editing
 
 ```bash
@@ -187,6 +217,7 @@ fin restore-latest --yes
 | `fin list -s all` | List all tasks |
 | `fine` | Edit tasks in editor |
 | `fins` | View completed tasks |
+| `fin config` | Manage configuration |
 | `fin export file.csv` | Export tasks |
 | `fin import file.csv` | Import tasks |
 | `fin backup` | Create backup |
@@ -202,7 +233,7 @@ fin restore-latest --yes
 ## Examples
 
 ```bash
-# Add important task
+# Add important task (auto-gets today label)
 fin "meeting with client #i"
 
 # Add today task
@@ -214,6 +245,9 @@ fin "critical deadline #i #t"
 # List with organized sections
 fin list
 
+# Filter by today label (shows important + today tasks)
+fin list -l t
+
 # Edit important tasks
 fine
 
@@ -222,8 +256,18 @@ fin export priority.csv
 
 # Import with priority labels
 fin import tasks.csv -l i -l t
+
+# Configure auto-today behavior
+fin config --auto-today false
 ```
 
 ## Configuration
 
-The database is stored at `~/fin/tasks.db` by default. Set `FIN_DB_PATH` environment variable to use a different location. 
+The database is stored at `~/fin/tasks.db` by default. Set `FIN_DB_PATH` environment variable to use a different location.
+
+Configuration is stored at `~/fin/config.json` and includes:
+
+- `auto_today_for_important`: Auto-add today label to important tasks (default: true)
+- `show_sections`: Show organized sections in task lists (default: true)
+- `default_days`: Default number of days for task lists (default: 1)
+- `default_editor`: Default editor for task editing (default: system default) 
