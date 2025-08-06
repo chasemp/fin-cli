@@ -629,16 +629,19 @@ def list_backups():
 @cli.command(name="restore")
 @click.argument("backup_id", type=int)
 @click.option("--force", is_flag=True, help="Skip confirmation prompt")
-def restore_backup(backup_id, force):
+@click.option("--yes", "-y", is_flag=True, help="Skip confirmation prompt (alias for --force)")
+def restore_backup(backup_id, force, yes):
     """Restore database from a backup."""
     db_manager = DatabaseManager()
     backup_manager = DatabaseBackup(db_manager.db_path)
     
-    if not force:
+    skip_confirmation = force or yes
+    
+    if not skip_confirmation:
         click.echo(f"⚠️  This will overwrite your current database with backup_{backup_id:03d}")
-        click.echo("   This action cannot be undone!")
-        if not click.confirm("Do you want to continue?"):
-            click.echo("Restore cancelled")
+        click.echo("💡 Use --force or --yes to skip this confirmation")
+        if not click.confirm("Proceed with restore?"):
+            click.echo("Restore cancelled.")
             return
     
     if backup_manager.rollback(backup_id):
@@ -649,7 +652,8 @@ def restore_backup(backup_id, force):
 
 @cli.command(name="restore-latest")
 @click.option("--force", is_flag=True, help="Skip confirmation prompt")
-def restore_latest_backup(force):
+@click.option("--yes", "-y", is_flag=True, help="Skip confirmation prompt (alias for --force)")
+def restore_latest_backup(force, yes):
     """Restore database from the latest backup."""
     db_manager = DatabaseManager()
     backup_manager = DatabaseBackup(db_manager.db_path)
@@ -659,11 +663,13 @@ def restore_latest_backup(force):
         click.echo("❌ No backups found")
         return
     
-    if not force:
+    skip_confirmation = force or yes
+    
+    if not skip_confirmation:
         click.echo(f"⚠️  This will overwrite your current database with backup_{latest_id:03d}")
-        click.echo("   This action cannot be undone!")
-        if not click.confirm("Do you want to continue?"):
-            click.echo("Restore cancelled")
+        click.echo("💡 Use --force or --yes to skip this confirmation")
+        if not click.confirm("Proceed with restore?"):
+            click.echo("Restore cancelled.")
             return
     
     if backup_manager.restore_latest():
@@ -772,7 +778,8 @@ def _export_txt(tasks, file_path):
 @click.option("--label", "-l", multiple=True, help="Add labels to imported tasks")
 @click.option("--clear-existing", is_flag=True, help="Clear existing tasks before import")
 @click.option("--force", is_flag=True, help="Skip confirmation prompt")
-def import_tasks_from_file(file_path, format, label, clear_existing, force):
+@click.option("--yes", "-y", is_flag=True, help="Skip confirmation prompt (alias for --force)")
+def import_tasks_from_file(file_path, format, label, clear_existing, force, yes):
     """Import tasks from a flat file."""
     db_manager = DatabaseManager()
     task_manager = TaskManager(db_manager)
@@ -789,14 +796,22 @@ def import_tasks_from_file(file_path, format, label, clear_existing, force):
             click.echo("❌ Could not auto-detect format. Please specify --format")
             raise click.Abort()
     
+    # Combine force and yes flags
+    skip_confirmation = force or yes
+    
     # Show import preview
-    if not force:
+    if not skip_confirmation:
         preview = _get_import_preview(file_path, format, label, clear_existing)
         click.echo(preview)
         
-        if not click.confirm("Proceed with import?"):
-            click.echo("Import cancelled.")
-            return
+        # Only prompt for confirmation if it's a destructive operation
+        if clear_existing:
+            if not click.confirm("⚠️  This will DELETE ALL existing tasks. Proceed?"):
+                click.echo("Import cancelled.")
+                return
+        else:
+            # For non-destructive imports, just proceed without confirmation
+            click.echo("💡 Use --force or --yes to skip this preview in the future")
     
     try:
         if clear_existing:
