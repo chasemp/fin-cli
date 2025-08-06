@@ -8,6 +8,38 @@ from datetime import date, datetime, timedelta
 from typing import Any, Dict, List
 
 
+def is_important_task(task: Dict[str, Any]) -> bool:
+    """
+    Check if a task is marked as important (has #i label).
+    
+    Args:
+        task: Task dictionary
+        
+    Returns:
+        True if task has important label, False otherwise
+    """
+    if not task.get("labels"):
+        return False
+    
+    return "i" in task["labels"]
+
+
+def is_today_task(task: Dict[str, Any]) -> bool:
+    """
+    Check if a task is marked as today (has #t label).
+    
+    Args:
+        task: Task dictionary
+        
+    Returns:
+        True if task has today label, False otherwise
+    """
+    if not task.get("labels"):
+        return False
+    
+    return "t" in task["labels"]
+
+
 def format_task_for_display(task: Dict[str, Any]) -> str:
     """
     Format a task for display in syslog-like Markdown format.
@@ -89,8 +121,13 @@ def filter_tasks_by_date_range(
             if lookback_date <= task_date <= today:
                 filtered_tasks.append(task)
 
-    # Sort by created_at ascending
-    filtered_tasks.sort(key=lambda x: x["created_at"])
+    # Sort by priority first, then by created_at ascending
+    # Important tasks (#i) come first, then today tasks (#t), then regular tasks
+    filtered_tasks.sort(key=lambda x: (
+        not is_important_task(x),  # Important tasks first
+        not is_today_task(x),      # Then today tasks
+        x["created_at"]            # Then by creation date
+    ))
 
     return filtered_tasks
 

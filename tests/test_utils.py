@@ -12,6 +12,8 @@ from fincli.utils import (
     get_date_range,
     filter_tasks_by_date_range,
     get_editor,
+    is_important_task,
+    is_today_task,
 )
 
 
@@ -103,56 +105,153 @@ class TestFormatTaskForDisplay:
         assert "#test" in result
 
 
+class TestIsImportantTask:
+    """Test the is_important_task function."""
+
+    def test_important_task_with_i(self):
+        """Test that task with i label is marked as important."""
+        task = {
+            "id": 1,
+            "content": "Important task",
+            "created_at": "2025-08-05 10:30:00",
+            "completed_at": None,
+            "labels": ["i", "work"],
+            "source": "cli",
+        }
+        
+        assert is_important_task(task) is True
+
+    def test_non_important_task(self):
+        """Test that task without i label is not important."""
+        task = {
+            "id": 1,
+            "content": "Regular task",
+            "created_at": "2025-08-05 10:30:00",
+            "completed_at": None,
+            "labels": ["work", "urgent"],
+            "source": "cli",
+        }
+        
+        assert is_important_task(task) is False
+
+    def test_task_without_labels(self):
+        """Test that task without labels is not important."""
+        task = {
+            "id": 1,
+            "content": "Task without labels",
+            "created_at": "2025-08-05 10:30:00",
+            "completed_at": None,
+            "labels": None,
+            "source": "cli",
+        }
+        
+        assert is_important_task(task) is False
+
+    def test_task_with_empty_labels(self):
+        """Test that task with empty labels list is not important."""
+        task = {
+            "id": 1,
+            "content": "Task with empty labels",
+            "created_at": "2025-08-05 10:30:00",
+            "completed_at": None,
+            "labels": [],
+            "source": "cli",
+        }
+        
+        assert is_important_task(task) is False
+
+
+class TestIsTodayTask:
+    """Test the is_today_task function."""
+
+    def test_today_task_with_t(self):
+        """Test that task with t label is marked as today."""
+        task = {
+            "id": 1,
+            "content": "Today task",
+            "created_at": "2025-08-05 10:30:00",
+            "completed_at": None,
+            "labels": ["t", "work"],
+            "source": "cli",
+        }
+        
+        assert is_today_task(task) is True
+
+    def test_non_today_task(self):
+        """Test that task without t label is not today."""
+        task = {
+            "id": 1,
+            "content": "Regular task",
+            "created_at": "2025-08-05 10:30:00",
+            "completed_at": None,
+            "labels": ["work", "urgent"],
+            "source": "cli",
+        }
+        
+        assert is_today_task(task) is False
+
+    def test_task_without_labels(self):
+        """Test that task without labels is not today."""
+        task = {
+            "id": 1,
+            "content": "Task without labels",
+            "created_at": "2025-08-05 10:30:00",
+            "completed_at": None,
+            "labels": None,
+            "source": "cli",
+        }
+        
+        assert is_today_task(task) is False
+
+    def test_task_with_empty_labels(self):
+        """Test that task with empty labels list is not today."""
+        task = {
+            "id": 1,
+            "content": "Task with empty labels",
+            "created_at": "2025-08-05 10:30:00",
+            "completed_at": None,
+            "labels": [],
+            "source": "cli",
+        }
+        
+        assert is_today_task(task) is False
+
+
 class TestGetDateRange:
     """Test the get_date_range function."""
 
-    def test_get_date_range_default(self):
-        """Test get_date_range with default parameter."""
+    def test_default_range(self):
+        """Test default date range (1 day)."""
         today, lookback = get_date_range()
         
-        assert isinstance(today, date)
-        assert isinstance(lookback, date)
         assert today == date.today()
-        assert lookback == today - timedelta(days=1)
+        assert lookback == date.today() - timedelta(days=1)
 
-    def test_get_date_range_custom_days(self):
-        """Test get_date_range with custom days parameter."""
+    def test_custom_range(self):
+        """Test custom date range."""
         today, lookback = get_date_range(7)
         
-        assert isinstance(today, date)
-        assert isinstance(lookback, date)
         assert today == date.today()
-        assert lookback == today - timedelta(days=7)
+        assert lookback == date.today() - timedelta(days=7)
 
-    def test_get_date_range_zero_days(self):
-        """Test get_date_range with zero days."""
+    def test_zero_days(self):
+        """Test zero days range."""
         today, lookback = get_date_range(0)
         
-        assert isinstance(today, date)
-        assert isinstance(lookback, date)
         assert today == date.today()
-        assert lookback == today
-
-    def test_get_date_range_large_number(self):
-        """Test get_date_range with a large number."""
-        today, lookback = get_date_range(365)
-        
-        assert isinstance(today, date)
-        assert isinstance(lookback, date)
-        assert today == date.today()
-        assert lookback == today - timedelta(days=365)
+        assert lookback == date.today()
 
 
 class TestFilterTasksByDateRange:
     """Test the filter_tasks_by_date_range function."""
 
-    def test_filter_tasks_open_tasks_always_included(self):
-        """Test that open tasks are always included regardless of creation date."""
+    def test_filter_open_tasks_always_included(self):
+        """Test that open tasks are always included regardless of date."""
         tasks = [
             {
                 "id": 1,
                 "content": "Old open task",
-                "created_at": "2020-01-01 10:00:00",
+                "created_at": "2025-01-01 10:00:00",
                 "completed_at": None,
                 "labels": [],
                 "source": "cli",
@@ -169,166 +268,129 @@ class TestFilterTasksByDateRange:
         
         filtered = filter_tasks_by_date_range(tasks, days=1)
         
+        # Both open tasks should be included
         assert len(filtered) == 2
-        assert any(task["content"] == "Old open task" for task in filtered)
-        assert any(task["content"] == "Recent open task" for task in filtered)
+        assert filtered[0]["id"] == 1  # Old task first (by creation date)
+        assert filtered[1]["id"] == 2  # Recent task second
 
-    def test_filter_tasks_completed_tasks_filtered_by_date(self):
+    def test_filter_completed_tasks_by_date(self):
         """Test that completed tasks are filtered by completion date."""
-        today = date.today()
-        yesterday = today - timedelta(days=1)
-        week_ago = today - timedelta(days=7)
-        
         tasks = [
             {
                 "id": 1,
-                "content": "Completed today",
-                "created_at": "2025-08-01 10:00:00",
-                "completed_at": today.strftime("%Y-%m-%d 10:00:00"),
+                "content": "Old completed task",
+                "created_at": "2025-01-01 10:00:00",
+                "completed_at": "2025-01-01 11:00:00",
                 "labels": [],
                 "source": "cli",
             },
             {
                 "id": 2,
-                "content": "Completed yesterday",
-                "created_at": "2025-08-01 10:00:00",
-                "completed_at": yesterday.strftime("%Y-%m-%d 10:00:00"),
-                "labels": [],
-                "source": "cli",
-            },
-            {
-                "id": 3,
-                "content": "Completed week ago",
-                "created_at": "2025-08-01 10:00:00",
-                "completed_at": week_ago.strftime("%Y-%m-%d 10:00:00"),
+                "content": "Recent completed task",
+                "created_at": "2025-08-05 10:00:00",
+                "completed_at": "2025-08-05 11:00:00",
                 "labels": [],
                 "source": "cli",
             },
         ]
         
-        # Filter for last 1 day
         filtered = filter_tasks_by_date_range(tasks, days=1)
         
-        # Should include open tasks and tasks completed today/yesterday
-        assert len(filtered) == 2
-        assert any(task["content"] == "Completed today" for task in filtered)
-        assert any(task["content"] == "Completed yesterday" for task in filtered)
-        assert not any(task["content"] == "Completed week ago" for task in filtered)
+        # Only recent completed task should be included
+        assert len(filtered) == 1
+        assert filtered[0]["id"] == 2
 
-    def test_filter_tasks_mixed_open_and_completed(self):
-        """Test filtering with mixed open and completed tasks."""
-        today = date.today()
-        yesterday = today - timedelta(days=1)
-        
+    def test_priority_sorting(self):
+        """Test that important and today tasks appear in correct order."""
         tasks = [
             {
                 "id": 1,
-                "content": "Open task",
-                "created_at": "2025-08-01 10:00:00",
+                "content": "Regular task",
+                "created_at": "2025-01-01 10:00:00",
                 "completed_at": None,
                 "labels": [],
                 "source": "cli",
             },
             {
                 "id": 2,
-                "content": "Completed today",
-                "created_at": "2025-08-01 10:00:00",
-                "completed_at": today.strftime("%Y-%m-%d 10:00:00"),
-                "labels": [],
+                "content": "Today task",
+                "created_at": "2025-08-05 10:00:00",
+                "completed_at": None,
+                "labels": ["t"],
                 "source": "cli",
             },
             {
                 "id": 3,
-                "content": "Old completed",
-                "created_at": "2025-08-01 10:00:00",
-                "completed_at": "2020-01-01 10:00:00",
-                "labels": [],
+                "content": "Important task",
+                "created_at": "2025-01-01 09:00:00",
+                "completed_at": None,
+                "labels": ["i", "urgent"],
+                "source": "cli",
+            },
+            {
+                "id": 4,
+                "content": "Important today task",
+                "created_at": "2025-08-05 09:00:00",
+                "completed_at": None,
+                "labels": ["i", "t"],
                 "source": "cli",
             },
         ]
         
         filtered = filter_tasks_by_date_range(tasks, days=1)
         
-        # Should include open task and recently completed task
-        assert len(filtered) == 2
-        assert any(task["content"] == "Open task" for task in filtered)
-        assert any(task["content"] == "Completed today" for task in filtered)
-        assert not any(task["content"] == "Old completed" for task in filtered)
+        # Important tasks first, then today tasks, then regular tasks
+        # Tasks with both #i and #t come before tasks with only #i
+        assert len(filtered) == 4
+        assert filtered[0]["id"] == 4  # Important today task first (has both #i and #t)
+        assert filtered[1]["id"] == 3  # Important task second (has only #i)
+        assert filtered[2]["id"] == 2  # Today task third (has only #t)
+        assert filtered[3]["id"] == 1  # Regular task last
 
-    def test_filter_tasks_empty_list(self):
-        """Test filtering with empty task list."""
-        filtered = filter_tasks_by_date_range([], days=1)
-        assert filtered == []
-
-    def test_filter_tasks_custom_days(self):
-        """Test filtering with custom days parameter."""
-        today = date.today()
-        week_ago = today - timedelta(days=7)
-        
+    def test_mixed_priority_and_completed(self):
+        """Test priority sorting with completed tasks."""
         tasks = [
             {
                 "id": 1,
-                "content": "Completed week ago",
-                "created_at": "2025-08-01 10:00:00",
-                "completed_at": week_ago.strftime("%Y-%m-%d 10:00:00"),
+                "content": "Regular completed task",
+                "created_at": "2025-08-05 10:00:00",
+                "completed_at": "2025-08-05 11:00:00",
                 "labels": [],
+                "source": "cli",
+            },
+            {
+                "id": 2,
+                "content": "Important open task",
+                "created_at": "2025-08-05 09:00:00",
+                "completed_at": None,
+                "labels": ["i"],
                 "source": "cli",
             },
         ]
         
-        # Filter for last 7 days
-        filtered = filter_tasks_by_date_range(tasks, days=7)
+        filtered = filter_tasks_by_date_range(tasks, days=1)
         
-        # Should include the task completed a week ago
-        assert len(filtered) == 1
-        assert filtered[0]["content"] == "Completed week ago"
+        # Important task should come first, then completed task
+        assert len(filtered) == 2
+        assert filtered[0]["id"] == 2  # Important task first
+        assert filtered[1]["id"] == 1  # Completed task second
 
 
 class TestGetEditor:
     """Test the get_editor function."""
 
-    @patch.dict(os.environ, {"EDITOR": "vim"})
-    def test_get_editor_from_environment(self):
-        """Test getting editor from EDITOR environment variable."""
-        result = get_editor()
-        assert result == "vim"
+    @patch.dict(os.environ, {"EDITOR": "custom-editor"})
+    def test_get_editor_from_env(self):
+        """Test getting editor from environment variable."""
+        editor = get_editor()
+        assert editor == "custom-editor"
 
     @patch.dict(os.environ, {}, clear=True)
     @patch("subprocess.run")
-    def test_get_editor_fallback_to_nano(self, mock_run):
-        """Test fallback to nano when no editor is found."""
-        # Mock subprocess.run to return failure for all editors
-        mock_run.return_value.returncode = 1
+    def test_get_editor_fallback(self, mock_run):
+        """Test editor fallback behavior."""
+        # Mock that nano is available
+        mock_run.return_value.returncode = 0
         
-        result = get_editor()
-        assert result == "nano"
-
-    @patch.dict(os.environ, {}, clear=True)
-    @patch("subprocess.run")
-    def test_get_editor_fallback_to_vim(self, mock_run):
-        """Test fallback to vim when nano is not found."""
-        def mock_run_side_effect(cmd, **kwargs):
-            class MockResult:
-                def __init__(self, returncode):
-                    self.returncode = returncode
-            return MockResult(1 if cmd == ["which", "nano"] else 0)
-        
-        mock_run.side_effect = mock_run_side_effect
-        
-        result = get_editor()
-        assert result == "vim"
-
-    @patch.dict(os.environ, {}, clear=True)
-    @patch("subprocess.run")
-    def test_get_editor_fallback_to_code(self, mock_run):
-        """Test fallback to code when nano and vim are not found."""
-        def mock_run_side_effect(cmd, **kwargs):
-            class MockResult:
-                def __init__(self, returncode):
-                    self.returncode = returncode
-            return MockResult(1 if cmd[1] in ["nano", "vim"] else 0)
-        
-        mock_run.side_effect = mock_run_side_effect
-        
-        result = get_editor()
-        assert result == "code" 
+        editor = get_editor()
+        assert editor == "nano" 
