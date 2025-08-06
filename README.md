@@ -64,6 +64,8 @@ fin "weekly review #recur:weekly"
 fin "implement feature #depends:task123"
 ```
 
+**Note:** The words `and` and `or` are reserved and cannot be used as labels. Use complex filtering instead: `fin list -l "work and urgent"`.
+
 ### Listing Tasks
 
 Tasks are displayed in organized sections:
@@ -151,6 +153,20 @@ fin list -l "work or personal"
 
 # Combine multiple criteria
 fin list -l "work and urgent" -l "personal"
+```
+
+#### Reserved Words
+The following words are reserved and cannot be used as labels because they're used for complex filtering:
+- `and` - Used for AND logic in filtering
+- `or` - Used for OR logic in filtering
+
+**Example:**
+```bash
+# ❌ This will fail
+fin "Task with reserved label #and"
+
+# ✅ Use complex filtering instead
+fin list -l "work and urgent"
 ```
 
 #### Bulk Operations in Editor
