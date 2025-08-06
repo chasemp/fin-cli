@@ -258,55 +258,68 @@ python -m pytest tests/
 python -m pytest tests/ --cov=fincli --cov-report=term-missing
 ```
 
-### Importing Tasks
+### Exporting and Importing Tasks
 
-**Import from CSV file:**
+**Export tasks to flat files:**
 ```bash
-# Import from default location (~/fin/tasks.csv)
-fin-import --source csv
+# Export all tasks to CSV format
+fin export tasks.csv
 
-# Import from specific file
-fin-import --source csv --file /path/to/tasks.csv
+# Export all tasks to JSON format
+fin export tasks.json -f json
 
-# Import and delete source file
-fin-import --source csv --delete-after-import
+# Export all tasks to text format (editor-compatible)
+fin export tasks.txt -f txt
 ```
 
-**Import from JSON file:**
+**Import tasks from flat files:**
 ```bash
-fin-import --source json --file tasks.json
+# Import from file (auto-detects format)
+fin import tasks.csv
+
+# Import from specific format
+fin import tasks.json -f json
+
+# Import with additional labels
+fin import tasks.csv -l work -l urgent
+
+# Import and replace all existing tasks
+fin import tasks.csv --clear-existing
+
+# Import without confirmation prompts
+fin import tasks.csv --yes
 ```
 
-**Import from text file:**
-```bash
-fin-import --source text --file tasks.txt
-```
+**Available formats:** csv, json, txt
 
-**Available sources:** csv, json, text, sheets, excel
-
-**File formats:**
+**Export formats:**
 
 **CSV format:**
 ```csv
-Task,Label
-"Finish sync script",planning
-"Review PR",backend
+ID,Content,Status,Created,Completed,Labels,Source
+1,"Finish sync script",open,2024-01-01 10:00,,planning,cli
+2,"Review PR",completed,2024-01-01 09:00,2024-01-01 11:00,backend,cli
 ```
 
 **JSON format:**
 ```json
 [
   {
-    "task": "Finish sync script",
-    "labels": ["planning", "backend"]
+    "id": 1,
+    "content": "Finish sync script",
+    "status": "open",
+    "created_at": "2024-01-01 10:00",
+    "completed_at": null,
+    "labels": ["planning"],
+    "source": "cli"
   }
 ]
 ```
 
-**Text format:**
+**Text format (editor-compatible):**
 ```text
-Finish sync script,planning
-Review PR,backend,urgent
+[ ] 2024-01-01 10:00  Finish sync script  #planning  #ref:task_1
+[x] 2024-01-01 09:00  Review PR  #backend  #ref:task_2
 ```
 
 ## License

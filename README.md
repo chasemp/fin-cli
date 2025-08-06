@@ -156,17 +156,32 @@ fin report monthly --format csv
 
 ## Advanced Features
 
-### Importing Tasks
+### Exporting and Importing Tasks
 
 ```bash
-# Import from CSV file
-fin import csv sample_tasks.csv
+# Export all tasks to CSV format
+fin export tasks.csv
 
-# Import from JSON file
-fin import json sample_tasks.json
+# Export all tasks to JSON format
+fin export tasks.json -f json
 
-# Import from text file
-fin import text sample_tasks.txt
+# Export all tasks to text format (editor-compatible)
+fin export tasks.txt -f txt
+
+# Import tasks from file (auto-detects format)
+fin import tasks.csv
+
+# Import tasks from specific format
+fin import tasks.json -f json
+
+# Import tasks with additional labels
+fin import tasks.csv -l work -l urgent
+
+# Import and replace all existing tasks
+fin import tasks.csv --clear-existing
+
+# Import without confirmation prompts
+fin import tasks.csv --yes
 ```
 
 ### Database Management
@@ -250,7 +265,8 @@ fin/
 | `fin list-labels` | List all known labels |
 | `fin digest <period>` | Generate digest report |
 | `fin report <period>` | Generate detailed report |
-| `fin import <format> <file>` | Import tasks from file |
+| `fin export <file>` | Export all tasks to flat file |
+| `fin import <file>` | Import tasks from flat file |
 
 ### Command Options
 
@@ -312,10 +328,16 @@ fin report weekly --format markdown
 **Import from External Sources:**
 ```bash
 # Import from CSV
-fin import csv tasks.csv
+fin import tasks.csv
 
 # Import from project management tool
-fin import json jira_export.json
+fin import jira_export.json
+
+# Import with additional labels
+fin import tasks.csv -l imported -l external
+
+# Import and replace all existing tasks
+fin import tasks.csv --clear-existing
 ```
 
 ## Troubleshooting
