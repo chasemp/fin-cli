@@ -14,7 +14,7 @@ from fincli.editor import EditorManager
 from fincli.intake import get_available_sources, import_from_source
 from fincli.labels import LabelManager
 from fincli.tasks import TaskManager
-from fincli.utils import filter_tasks_by_date_range, format_task_for_display
+from fincli.utils import filter_tasks_by_date_range, format_task_for_display, is_important_task, is_today_task
 from fincli.backup import DatabaseBackup
 from datetime import datetime
 import re
@@ -86,6 +86,28 @@ def handle_direct_task(args):
         sys.exit(1)
 
     content = " ".join(task_content)
+    
+    # Extract hashtags from content and add them as labels
+    # Exclude task reference patterns like #task23, #ref:task23, etc.
+    hashtags = re.findall(r'#(?!task\d+|ref:task\d+)(\w+)', content)
+    for hashtag in hashtags:
+        labels.append(hashtag)
+    
+    # Remove hashtags from content (but preserve task references)
+    # First, temporarily replace task references
+    content = re.sub(r'#(task\d+|ref:task\d+)', r'__TASK_REF_\1__', content)
+    # Remove other hashtags
+    content = re.sub(r'#\w+', '', content)
+    # Restore task references
+    content = re.sub(r'__TASK_REF_(task\d+|ref:task\d+)__', r'#\1', content)
+    
+    # Clean up extra whitespace
+    content = re.sub(r'\s+', ' ', content).strip()
+    
+    if not content:
+        click.echo("Error: Task content cannot be empty after removing hashtags")
+        sys.exit(1)
+    
     add_task(content, tuple(labels), "cli")
 
 
@@ -184,9 +206,36 @@ def _list_tasks_impl(days, label, status):
         click.echo("📝 No tasks found matching your criteria.")
         return
 
-    for task in tasks:
-        formatted_task = format_task_for_display(task)
-        click.echo(formatted_task)
+    # Organize tasks into sections
+    important_tasks = [task for task in tasks if is_important_task(task)]
+    today_tasks = [task for task in tasks if is_today_task(task) and not is_important_task(task)]
+    open_tasks = [task for task in tasks if not is_important_task(task) and not is_today_task(task)]
+
+    # Display Important section
+    if important_tasks:
+        click.echo("Important")
+        for i, task in enumerate(important_tasks, 1):
+            formatted_task = format_task_for_display(task)
+            click.echo(f"{i}")
+            click.echo(f"{formatted_task}")
+        click.echo()
+
+    # Display Today section
+    if today_tasks:
+        click.echo("Today")
+        for i, task in enumerate(today_tasks, 1):
+            formatted_task = format_task_for_display(task)
+            click.echo(f"{i}")
+            click.echo(f"{formatted_task}")
+        click.echo()
+
+    # Display Open section
+    if open_tasks:
+        click.echo("Open")
+        for i, task in enumerate(open_tasks, 1):
+            formatted_task = format_task_for_display(task)
+            click.echo(f"{i}")
+            click.echo(f"{formatted_task}")
 
 
 @cli.command(name="list-tasks")
@@ -1087,10 +1136,36 @@ def main():
             click.echo("💡 Or see all commands: fin --help")
             return
         else:
-            # Display tasks
-            for task in tasks:
-                formatted_task = format_task_for_display(task)
-                click.echo(formatted_task)
+            # Organize tasks into sections
+            important_tasks = [task for task in tasks if is_important_task(task)]
+            today_tasks = [task for task in tasks if is_today_task(task) and not is_important_task(task)]
+            open_tasks = [task for task in tasks if not is_important_task(task) and not is_today_task(task)]
+
+            # Display Important section
+            if important_tasks:
+                click.echo("Important")
+                for i, task in enumerate(important_tasks, 1):
+                    formatted_task = format_task_for_display(task)
+                    click.echo(f"{i}")
+                    click.echo(f"{formatted_task}")
+                click.echo()
+
+            # Display Today section
+            if today_tasks:
+                click.echo("Today")
+                for i, task in enumerate(today_tasks, 1):
+                    formatted_task = format_task_for_display(task)
+                    click.echo(f"{i}")
+                    click.echo(f"{formatted_task}")
+                click.echo()
+
+            # Display Open section
+            if open_tasks:
+                click.echo("Open")
+                for i, task in enumerate(open_tasks, 1):
+                    formatted_task = format_task_for_display(task)
+                    click.echo(f"{i}")
+                    click.echo(f"{formatted_task}")
             return
 
     # Check if this is a direct task addition (no subcommand)

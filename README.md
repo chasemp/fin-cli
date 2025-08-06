@@ -1,382 +1,229 @@
-# Fin - Task Management System
+# FinCLI - A lightweight task tracking system
 
-A lightweight, modular task tracking system with a powerful CLI interface and web dashboard.
-
-## Features
-
-- **CLI Interface**: Add, list, and manage tasks from the command line
-- **Web Dashboard**: Browser-based interface with SQLite via WebAssembly
-- **Label Management**: Organize tasks with tags and labels
-- **Analytics**: Track productivity with detailed reports and digests
-- **Import System**: Import tasks from CSV, JSON, and text files
-- **Offline Support**: Works entirely offline with local SQLite storage
+A simple command-line tool for managing your local task database.
 
 ## Quick Start
 
-### Installation
-
-1. **Clone the repository:**
-   ```bash
-   git clone <repository-url>
-   cd fin
-   ```
-
-2. **Install the package:**
-   ```bash
-   pip install -e .
-   ```
-
-3. **Initialize the database:**
-   ```bash
-   fin init
-   ```
-
-### Basic Usage
-
-#### Adding Tasks
 ```bash
-# Add a simple task
-fin "Complete project documentation"
+# Add a task
+fin "my new task"
 
-# Add a task with labels
-fin "Review pull requests" --label work --label urgent
+# Add an important task (shows in Important section)
+fin "urgent meeting #i"
 
-# Add a task with multiple labels (shorthand)
-fin "Update dependencies" -l maintenance -l backend
+# Add a today task (shows in Today section)
+fin "daily standup #t"
 
-# Add a task directly (shortcut for add-task)
-fin "Complete project documentation"
-```
+# List today's tasks with organized sections
+fin list
 
-#### Listing Tasks
-```bash
-# List today and yesterday's open tasks (default)
-fin list-tasks
-
-# List today and yesterday's completed tasks
-fin list-tasks -s completed
-
-# List today and yesterday's completed tasks (alias)
-fin list-tasks -s done
-
-# List today and yesterday's all tasks (open + completed)
-fin list-tasks -s all
-
-# List completed tasks from past week (shortcut)
+# List completed tasks from last week
 fins
 
-# List open tasks from past week
-fins -s open
+# Edit tasks in your editor
+fine
+```
 
-# List all tasks from past 10 days
-fins -s all -d 10
+## Installation
 
-# Add a completed task
-fins 'task that is already done'
+```bash
+pip install -e .
+```
 
-# Add a completed task with labels
-fins 'finished task with labels' -l work -l urgent
+## Usage
 
-# Edit today and yesterday's open tasks (default)
+### Adding Tasks
+
+```bash
+# Direct task addition
+fin "my new task"
+
+# Add with labels
+fin "work task #work #urgent"
+
+# Add important task (shows in Important section)
+fin "urgent meeting #i"
+
+# Add today task (shows in Today section)
+fin "daily standup #t"
+
+# Add task that's both important and for today
+fin "critical deadline #i #t"
+
+# Add completed task directly
+fins "already done task"
+```
+
+### Listing Tasks
+
+Tasks are displayed in organized sections:
+
+```bash
+# List today and yesterday's open tasks (default)
+fin list
+
+# List with custom date range
+fin list -d 7
+
+# List completed tasks
+fin list -s completed
+
+# List all tasks (open and completed)
+fin list -s all
+```
+
+### Priority System
+
+Tasks are organized into sections based on labels:
+
+- **Important** (`#i`): High priority tasks that appear first
+- **Today** (`#t`): Tasks marked for today
+- **Open**: Regular tasks without priority labels
+
+```bash
+# Add important task
+fin "urgent meeting #i"
+
+# Add today task
+fin "daily standup #t"
+
+# Add regular task
+fin "routine task"
+
+# Tasks display in organized sections
+fin list
+```
+
+**Example Output:**
+```
+Important
+1
+[ ] 2025-08-06 15:00  urgent meeting  #i
+
+Today
+1
+[ ] 2025-08-06 15:00  daily standup  #t
+
+Open
+1
+[ ] 2025-08-06 15:00  routine task
+```
+
+### Task Editing
+
+```bash
+# Edit today's tasks in your editor
 fine
 
-# Edit completed tasks from past week
-fine -s completed -d 7
+# Edit with custom date range
+fine -d 7
 
-# Edit completed tasks from past week (alias)
-fine -s done -d 7
+# Edit completed tasks
+fine -s completed
 
-# List tasks with labels
-fin list-tasks --label work
-
-# List tasks from the past 30 days
-fin list-tasks --days 30
-
-# List completed tasks from the past week
-fin list-tasks -s completed -d 7
-
-# List completed tasks from the past week (alias)
-fin list-tasks -s done -d 7
+# Preview what would be edited
+fine --dry-run
 ```
 
-#### Editing Tasks
-```bash
-# Open tasks in your default editor
-fin open-editor
-
-# Edit only work tasks
-fin open-editor --label work
-
-# Edit tasks from the past week
-fin open-editor --days 7
-
-# Edit tasks from a specific date
-fin open-editor --date 2025-01-15
-```
-
-#### Managing Labels
-```bash
-# List all known labels
-fin list-labels
-
-# Filter tasks by label
-fin list-tasks --label urgent
-```
-
-### Web Dashboard
-
-1. **Open the dashboard:**
-   ```bash
-   # Navigate to the web directory
-   cd fin-web
-   
-   # Open index.html in your browser
-   open index.html
-   ```
-
-2. **Dashboard Features:**
-   - View tasks grouped by date
-   - Add new tasks with the `n` key
-   - Search and filter tasks
-   - Toggle task completion
-   - Keyboard shortcuts for quick navigation
-
-### Analytics and Reports
+### Viewing Completed Tasks
 
 ```bash
-# Generate daily digest
-fin digest daily
+# View recent completed tasks
+fins
 
-# Generate weekly report in Markdown
-fin report weekly --format markdown
+# View completed tasks from last 30 days
+fins -d 30
 
-# Export analytics to CSV
-fin report monthly --format csv
+# Add completed task directly
+fins "task I already finished"
 ```
-
-## Advanced Features
 
 ### Exporting and Importing Tasks
 
 ```bash
-# Export all tasks to CSV format
+# Export all tasks to CSV
 fin export tasks.csv
 
-# Export all tasks to JSON format
+# Export to JSON with completion status
 fin export tasks.json -f json
 
-# Export all tasks to text format (editor-compatible)
+# Export to editor-compatible format
 fin export tasks.txt -f txt
 
-# Import tasks from file (auto-detects format)
+# Import tasks (auto-detects format)
 fin import tasks.csv
 
-# Import tasks from specific format
-fin import tasks.json -f json
+# Import with labels
+fin import tasks.txt -l work -l urgent
 
-# Import tasks with additional labels
-fin import tasks.csv -l work -l urgent
-
-# Import and replace all existing tasks
-fin import tasks.csv --clear-existing
-
-# Import without confirmation prompts
-fin import tasks.csv --yes
+# Import and clear existing tasks
+fin import tasks.csv --clear-existing --yes
 ```
 
-### Database Management
-
-The system uses SQLite for data storage. By default, the database is located at:
-- **CLI**: `~/fin/tasks.db`
-- **Web Dashboard**: Uses the same database location
-
-### Configuration
-
-Environment variables:
-- `FIN_DB_PATH`: Custom database path
-- `EDITOR`: Default editor for task editing
-
-## Development
-
-### Running Tests
+### Backup and Restore
 
 ```bash
-# Run all tests
-pytest
+# Create backup
+fin backup
 
-# Run with coverage
-pytest --cov=fincli --cov-report=html
+# List backups
+fin list-backups
 
-# Run specific test categories
-pytest -m unit
-pytest -m integration
-pytest -m cli
+# Restore from backup
+fin restore 001
+
+# Restore latest backup
+fin restore-latest --yes
 ```
 
-### Code Quality
-
-```bash
-# Format code
-black fincli/ tests/
-
-# Sort imports
-isort fincli/ tests/
-
-# Lint code
-flake8 fincli/ tests/
-```
-
-### Project Structure
-
-```
-fin/
-├── fincli/                 # Main Python package
-│   ├── fincli/
-│   │   ├── cli.py        # CLI commands
-│   │   ├── db.py         # Database management
-│   │   ├── tasks.py      # Task operations
-│   │   ├── labels.py     # Label management
-│   │   ├── editor.py     # Editor integration
-│   │   ├── analytics.py  # Analytics and reporting
-│   │   ├── utils.py      # Utility functions
-│   │   └── intake/       # Import modules
-│   └── setup.py          # Package configuration
-├── fin-web/              # Web dashboard
-│   ├── index.html        # Main dashboard
-│   ├── app.js           # Dashboard logic
-│   └── style.css        # Styling
-├── tests/               # Test suite
-└── README.md           # This file
-```
-
-## CLI Commands
+## Command Reference
 
 | Command | Description |
 |---------|-------------|
-| `fin init` | Initialize the database |
-| `fin add-task <content>` | Add a new task |
-| `fin <content>` | Add a new task (shortcut) |
-| `fin list-tasks` | List all tasks |
-| `fin list` | List all tasks (alias) |
-| `fin open-editor` | Edit tasks in external editor |
-| `fine` | Edit tasks in external editor (shortcut) |
-| `fins` | List completed tasks from past week (shortcut) |
-| `fins <content>` | Add a completed task |
-| `fin list-labels` | List all known labels |
-| `fin digest <period>` | Generate digest report |
-| `fin report <period>` | Generate detailed report |
-| `fin export <file>` | Export all tasks to flat file |
-| `fin import <file>` | Import tasks from flat file |
+| `fin "task"` | Add task directly |
+| `fin list` | List today's open tasks (organized sections) |
+| `fin list -d 7` | List tasks from last 7 days |
+| `fin list -s completed` | List completed tasks |
+| `fin list -s all` | List all tasks |
+| `fine` | Edit tasks in editor |
+| `fins` | View completed tasks |
+| `fin export file.csv` | Export tasks |
+| `fin import file.csv` | Import tasks |
+| `fin backup` | Create backup |
+| `fin restore 001` | Restore from backup |
 
-### Command Options
+## Options
 
-- `--label, -l`: Add labels to tasks
-- `--days, -d`: Show tasks from past N days (default: 1 for today and yesterday)
-- `--status, -s`: Filter by status (open, completed, done, all)
-- `--format`: Output format (text, markdown, html, csv)
-- `--date`: Filter by specific date
-
-## Keyboard Shortcuts (Web Dashboard)
-
-| Key | Action |
-|-----|--------|
-| `n` | Add new task |
-| `s` | Search tasks |
-| `/` | Focus search |
-| `↑/↓` | Navigate tasks |
-| `Space` | Toggle completion |
-| `Esc` | Close modal/cancel |
-| `Cmd+Shift+R` | Hard reload |
-| `?` | Show help |
+- `-d, --days N` - Show tasks from last N days
+- `-s, --status [open\|completed\|done\|all]` - Filter by status
+- `-l, --label LABEL` - Filter by label
+- `--force, --yes` - Skip confirmation prompts
 
 ## Examples
 
-### Workflow Examples
-
-**Daily Task Management:**
 ```bash
-# Add today's tasks
-fin "Review email backlog" -l work
-fin "Update project documentation" -l docs
-fin "Call client about requirements" -l urgent
+# Add important task
+fin "meeting with client #i"
 
-# Add completed tasks
-fins 'Email backlog reviewed' -l work
-fins 'Documentation updated' -l docs
+# Add today task
+fin "daily standup #t"
 
-# List today's work tasks
-fin list-tasks --label work
+# Add task that's both important and for today
+fin "critical deadline #i #t"
 
-# List today's work tasks (alias)
-fin list --label work
+# List with organized sections
+fin list
 
-# Edit tasks in editor
-fin open-editor
+# Edit important tasks
+fine
+
+# Export important tasks
+fin export priority.csv
+
+# Import with priority labels
+fin import tasks.csv -l i -l t
 ```
 
-**Weekly Planning:**
-```bash
-# Add weekly goals
-fin "Plan sprint tasks" -l planning
-fin "Review team performance" -l management
-fin "Update dependencies" -l maintenance
+## Configuration
 
-# Generate weekly report
-fin report weekly --format markdown
-```
-
-**Import from External Sources:**
-```bash
-# Import from CSV
-fin import tasks.csv
-
-# Import from project management tool
-fin import jira_export.json
-
-# Import with additional labels
-fin import tasks.csv -l imported -l external
-
-# Import and replace all existing tasks
-fin import tasks.csv --clear-existing
-```
-
-## Troubleshooting
-
-### Common Issues
-
-**Database not found:**
-```bash
-fin init
-```
-
-**Editor not opening:**
-```bash
-export EDITOR=nano  # or vim, code, etc.
-```
-
-**Web dashboard not loading:**
-- Ensure you're opening `fin-web/index.html` in a modern browser
-- Check that the database file exists at `~/fin/tasks.db`
-
-### Getting Help
-
-- Run `fin --help` for command overview
-- Run `fin <command> --help` for specific command help
-- Check the test suite for usage examples
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests for new functionality
-5. Ensure all tests pass
-6. Submit a pull request
-
-## License
-
-[Add your license information here]
-
----
-
-**Fin** - Simple, powerful task management for developers and teams. 
+The database is stored at `~/fin/tasks.db` by default. Set `FIN_DB_PATH` environment variable to use a different location. 
