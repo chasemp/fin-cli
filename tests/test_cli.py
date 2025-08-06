@@ -180,11 +180,12 @@ class TestCLI:
 
     def test_cli_reserved_word_validation_and(self, temp_db_path, monkeypatch):
         """Test that reserved word 'and' cannot be used as a label."""
-        # Mock the database path
+        # Mock the database path and set environment variable
         monkeypatch.setattr(
             "fincli.db.DatabaseManager.__init__",
             lambda self, db_path=None: self._init_mock_db(temp_db_path),
         )
+        monkeypatch.setenv("FIN_DB_PATH", temp_db_path)
         
         # Mock sys.argv to simulate direct task addition
         import sys
@@ -219,11 +220,12 @@ class TestCLI:
 
     def test_cli_reserved_word_validation_or(self, temp_db_path, monkeypatch):
         """Test that reserved word 'or' cannot be used as a label."""
-        # Mock the database path
+        # Mock the database path and set environment variable
         monkeypatch.setattr(
             "fincli.db.DatabaseManager.__init__",
             lambda self, db_path=None: self._init_mock_db(temp_db_path),
         )
+        monkeypatch.setenv("FIN_DB_PATH", temp_db_path)
         
         # Mock sys.argv to simulate direct task addition
         import sys
@@ -258,11 +260,12 @@ class TestCLI:
 
     def test_cli_reserved_word_validation_case_insensitive(self, temp_db_path, monkeypatch):
         """Test that reserved word validation is case insensitive."""
-        # Mock the database path
+        # Mock the database path and set environment variable
         monkeypatch.setattr(
             "fincli.db.DatabaseManager.__init__",
             lambda self, db_path=None: self._init_mock_db(temp_db_path),
         )
+        monkeypatch.setenv("FIN_DB_PATH", temp_db_path)
         
         # Mock sys.argv to simulate direct task addition
         import sys
@@ -289,11 +292,12 @@ class TestCLI:
 
     def test_cli_normal_labels_still_work(self, temp_db_path, monkeypatch):
         """Test that normal labels still work after adding reserved word validation."""
-        # Mock the database path
+        # Mock the database path and set environment variable
         monkeypatch.setattr(
             "fincli.db.DatabaseManager.__init__",
             lambda self, db_path=None: self._init_mock_db(temp_db_path),
         )
+        monkeypatch.setenv("FIN_DB_PATH", temp_db_path)
         
         # Mock sys.argv to simulate direct task addition
         import sys
@@ -317,11 +321,12 @@ class TestCLI:
 
     def test_cli_reserved_word_validation_ref(self, temp_db_path, monkeypatch):
         """Test that reserved word 'ref' cannot be used as a label."""
-        # Mock the database path
+        # Mock the database path and set environment variable
         monkeypatch.setattr(
             "fincli.db.DatabaseManager.__init__",
             lambda self, db_path=None: self._init_mock_db(temp_db_path),
         )
+        monkeypatch.setenv("FIN_DB_PATH", temp_db_path)
         
         # Mock sys.argv to simulate direct task addition
         import sys
@@ -349,11 +354,12 @@ class TestCLI:
 
     def test_cli_reserved_word_validation_due(self, temp_db_path, monkeypatch):
         """Test that reserved word 'due' cannot be used as a label."""
-        # Mock the database path
+        # Mock the database path and set environment variable
         monkeypatch.setattr(
             "fincli.db.DatabaseManager.__init__",
             lambda self, db_path=None: self._init_mock_db(temp_db_path),
         )
+        monkeypatch.setenv("FIN_DB_PATH", temp_db_path)
         
         # Mock sys.argv to simulate direct task addition
         import sys
@@ -381,11 +387,12 @@ class TestCLI:
 
     def test_cli_reserved_word_validation_not(self, temp_db_path, monkeypatch):
         """Test that reserved word 'not' cannot be used as a label."""
-        # Mock the database path
+        # Mock the database path and set environment variable
         monkeypatch.setattr(
             "fincli.db.DatabaseManager.__init__",
             lambda self, db_path=None: self._init_mock_db(temp_db_path),
         )
+        monkeypatch.setenv("FIN_DB_PATH", temp_db_path)
         
         # Mock sys.argv to simulate direct task addition
         import sys
@@ -413,11 +420,12 @@ class TestCLI:
 
     def test_cli_due_date_parsing(self, temp_db_path, monkeypatch):
         """Test that due dates are parsed correctly."""
-        # Mock the database path
+        # Mock the database path and set environment variable
         monkeypatch.setattr(
             "fincli.db.DatabaseManager.__init__",
             lambda self, db_path=None: self._init_mock_db(temp_db_path),
         )
+        monkeypatch.setenv("FIN_DB_PATH", temp_db_path)
         
         # Mock sys.argv to simulate direct task addition
         import sys
@@ -441,11 +449,12 @@ class TestCLI:
 
     def test_cli_recurring_task_parsing(self, temp_db_path, monkeypatch):
         """Test that recurring tasks are parsed correctly."""
-        # Mock the database path
+        # Mock the database path and set environment variable
         monkeypatch.setattr(
             "fincli.db.DatabaseManager.__init__",
             lambda self, db_path=None: self._init_mock_db(temp_db_path),
         )
+        monkeypatch.setenv("FIN_DB_PATH", temp_db_path)
         
         # Mock sys.argv to simulate direct task addition
         import sys
@@ -469,11 +478,12 @@ class TestCLI:
 
     def test_cli_dependency_parsing(self, temp_db_path, monkeypatch):
         """Test that task dependencies are parsed correctly."""
-        # Mock the database path
+        # Mock the database path and set environment variable
         monkeypatch.setattr(
             "fincli.db.DatabaseManager.__init__",
             lambda self, db_path=None: self._init_mock_db(temp_db_path),
         )
+        monkeypatch.setenv("FIN_DB_PATH", temp_db_path)
         
         # Mock sys.argv to simulate direct task addition
         import sys
@@ -497,11 +507,12 @@ class TestCLI:
 
     def test_cli_complex_label_combinations_and(self, temp_db_path, monkeypatch):
         """Test AND logic in complex label combinations."""
-        # Mock the database path
+        # Mock the database path and set environment variable
         monkeypatch.setattr(
             "fincli.db.DatabaseManager.__init__",
             lambda self, db_path=None: self._init_mock_db(temp_db_path),
         )
+        monkeypatch.setenv("FIN_DB_PATH", temp_db_path)
         
         # Add some test tasks first
         import sys
@@ -548,11 +559,12 @@ class TestCLI:
 
     def test_cli_complex_label_combinations_or(self, temp_db_path, monkeypatch):
         """Test OR logic in complex label combinations."""
-        # Mock the database path
+        # Mock the database path and set environment variable
         monkeypatch.setattr(
             "fincli.db.DatabaseManager.__init__",
             lambda self, db_path=None: self._init_mock_db(temp_db_path),
         )
+        monkeypatch.setenv("FIN_DB_PATH", temp_db_path)
         
         # Add some test tasks first
         import sys
@@ -599,11 +611,12 @@ class TestCLI:
 
     def test_cli_multiple_criteria_filtering(self, temp_db_path, monkeypatch):
         """Test multiple criteria filtering."""
-        # Mock the database path
+        # Mock the database path and set environment variable
         monkeypatch.setattr(
             "fincli.db.DatabaseManager.__init__",
             lambda self, db_path=None: self._init_mock_db(temp_db_path),
         )
+        monkeypatch.setenv("FIN_DB_PATH", temp_db_path)
         
         # Add some test tasks first
         import sys
