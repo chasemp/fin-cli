@@ -305,6 +305,243 @@ class TestCLI:
         finally:
             sys.argv = original_argv
 
+    def test_cli_due_date_parsing(self, temp_db_path, monkeypatch):
+        """Test that due dates are parsed correctly."""
+        # Mock the database path
+        monkeypatch.setattr(
+            "fincli.db.DatabaseManager.__init__",
+            lambda self, db_path=None: self._init_mock_db(temp_db_path),
+        )
+        
+        # Mock sys.argv to simulate direct task addition
+        import sys
+        original_argv = sys.argv
+        sys.argv = ["fin", "Project deadline #due:2025-08-10"]
+        
+        try:
+            from fincli.cli import main
+            import io
+            from contextlib import redirect_stdout
+            
+            # Capture stdout
+            f = io.StringIO()
+            with redirect_stdout(f):
+                main()
+            
+            output = f.getvalue()
+            assert '✅ Task added: "Project deadline" [due:2025-08-10]' in output
+        finally:
+            sys.argv = original_argv
+
+    def test_cli_recurring_task_parsing(self, temp_db_path, monkeypatch):
+        """Test that recurring tasks are parsed correctly."""
+        # Mock the database path
+        monkeypatch.setattr(
+            "fincli.db.DatabaseManager.__init__",
+            lambda self, db_path=None: self._init_mock_db(temp_db_path),
+        )
+        
+        # Mock sys.argv to simulate direct task addition
+        import sys
+        original_argv = sys.argv
+        sys.argv = ["fin", "Daily standup #recur:daily"]
+        
+        try:
+            from fincli.cli import main
+            import io
+            from contextlib import redirect_stdout
+            
+            # Capture stdout
+            f = io.StringIO()
+            with redirect_stdout(f):
+                main()
+            
+            output = f.getvalue()
+            assert '✅ Task added: "Daily standup" [recur:daily]' in output
+        finally:
+            sys.argv = original_argv
+
+    def test_cli_dependency_parsing(self, temp_db_path, monkeypatch):
+        """Test that task dependencies are parsed correctly."""
+        # Mock the database path
+        monkeypatch.setattr(
+            "fincli.db.DatabaseManager.__init__",
+            lambda self, db_path=None: self._init_mock_db(temp_db_path),
+        )
+        
+        # Mock sys.argv to simulate direct task addition
+        import sys
+        original_argv = sys.argv
+        sys.argv = ["fin", "Implement feature #depends:task123"]
+        
+        try:
+            from fincli.cli import main
+            import io
+            from contextlib import redirect_stdout
+            
+            # Capture stdout
+            f = io.StringIO()
+            with redirect_stdout(f):
+                main()
+            
+            output = f.getvalue()
+            assert '✅ Task added: "Implement feature" [depends:task123]' in output
+        finally:
+            sys.argv = original_argv
+
+    def test_cli_complex_label_combinations_and(self, temp_db_path, monkeypatch):
+        """Test AND logic in complex label combinations."""
+        # Mock the database path
+        monkeypatch.setattr(
+            "fincli.db.DatabaseManager.__init__",
+            lambda self, db_path=None: self._init_mock_db(temp_db_path),
+        )
+        
+        # Add some test tasks first
+        import sys
+        original_argv = sys.argv
+        
+        # Add tasks with different label combinations
+        test_tasks = [
+            ["fin", "Work task #work"],
+            ["fin", "Urgent work task #work #urgent"],
+            ["fin", "Personal task #personal"],
+        ]
+        
+        try:
+            from fincli.cli import main
+            import io
+            from contextlib import redirect_stdout
+            from click.exceptions import Exit
+            
+            # Add test tasks
+            for task_args in test_tasks:
+                sys.argv = task_args
+                f = io.StringIO()
+                with redirect_stdout(f):
+                    try:
+                        main()
+                    except (SystemExit, Exit):
+                        pass  # Expected when command completes
+            
+            # Test AND filtering
+            sys.argv = ["fin", "list", "-l", "work and urgent"]
+            f = io.StringIO()
+            with redirect_stdout(f):
+                try:
+                    main()
+                except (SystemExit, Exit):
+                    pass  # Expected when command completes
+            
+            output = f.getvalue()
+            assert "Urgent work task" in output
+            assert "Work task" not in output  # Should not appear (only has work, not urgent)
+            assert "Personal task" not in output  # Should not appear (has neither)
+        finally:
+            sys.argv = original_argv
+
+    def test_cli_complex_label_combinations_or(self, temp_db_path, monkeypatch):
+        """Test OR logic in complex label combinations."""
+        # Mock the database path
+        monkeypatch.setattr(
+            "fincli.db.DatabaseManager.__init__",
+            lambda self, db_path=None: self._init_mock_db(temp_db_path),
+        )
+        
+        # Add some test tasks first
+        import sys
+        original_argv = sys.argv
+        
+        # Add tasks with different label combinations
+        test_tasks = [
+            ["fin", "Work task #work"],
+            ["fin", "Urgent work task #work #urgent"],
+            ["fin", "Personal task #personal"],
+        ]
+        
+        try:
+            from fincli.cli import main
+            import io
+            from contextlib import redirect_stdout
+            from click.exceptions import Exit
+            
+            # Add test tasks
+            for task_args in test_tasks:
+                sys.argv = task_args
+                f = io.StringIO()
+                with redirect_stdout(f):
+                    try:
+                        main()
+                    except (SystemExit, Exit):
+                        pass  # Expected when command completes
+            
+            # Test OR filtering
+            sys.argv = ["fin", "list", "-l", "work or personal"]
+            f = io.StringIO()
+            with redirect_stdout(f):
+                try:
+                    main()
+                except (SystemExit, Exit):
+                    pass  # Expected when command completes
+            
+            output = f.getvalue()
+            assert "Work task" in output
+            assert "Urgent work task" in output  # Has work label
+            assert "Personal task" in output
+        finally:
+            sys.argv = original_argv
+
+    def test_cli_multiple_criteria_filtering(self, temp_db_path, monkeypatch):
+        """Test multiple criteria filtering."""
+        # Mock the database path
+        monkeypatch.setattr(
+            "fincli.db.DatabaseManager.__init__",
+            lambda self, db_path=None: self._init_mock_db(temp_db_path),
+        )
+        
+        # Add some test tasks first
+        import sys
+        original_argv = sys.argv
+        
+        # Add tasks with different label combinations
+        test_tasks = [
+            ["fin", "Work task #work"],
+            ["fin", "Urgent work task #work #urgent"],
+            ["fin", "Personal task #personal"],
+        ]
+        
+        try:
+            from fincli.cli import main
+            import io
+            from contextlib import redirect_stdout
+            from click.exceptions import Exit
+            
+            # Add test tasks
+            for task_args in test_tasks:
+                sys.argv = task_args
+                f = io.StringIO()
+                with redirect_stdout(f):
+                    try:
+                        main()
+                    except (SystemExit, Exit):
+                        pass  # Expected when command completes
+            
+            # Test multiple criteria (should match any of the criteria)
+            sys.argv = ["fin", "list", "-l", "work and urgent", "-l", "personal"]
+            f = io.StringIO()
+            with redirect_stdout(f):
+                try:
+                    main()
+                except (SystemExit, Exit):
+                    pass  # Expected when command completes
+            
+            output = f.getvalue()
+            assert "Urgent work task" in output  # Matches "work and urgent"
+            assert "Personal task" in output     # Matches "personal"
+            assert "Work task" not in output     # Only has work, not urgent
+        finally:
+            sys.argv = original_argv
+
 
 class TestCLIExecution:
     """Test CLI execution via subprocess."""
