@@ -323,3 +323,112 @@ class TestCLIOutput:
             '✅ Task added: "Task with multiple labels" [personal, urgent, work]'
             in result.output
         )
+
+
+class TestCLIBackup:
+    """Test CLI backup functionality."""
+
+    def test_backup_create(self, cli_runner, temp_db_path, monkeypatch):
+        """Test creating a backup via CLI."""
+        # Mock the database path
+        monkeypatch.setattr(
+            "fincli.db.DatabaseManager.__init__",
+            lambda self, db_path=None: self._init_mock_db(temp_db_path),
+        )
+
+        # Add a task first
+        result = cli_runner.invoke(cli, ["add-task", "Test task for backup"])
+        assert result.exit_code == 0
+
+        # Create backup
+        result = cli_runner.invoke(cli, ["backup", "-d", "Test backup"])
+        assert result.exit_code == 0
+        assert "✅ Backup created: backup_" in result.output
+
+    def test_backup_list(self, cli_runner, temp_db_path, monkeypatch):
+        """Test listing backups via CLI."""
+        # Mock the database path
+        monkeypatch.setattr(
+            "fincli.db.DatabaseManager.__init__",
+            lambda self, db_path=None: self._init_mock_db(temp_db_path),
+        )
+
+        # Create a backup first
+        result = cli_runner.invoke(cli, ["backup", "-d", "Test backup"])
+        assert result.exit_code == 0
+
+        # List backups
+        result = cli_runner.invoke(cli, ["list-backups"])
+        assert result.exit_code == 0
+        assert "Available backups:" in result.output
+        assert "backup_" in result.output
+
+    def test_backup_restore(self, cli_runner, temp_db_path, monkeypatch):
+        """Test restoring from backup via CLI."""
+        # Mock the database path
+        monkeypatch.setattr(
+            "fincli.db.DatabaseManager.__init__",
+            lambda self, db_path=None: self._init_mock_db(temp_db_path),
+        )
+
+        # Add initial task
+        result = cli_runner.invoke(cli, ["add-task", "Original task"])
+        assert result.exit_code == 0
+
+        # Create backup
+        result = cli_runner.invoke(cli, ["backup", "-d", "Initial backup"])
+        assert result.exit_code == 0
+        backup_output = result.output
+        backup_id = backup_output.split("backup_")[1].split()[0]
+
+        # Add another task
+        result = cli_runner.invoke(cli, ["add-task", "New task"])
+        assert result.exit_code == 0
+
+        # Verify we have 2 tasks
+        result = cli_runner.invoke(cli, ["list-tasks", "-s", "all"])
+        assert result.exit_code == 0
+        assert "Original task" in result.output
+        assert "New task" in result.output
+
+        # Restore from backup
+        result = cli_runner.invoke(cli, ["restore", backup_id, "--force"])
+        assert result.exit_code == 0
+        assert f"✅ Successfully restored from backup_{backup_id}" in result.output
+
+        # Verify we're back to 1 task
+        result = cli_runner.invoke(cli, ["list-tasks", "-s", "all"])
+        assert result.exit_code == 0
+        assert "Original task" in result.output
+        assert "New task" not in result.output
+
+    def test_backup_restore_latest(self, cli_runner, temp_db_path, monkeypatch):
+        """Test restoring from latest backup via CLI."""
+        # Mock the database path
+        monkeypatch.setattr(
+            "fincli.db.DatabaseManager.__init__",
+            lambda self, db_path=None: self._init_mock_db(temp_db_path),
+        )
+
+        # Add initial task
+        result = cli_runner.invoke(cli, ["add-task", "Original task"])
+        assert result.exit_code == 0
+
+        # Create backup
+        result = cli_runner.invoke(cli, ["backup", "-d", "Initial backup"])
+        assert result.exit_code == 0
+
+        # Add another task
+        result = cli_runner.invoke(cli, ["add-task", "New task"])
+        assert result.exit_code == 0
+
+        # Restore from latest backup
+        result = cli_runner.invoke(cli, ["restore-latest", "--force"])
+        assert result.exit_code == 0
+        assert "✅ Successfully restored from backup_" in result.output
+
+        # Verify we're back to 1 task
+        result = cli_runner.invoke(cli, ["list-tasks", "-s", "all"])
+        assert result.exit_code == 0
+        assert "Original task" in result.output
+        assert "New task" not in result.output
