@@ -101,6 +101,9 @@ fin list-tasks
 # List today and yesterday's completed tasks
 fin list-tasks -s completed
 
+# List today and yesterday's completed tasks (alias)
+fin list-tasks -s done
+
 # Filter by label
 fins --label work
 fins --label infra
@@ -192,6 +195,9 @@ fine
 
 # Edit completed tasks from past week
 fine -s completed -d 7
+
+# Edit completed tasks from past week (alias)
+fine -s done -d 7
 
 # Edit all automation tasks
 fine --label automation

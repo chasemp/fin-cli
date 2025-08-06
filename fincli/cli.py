@@ -151,7 +151,7 @@ def init(db_path: str):
 @click.option("--label", "-l", multiple=True, help="Filter by labels")
 @click.option(
     "--status", "-s",
-    type=click.Choice(["open", "completed", "all"]),
+    type=click.Choice(["open", "completed", "done", "all"]),
     default="open",
     help="Filter by status",
 )
@@ -169,7 +169,7 @@ def list_tasks(days, label, status):
     # Apply status filtering
     if status == "open":
         tasks = [task for task in tasks if task["completed_at"] is None]
-    elif status == "completed":
+    elif status in ["completed", "done"]:
         tasks = [task for task in tasks if task["completed_at"] is not None]
     # For "all", we keep all tasks (both open and completed)
 
@@ -319,7 +319,7 @@ def fine_command():
     @click.option("--dry-run", is_flag=True, help="Show what would be edited without opening editor")
     @click.option(
         "--status", "-s",
-        type=click.Choice(["open", "completed", "all"]),
+        type=click.Choice(["open", "completed", "done", "all"]),
         default="open",
         help="Filter by status (default: open)",
     )
@@ -342,7 +342,7 @@ def fine_command():
             # Apply status filtering
             if status == "open":
                 tasks = [task for task in tasks if task["completed_at"] is None]
-            elif status == "completed":
+            elif status in ["completed", "done"]:
                 tasks = [task for task in tasks if task["completed_at"] is not None]
             # For "all", we keep all tasks (both open and completed)
             
@@ -363,7 +363,7 @@ def fine_command():
             # Apply status filtering
             if status == "open":
                 tasks = [task for task in tasks if task["completed_at"] is None]
-            elif status == "completed":
+            elif status in ["completed", "done"]:
                 tasks = [task for task in tasks if task["completed_at"] is not None]
             # For "all", we keep all tasks (both open and completed)
             
@@ -483,7 +483,7 @@ def fins_command():
     @click.option("--today", is_flag=True, help="Show only today's tasks (overrides default days behavior)")
     @click.option(
         "--status", "-s",
-        type=click.Choice(["open", "completed", "all"]),
+        type=click.Choice(["open", "completed", "done", "all"]),
         default="completed",
         help="Filter by status (default: completed)",
     )
@@ -506,7 +506,7 @@ def fins_command():
         # Apply status filtering
         if status == "open":
             tasks = [task for task in tasks if task["completed_at"] is None]
-        elif status == "completed":
+        elif status in ["completed", "done"]:
             tasks = [task for task in tasks if task["completed_at"] is not None]
         # For "all", we keep all tasks (both open and completed)
 
