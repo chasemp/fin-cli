@@ -5,20 +5,19 @@ Handles the fine command functionality for editing tasks in an external editor.
 This module is designed to be safe and only trigger editor opening when explicitly requested.
 """
 
+import hashlib
 import os
 import re
 import subprocess
 import tempfile
-import hashlib
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Set
 
+from .backup import DatabaseBackup
 from .db import DatabaseManager
 from .labels import LabelManager
 from .tasks import TaskManager
-from .utils import (filter_tasks_by_date_range, format_task_for_display,
-                    get_editor)
-from .backup import DatabaseBackup
+from .utils import filter_tasks_by_date_range, format_task_for_display, get_editor
 
 
 class EditorManager:
@@ -40,10 +39,10 @@ class EditorManager:
     def _generate_task_id(self, task_id: int) -> str:
         """
         Generate a unique reference ID for a task.
-        
+
         Args:
             task_id: Database task ID
-            
+
         Returns:
             Unique reference string
         """
@@ -52,10 +51,10 @@ class EditorManager:
     def _extract_task_id_from_reference(self, reference: str) -> Optional[int]:
         """
         Extract task ID from reference string.
-        
+
         Args:
             reference: Reference string like "task_123"
-            
+
         Returns:
             Task ID if valid, None otherwise
         """
@@ -81,7 +80,7 @@ class EditorManager:
         # First, try to match with reference
         pattern_with_ref = r"^(\[ \]|\[x\]) (\d{4}-\d{2}-\d{2} \d{2}:\d{2})  (.+?)(  #.+)?  #ref:([^ ]+)$"
         match = re.match(pattern_with_ref, line.strip())
-        
+
         if match:
             # Line has a reference
             status = match.group(1)
@@ -91,9 +90,11 @@ class EditorManager:
             reference_part = match.group(5) or ""
         else:
             # Try to match without reference (for new tasks)
-            pattern_without_ref = r"^(\[ \]|\[x\]) (\d{4}-\d{2}-\d{2} \d{2}:\d{2})  (.+?)(  #.+)?$"
+            pattern_without_ref = (
+                r"^(\[ \]|\[x\]) (\d{4}-\d{2}-\d{2} \d{2}:\d{2})  (.+?)(  #.+)?$"
+            )
             match = re.match(pattern_without_ref, line.strip())
-            
+
             if match:
                 # Line has timestamp but no reference
                 status = match.group(1)
@@ -105,10 +106,10 @@ class EditorManager:
                 # Try to match new tasks without timestamp (just checkbox and content)
                 pattern_new_task = r"^(\[ \]|\[\]|\[x\]) (.+?)(  #.+)?$"
                 match = re.match(pattern_new_task, line.strip())
-                
+
                 if not match:
                     return None
-                
+
                 status = match.group(1)
                 timestamp = ""  # No timestamp for new tasks
                 content = match.group(2)
@@ -158,7 +159,10 @@ class EditorManager:
         return None
 
     def get_tasks_for_editing(
-        self, label: Optional[str] = None, target_date: Optional[str] = None, all_tasks: bool = False
+        self,
+        label: Optional[str] = None,
+        target_date: Optional[str] = None,
+        all_tasks: bool = False,
     ) -> List[Dict[str, Any]]:
         """
         Get tasks for editing based on criteria.
@@ -249,23 +253,25 @@ class EditorManager:
     def _format_task_with_reference(self, task: Dict[str, Any]) -> str:
         """
         Format a task for display with its reference ID.
-        
+
         Args:
             task: Task dictionary
-            
+
         Returns:
             Formatted task line with reference
         """
         # Get the base formatted line
         base_line = format_task_for_display(task)
-        
+
         # Add the reference ID
         task_id = task["id"]
         reference = self._generate_task_id(task_id)
-        
+
         return f"{base_line}  #ref:{reference}"
 
-    def parse_edited_content(self, content: str, original_task_ids: Optional[Set[int]] = None) -> tuple:
+    def parse_edited_content(
+        self, content: str, original_task_ids: Optional[Set[int]] = None
+    ) -> tuple:
         """
         Parse edited content and return completion statistics.
         This method is safe and doesn't open any external processes.
@@ -298,26 +304,24 @@ class EditorManager:
                 if task_info["content"].strip():  # Only add if content is not empty
                     # Add current timestamp for new tasks that don't have one
                     current_time = datetime.now().strftime("%Y-%m-%d %H:%M")
-                    
+
                     # Add the task to the database
                     task_id = self.task_manager.add_task(
-                        task_info["content"], 
-                        labels=task_info["labels"] if task_info["labels"] else None
+                        task_info["content"],
+                        labels=task_info["labels"] if task_info["labels"] else None,
                     )
                     new_tasks_count += 1
-                    
+
                     # Update the task with the current timestamp if it didn't have one
                     if not task_info.get("timestamp"):
                         with self.db_manager.get_connection() as conn:
                             cursor = conn.cursor()
                             cursor.execute(
                                 "UPDATE tasks SET created_at = ? WHERE id = ?",
-                                (current_time, task_id)
+                                (current_time, task_id),
                             )
                             conn.commit()
                 continue
-
-
 
             # Handle existing tasks
             task_id = self.find_matching_task(task_info)
@@ -351,7 +355,10 @@ class EditorManager:
         return completed_count, reopened_count, new_tasks_count, deleted_count
 
     def edit_tasks(
-        self, label: Optional[str] = None, target_date: Optional[str] = None, all_tasks: bool = False
+        self,
+        label: Optional[str] = None,
+        target_date: Optional[str] = None,
+        all_tasks: bool = False,
     ) -> tuple:
         """
         Edit tasks in external editor.
@@ -376,7 +383,9 @@ class EditorManager:
             return 0, 0, 0, 0
 
         # Create backup before editing
-        backup_id = self.backup_manager.create_backup("Auto-backup before editor session")
+        backup_id = self.backup_manager.create_backup(
+            "Auto-backup before editor session"
+        )
 
         # Track original task IDs for deletion detection
         original_task_ids = {task["id"] for task in tasks}
@@ -396,10 +405,10 @@ class EditorManager:
 
             # Split editor command if it contains spaces
             editor_parts = editor_cmd.split()
-            
+
             # Mark that we're about to open the editor
             self._editor_opened = True
-            
+
             # Open the editor - this is the only blocking operation
             result = subprocess.run(editor_parts + [temp_file_path])
 
@@ -416,8 +425,8 @@ class EditorManager:
                 edited_content = f.read()
 
             # Parse changes and update database
-            completed_count, reopened_count, new_tasks_count, deleted_count = self.parse_edited_content(
-                edited_content, original_task_ids
+            completed_count, reopened_count, new_tasks_count, deleted_count = (
+                self.parse_edited_content(edited_content, original_task_ids)
             )
 
         finally:
@@ -429,7 +438,9 @@ class EditorManager:
 
         return completed_count, reopened_count, new_tasks_count, deleted_count
 
-    def simulate_edit_with_content(self, original_content: str, modified_content: str) -> tuple:
+    def simulate_edit_with_content(
+        self, original_content: str, modified_content: str
+    ) -> tuple:
         """
         Simulate editing tasks with provided content for testing purposes.
         This method does NOT open any external editor.
@@ -451,6 +462,6 @@ class EditorManager:
                 task_id = self.find_matching_task(task_info)
                 if task_id:
                     original_task_ids.add(task_id)
-        
+
         # Parse the modified content to get completion statistics
         return self.parse_edited_content(modified_content, original_task_ids)

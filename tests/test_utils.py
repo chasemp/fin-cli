@@ -3,14 +3,15 @@ Tests for the utils module.
 """
 
 import os
-import pytest
 from datetime import date, datetime, timedelta
 from unittest.mock import patch
 
+import pytest
+
 from fincli.utils import (
+    filter_tasks_by_date_range,
     format_task_for_display,
     get_date_range,
-    filter_tasks_by_date_range,
     get_editor,
     is_important_task,
     is_today_task,
@@ -30,10 +31,10 @@ class TestFormatTaskForDisplay:
             "labels": ["work", "urgent"],
             "source": "cli",
         }
-        
+
         result = format_task_for_display(task)
         expected = "[ ] 2025-08-05 10:30  Test task  #urgent,#work"
-        
+
         # Split and compare parts since label order might vary
         assert "[ ] 2025-08-05 10:30  Test task" in result
         assert "#urgent" in result
@@ -49,10 +50,10 @@ class TestFormatTaskForDisplay:
             "labels": ["personal"],
             "source": "cli",
         }
-        
+
         result = format_task_for_display(task)
         expected = "[x] 2025-08-05 11:45  Completed task  #personal"
-        
+
         assert result == expected
 
     def test_format_task_without_labels(self):
@@ -65,10 +66,10 @@ class TestFormatTaskForDisplay:
             "labels": None,
             "source": "cli",
         }
-        
+
         result = format_task_for_display(task)
         expected = "[ ] 2025-08-05 10:30  Simple task"
-        
+
         assert result == expected
 
     def test_format_task_with_empty_labels(self):
@@ -81,10 +82,10 @@ class TestFormatTaskForDisplay:
             "labels": [],
             "source": "cli",
         }
-        
+
         result = format_task_for_display(task)
         expected = "[ ] 2025-08-05 10:30  Task with empty labels"
-        
+
         assert result == expected
 
     def test_format_task_with_iso_timestamp(self):
@@ -97,9 +98,9 @@ class TestFormatTaskForDisplay:
             "labels": ["test"],
             "source": "cli",
         }
-        
+
         result = format_task_for_display(task)
-        
+
         # Should handle ISO timestamp correctly
         assert "[ ] 2025-08-05 10:30  ISO timestamp task" in result
         assert "#test" in result
@@ -118,7 +119,7 @@ class TestIsImportantTask:
             "labels": ["i", "work"],
             "source": "cli",
         }
-        
+
         assert is_important_task(task) is True
 
     def test_non_important_task(self):
@@ -131,7 +132,7 @@ class TestIsImportantTask:
             "labels": ["work", "urgent"],
             "source": "cli",
         }
-        
+
         assert is_important_task(task) is False
 
     def test_task_without_labels(self):
@@ -144,7 +145,7 @@ class TestIsImportantTask:
             "labels": None,
             "source": "cli",
         }
-        
+
         assert is_important_task(task) is False
 
     def test_task_with_empty_labels(self):
@@ -157,7 +158,7 @@ class TestIsImportantTask:
             "labels": [],
             "source": "cli",
         }
-        
+
         assert is_important_task(task) is False
 
 
@@ -174,7 +175,7 @@ class TestIsTodayTask:
             "labels": ["t", "work"],
             "source": "cli",
         }
-        
+
         assert is_today_task(task) is True
 
     def test_non_today_task(self):
@@ -187,7 +188,7 @@ class TestIsTodayTask:
             "labels": ["work", "urgent"],
             "source": "cli",
         }
-        
+
         assert is_today_task(task) is False
 
     def test_task_without_labels(self):
@@ -200,7 +201,7 @@ class TestIsTodayTask:
             "labels": None,
             "source": "cli",
         }
-        
+
         assert is_today_task(task) is False
 
     def test_task_with_empty_labels(self):
@@ -213,7 +214,7 @@ class TestIsTodayTask:
             "labels": [],
             "source": "cli",
         }
-        
+
         assert is_today_task(task) is False
 
 
@@ -223,21 +224,21 @@ class TestGetDateRange:
     def test_default_range(self):
         """Test default date range (1 day)."""
         today, lookback = get_date_range()
-        
+
         assert today == date.today()
         assert lookback == date.today() - timedelta(days=1)
 
     def test_custom_range(self):
         """Test custom date range."""
         today, lookback = get_date_range(7)
-        
+
         assert today == date.today()
         assert lookback == date.today() - timedelta(days=7)
 
     def test_zero_days(self):
         """Test zero days range."""
         today, lookback = get_date_range(0)
-        
+
         assert today == date.today()
         assert lookback == date.today()
 
@@ -265,9 +266,9 @@ class TestFilterTasksByDateRange:
                 "source": "cli",
             },
         ]
-        
+
         filtered = filter_tasks_by_date_range(tasks, days=1)
-        
+
         # Both open tasks should be included
         assert len(filtered) == 2
         assert filtered[0]["id"] == 1  # Old task first (by creation date)
@@ -293,9 +294,9 @@ class TestFilterTasksByDateRange:
                 "source": "cli",
             },
         ]
-        
+
         filtered = filter_tasks_by_date_range(tasks, days=1)
-        
+
         # Only recent completed task should be included
         assert len(filtered) == 1
         assert filtered[0]["id"] == 2
@@ -336,9 +337,9 @@ class TestFilterTasksByDateRange:
                 "source": "cli",
             },
         ]
-        
+
         filtered = filter_tasks_by_date_range(tasks, days=1)
-        
+
         # Important tasks first, then today tasks, then regular tasks
         # Tasks with both #i and #t come before tasks with only #i
         assert len(filtered) == 4
@@ -367,9 +368,9 @@ class TestFilterTasksByDateRange:
                 "source": "cli",
             },
         ]
-        
+
         filtered = filter_tasks_by_date_range(tasks, days=1)
-        
+
         # Important task should come first, then completed task
         assert len(filtered) == 2
         assert filtered[0]["id"] == 2  # Important task first
@@ -391,6 +392,6 @@ class TestGetEditor:
         """Test editor fallback behavior."""
         # Mock that nano is available
         mock_run.return_value.returncode = 0
-        
+
         editor = get_editor()
-        assert editor == "nano" 
+        assert editor == "nano"
