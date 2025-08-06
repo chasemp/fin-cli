@@ -142,7 +142,7 @@ def init(db_path: str):
         fin init --db-path ~/my-tasks.db
     """
     db_manager = DatabaseManager(db_path=db_path)
-    db_manager.initialize()
+    # Database is automatically initialized in __init__
     click.echo("✅ Database initialized successfully!")
 
 
@@ -752,6 +752,28 @@ def report(output_format, period, output, overdue):
 def main():
     """Main entry point that handles direct task addition."""
     args = sys.argv[1:]
+
+    # If no arguments provided, default to list behavior
+    if not args:
+        db_manager = DatabaseManager()
+        task_manager = TaskManager(db_manager)
+        
+        # Get tasks with default filtering (today and yesterday, open tasks)
+        tasks = task_manager.list_tasks(include_completed=True)
+        tasks = filter_tasks_by_date_range(tasks, days=1)
+        tasks = [task for task in tasks if task["completed_at"] is None]
+        
+        if not tasks:
+            click.echo("📝 No open tasks found for today and yesterday.")
+            click.echo("💡 Try adding a task: fin 'your task here'")
+            click.echo("💡 Or see all commands: fin --help")
+            return
+        else:
+            # Display tasks
+            for task in tasks:
+                formatted_task = format_task_for_display(task)
+                click.echo(formatted_task)
+            return
 
     # Check if this is a direct task addition (no subcommand)
     if (
