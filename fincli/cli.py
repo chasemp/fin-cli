@@ -16,6 +16,8 @@ from fincli.labels import LabelManager
 from fincli.tasks import TaskManager
 from fincli.utils import filter_tasks_by_date_range, format_task_for_display
 from fincli.backup import DatabaseBackup
+from datetime import datetime
+import re
 
 
 def add_task(content: str, labels: tuple, source: str = "cli"):
@@ -670,26 +672,327 @@ def restore_latest_backup(force):
         click.echo(f"❌ Failed to restore from backup_{latest_id:03d}")
 
 
-@cli.command(name="import")
-@click.argument("source")
-@click.argument("file_path")
-@click.option("--label", "-l", multiple=True, help="Add labels to imported tasks")
-@click.option("--remove-rows", is_flag=True, help="Remove processed rows from source")
-def import_tasks(source, file_path, label, remove_rows):
-    """Import tasks from external sources."""
-    available_sources = get_available_sources()
-
-    if source not in available_sources:
-        click.echo(f"❌ Error: Unknown source '{source}'")
-        click.echo(f"Available sources: {', '.join(available_sources)}")
-        raise click.Abort()
-
+@cli.command(name="export")
+@click.argument("file_path", type=click.Path())
+@click.option("--format", "-f", type=click.Choice(["csv", "json", "txt"]), default="csv", help="Export format")
+@click.option("--include-completed", is_flag=True, default=True, help="Include completed tasks (default: True)")
+def export_tasks(file_path, format, include_completed):
+    """Export all tasks to a flat file."""
+    db_manager = DatabaseManager()
+    task_manager = TaskManager(db_manager)
+    
+    # Get all tasks
+    tasks = task_manager.list_tasks(include_completed=include_completed)
+    
+    if not tasks:
+        click.echo("📝 No tasks found to export.")
+        return
+    
     try:
-        imported_count = import_from_source(source, file_path, label, remove_rows)
-        click.echo(f"✅ Successfully imported {imported_count} tasks from {source}")
+        if format == "csv":
+            _export_csv(tasks, file_path)
+        elif format == "json":
+            _export_json(tasks, file_path)
+        elif format == "txt":
+            _export_txt(tasks, file_path)
+        
+        click.echo(f"✅ Exported {len(tasks)} tasks to {file_path}")
+        
     except Exception as e:
-        click.echo(f"❌ Error importing from {source}: {e}")
+        click.echo(f"❌ Export failed: {e}")
         raise click.Abort()
+
+
+def _export_csv(tasks, file_path):
+    """Export tasks to CSV format."""
+    import csv
+    
+    with open(file_path, 'w', newline='', encoding='utf-8') as csvfile:
+        fieldnames = ['ID', 'Content', 'Status', 'Created', 'Completed', 'Labels', 'Source']
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        
+        writer.writeheader()
+        for task in tasks:
+            status = "completed" if task["completed_at"] else "open"
+            labels = ",".join(task.get("labels", [])) if task.get("labels") else ""
+            
+            writer.writerow({
+                'ID': task["id"],
+                'Content': task["content"],
+                'Status': status,
+                'Created': task["created_at"],
+                'Completed': task["completed_at"] or "",
+                'Labels': labels,
+                'Source': task.get("source", "cli")
+            })
+
+
+def _export_json(tasks, file_path):
+    """Export tasks to JSON format."""
+    import json
+    
+    # Convert tasks to serializable format
+    export_data = []
+    for task in tasks:
+        export_task = {
+            "id": task["id"],
+            "content": task["content"],
+            "status": "completed" if task["completed_at"] else "open",
+            "created_at": task["created_at"],
+            "completed_at": task["completed_at"],
+            "labels": task.get("labels", []),
+            "source": task.get("source", "cli")
+        }
+        export_data.append(export_task)
+    
+    with open(file_path, 'w', encoding='utf-8') as f:
+        json.dump(export_data, f, indent=2, ensure_ascii=False)
+
+
+def _export_txt(tasks, file_path):
+    """Export tasks to plain text format using editor format."""
+    from fincli.editor import EditorManager
+    
+    db_manager = DatabaseManager()
+    editor_manager = EditorManager(db_manager)
+    
+    with open(file_path, 'w', encoding='utf-8') as f:
+        f.write(f"# FinCLI Task Export - {len(tasks)} tasks\n")
+        f.write(f"# Exported on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+        
+        for task in tasks:
+            # Use the same formatting as the editor
+            task_line = editor_manager._format_task_with_reference(task)
+            f.write(f"{task_line}\n")
+
+
+@cli.command(name="import")
+@click.argument("file_path", type=click.Path(exists=True))
+@click.option("--format", "-f", type=click.Choice(["csv", "json", "txt"]), help="Import format (auto-detected if not specified)")
+@click.option("--label", "-l", multiple=True, help="Add labels to imported tasks")
+@click.option("--clear-existing", is_flag=True, help="Clear existing tasks before import")
+@click.option("--force", is_flag=True, help="Skip confirmation prompt")
+def import_tasks_from_file(file_path, format, label, clear_existing, force):
+    """Import tasks from a flat file."""
+    db_manager = DatabaseManager()
+    task_manager = TaskManager(db_manager)
+    
+    # Auto-detect format if not specified
+    if not format:
+        if file_path.endswith('.csv'):
+            format = 'csv'
+        elif file_path.endswith('.json'):
+            format = 'json'
+        elif file_path.endswith('.txt'):
+            format = 'txt'
+        else:
+            click.echo("❌ Could not auto-detect format. Please specify --format")
+            raise click.Abort()
+    
+    # Show import preview
+    if not force:
+        preview = _get_import_preview(file_path, format, label, clear_existing)
+        click.echo(preview)
+        
+        if not click.confirm("Proceed with import?"):
+            click.echo("Import cancelled.")
+            return
+    
+    try:
+        if clear_existing:
+            # Clear existing tasks
+            with db_manager.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("DELETE FROM tasks")
+                conn.commit()
+            click.echo("🗑️  Cleared existing tasks")
+        
+        imported_count = 0
+        
+        if format == "csv":
+            imported_count = _import_csv(task_manager, file_path, label)
+        elif format == "json":
+            imported_count = _import_json(task_manager, file_path, label)
+        elif format == "txt":
+            imported_count = _import_txt(task_manager, file_path, label)
+        
+        click.echo(f"✅ Successfully imported {imported_count} tasks from {file_path}")
+        
+    except Exception as e:
+        click.echo(f"❌ Import failed: {e}")
+        raise click.Abort()
+
+
+def _get_import_preview(file_path, format, additional_labels, clear_existing):
+    """Generate a preview of what the import will do."""
+    preview_lines = []
+    preview_lines.append(f"📋 Import Preview for {file_path}")
+    preview_lines.append(f"📁 Format: {format}")
+    preview_lines.append(f"🏷️  Additional labels: {', '.join(additional_labels) if additional_labels else 'none'}")
+    preview_lines.append(f"🗑️  Clear existing: {'Yes' if clear_existing else 'No'}")
+    preview_lines.append("")
+    
+    # Count tasks in file
+    task_count = 0
+    completed_count = 0
+    
+    try:
+        if format == "csv":
+            import csv
+            with open(file_path, 'r', newline='', encoding='utf-8') as csvfile:
+                reader = csv.DictReader(csvfile)
+                for row in reader:
+                    if row.get('Content', '').strip():
+                        task_count += 1
+                        if row.get('Status') == 'completed':
+                            completed_count += 1
+        
+        elif format == "json":
+            import json
+            with open(file_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                for task_data in data:
+                    if task_data.get('content', '').strip():
+                        task_count += 1
+                        if task_data.get('status') == 'completed':
+                            completed_count += 1
+        
+        elif format == "txt":
+            from fincli.editor import EditorManager
+            db_manager = DatabaseManager()
+            editor_manager = EditorManager(db_manager)
+            
+            with open(file_path, 'r', encoding='utf-8') as f:
+                for line in f:
+                    line = line.strip()
+                    if not line or line.startswith('#'):
+                        continue
+                    
+                    task_info = editor_manager.parse_task_line(line)
+                    if task_info and task_info["content"].strip():
+                        task_count += 1
+                        if task_info["is_completed"]:
+                            completed_count += 1
+        
+        preview_lines.append(f"📊 File contains: {task_count} tasks ({completed_count} completed)")
+        
+        # Show current database stats
+        db_manager = DatabaseManager()
+        task_manager = TaskManager(db_manager)
+        current_tasks = task_manager.list_tasks(include_completed=True)
+        current_count = len(current_tasks)
+        current_completed = len([t for t in current_tasks if t["completed_at"]])
+        
+        preview_lines.append(f"📊 Current database: {current_count} tasks ({current_completed} completed)")
+        
+        if clear_existing:
+            preview_lines.append("⚠️  WARNING: All existing tasks will be deleted!")
+        else:
+            preview_lines.append(f"➕ {task_count} new tasks will be added")
+        
+    except Exception as e:
+        preview_lines.append(f"❌ Error reading file: {e}")
+    
+    return "\n".join(preview_lines)
+
+
+def _import_csv(task_manager, file_path, additional_labels):
+    """Import tasks from CSV format."""
+    import csv
+    
+    imported_count = 0
+    
+    with open(file_path, 'r', newline='', encoding='utf-8') as csvfile:
+        reader = csv.DictReader(csvfile)
+        
+        for row in reader:
+            content = row.get('Content', '').strip()
+            if not content:
+                continue
+            
+            # Parse labels
+            labels = []
+            if row.get('Labels'):
+                labels.extend([label.strip() for label in row['Labels'].split(',') if label.strip()])
+            
+            # Add additional labels
+            labels.extend(additional_labels)
+            
+            # Add task
+            task_manager.add_task(content, labels, source="csv-import")
+            imported_count += 1
+    
+    return imported_count
+
+
+def _import_json(task_manager, file_path, additional_labels):
+    """Import tasks from JSON format."""
+    import json
+    
+    imported_count = 0
+    
+    with open(file_path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    
+    for task_data in data:
+        content = task_data.get('content', '').strip()
+        if not content:
+            continue
+        
+        # Parse labels
+        labels = task_data.get('labels', [])
+        labels.extend(additional_labels)
+        
+        # Add task
+        task_id = task_manager.add_task(content, labels, source="json-import")
+        imported_count += 1
+        
+        # Mark as completed if it was completed in the export
+        if task_data.get('status') == 'completed' and task_data.get('completed_at'):
+            task_manager.update_task_completion(task_id, True)
+    
+    return imported_count
+
+
+def _import_txt(task_manager, file_path, additional_labels):
+    """Import tasks from plain text format using editor parsing."""
+    from fincli.editor import EditorManager
+    
+    db_manager = DatabaseManager()
+    editor_manager = EditorManager(db_manager)
+    
+    imported_count = 0
+    
+    with open(file_path, 'r', encoding='utf-8') as f:
+        for line_num, line in enumerate(f, 1):
+            line = line.strip()
+            
+            # Skip comments and empty lines
+            if not line or line.startswith('#'):
+                continue
+            
+            # Use the same parsing logic as the editor
+            task_info = editor_manager.parse_task_line(line)
+            if not task_info:
+                continue
+            
+            # Skip empty tasks
+            if not task_info["content"].strip():
+                continue
+            
+            # Add additional labels
+            labels = task_info.get("labels", [])
+            labels.extend(additional_labels)
+            
+            # Add task
+            task_id = task_manager.add_task(task_info["content"], labels, source="txt-import")
+            imported_count += 1
+            
+            # Mark as completed if it was completed in the export
+            if task_info["is_completed"]:
+                task_manager.update_task_completion(task_id, True)
+    
+    return imported_count
 
 
 @cli.command(name="digest")
@@ -789,6 +1092,7 @@ def main():
             "open-editor",
             "list-labels",
             "import",
+            "export",
             "digest",
             "report",
             "backup",
