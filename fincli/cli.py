@@ -35,6 +35,15 @@ def add_task(content: str, labels: tuple, source: str = "cli"):
     # Convert labels tuple to list for TaskManager
     labels_list = list(labels) if labels else []
 
+    # Validate labels for reserved words
+    reserved_words = {"and", "or"}
+    invalid_labels = [label for label in labels_list if label.lower() in reserved_words]
+    if invalid_labels:
+        click.echo(f"❌ Error: Cannot use reserved words as labels: {', '.join(invalid_labels)}")
+        click.echo(f"   Reserved words: {', '.join(reserved_words)}")
+        click.echo(f"   Use complex filtering instead: fin list -l 'work and urgent'")
+        sys.exit(1)
+
     # Check if this is an important task and auto-add today label if configured
     if "i" in labels_list and config.get_auto_today_for_important():
         if "t" not in labels_list:
@@ -126,6 +135,16 @@ def handle_direct_task(args):
     # Extract hashtags from content and add them as labels
     # Exclude task reference patterns like #task23, #ref:task23, etc.
     hashtags = re.findall(r"#(?!task\d+|ref:task\d+)(\w+)", content)
+    
+    # Validate hashtags for reserved words
+    reserved_words = {"and", "or"}
+    invalid_hashtags = [tag for tag in hashtags if tag.lower() in reserved_words]
+    if invalid_hashtags:
+        click.echo(f"❌ Error: Cannot use reserved words as labels: {', '.join(invalid_hashtags)}")
+        click.echo(f"   Reserved words: {', '.join(reserved_words)}")
+        click.echo(f"   Use complex filtering instead: fin list -l 'work and urgent'")
+        sys.exit(1)
+    
     for hashtag in hashtags:
         labels.append(hashtag)
 

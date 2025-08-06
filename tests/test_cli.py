@@ -178,6 +178,133 @@ class TestCLI:
         assert result.exit_code == 0
         assert '✅ Task added: "Task with empty labels" [valid]' in result.output
 
+    def test_cli_reserved_word_validation_and(self, temp_db_path, monkeypatch):
+        """Test that reserved word 'and' cannot be used as a label."""
+        # Mock the database path
+        monkeypatch.setattr(
+            "fincli.db.DatabaseManager.__init__",
+            lambda self, db_path=None: self._init_mock_db(temp_db_path),
+        )
+        
+        # Mock sys.argv to simulate direct task addition
+        import sys
+        original_argv = sys.argv
+        sys.argv = ["fin", "Test task #and"]
+        
+        try:
+            from fincli.cli import main
+            import io
+            from contextlib import redirect_stdout
+            
+            # Capture stdout and catch SystemExit
+            f = io.StringIO()
+            with redirect_stdout(f):
+                try:
+                    main()
+                except SystemExit:
+                    pass  # Expected when validation fails
+            
+            output = f.getvalue()
+            assert "Cannot use reserved words as labels: and" in output
+            assert "Reserved words:" in output
+            assert "and" in output
+            assert "or" in output
+        finally:
+            sys.argv = original_argv
+
+    def test_cli_reserved_word_validation_or(self, temp_db_path, monkeypatch):
+        """Test that reserved word 'or' cannot be used as a label."""
+        # Mock the database path
+        monkeypatch.setattr(
+            "fincli.db.DatabaseManager.__init__",
+            lambda self, db_path=None: self._init_mock_db(temp_db_path),
+        )
+        
+        # Mock sys.argv to simulate direct task addition
+        import sys
+        original_argv = sys.argv
+        sys.argv = ["fin", "Test task #or"]
+        
+        try:
+            from fincli.cli import main
+            import io
+            from contextlib import redirect_stdout
+            
+            # Capture stdout and catch SystemExit
+            f = io.StringIO()
+            with redirect_stdout(f):
+                try:
+                    main()
+                except SystemExit:
+                    pass  # Expected when validation fails
+            
+            output = f.getvalue()
+            assert "Cannot use reserved words as labels: or" in output
+            assert "Reserved words:" in output
+            assert "and" in output
+            assert "or" in output
+        finally:
+            sys.argv = original_argv
+
+    def test_cli_reserved_word_validation_case_insensitive(self, temp_db_path, monkeypatch):
+        """Test that reserved word validation is case insensitive."""
+        # Mock the database path
+        monkeypatch.setattr(
+            "fincli.db.DatabaseManager.__init__",
+            lambda self, db_path=None: self._init_mock_db(temp_db_path),
+        )
+        
+        # Mock sys.argv to simulate direct task addition
+        import sys
+        original_argv = sys.argv
+        sys.argv = ["fin", "Test task #AND"]
+        
+        try:
+            from fincli.cli import main
+            import io
+            from contextlib import redirect_stdout
+            
+            # Capture stdout and catch SystemExit
+            f = io.StringIO()
+            with redirect_stdout(f):
+                try:
+                    main()
+                except SystemExit:
+                    pass  # Expected when validation fails
+            
+            output = f.getvalue()
+            assert "Cannot use reserved words as labels: AND" in output
+        finally:
+            sys.argv = original_argv
+
+    def test_cli_normal_labels_still_work(self, temp_db_path, monkeypatch):
+        """Test that normal labels still work after adding reserved word validation."""
+        # Mock the database path
+        monkeypatch.setattr(
+            "fincli.db.DatabaseManager.__init__",
+            lambda self, db_path=None: self._init_mock_db(temp_db_path),
+        )
+        
+        # Mock sys.argv to simulate direct task addition
+        import sys
+        original_argv = sys.argv
+        sys.argv = ["fin", "Test task #work"]
+        
+        try:
+            from fincli.cli import main
+            import io
+            from contextlib import redirect_stdout
+            
+            # Capture stdout
+            f = io.StringIO()
+            with redirect_stdout(f):
+                main()
+            
+            output = f.getvalue()
+            assert '✅ Task added: "Test task" [work]' in output
+        finally:
+            sys.argv = original_argv
+
 
 class TestCLIExecution:
     """Test CLI execution via subprocess."""
