@@ -16,6 +16,7 @@ from fincli.labels import LabelManager
 from fincli.tasks import TaskManager
 from fincli.utils import filter_tasks_by_date_range, format_task_for_display, is_important_task, is_today_task
 from fincli.backup import DatabaseBackup
+from fincli.config import Config
 from datetime import datetime
 import re
 
@@ -24,9 +25,15 @@ def add_task(content: str, labels: tuple, source: str = "cli"):
     """Add a task to the database."""
     db_manager = DatabaseManager()
     task_manager = TaskManager(db_manager)
+    config = Config()
 
     # Convert labels tuple to list for TaskManager
-    labels_list = list(labels) if labels else None
+    labels_list = list(labels) if labels else []
+
+    # Check if this is an important task and auto-add today label if configured
+    if "i" in labels_list and config.get_auto_today_for_important():
+        if "t" not in labels_list:
+            labels_list.append("t")
 
     # Add the task with labels (TaskManager handles normalization)
     task_id = task_manager.add_task(content, labels_list, source)
@@ -207,8 +214,11 @@ def _list_tasks_impl(days, label, status):
         return
 
     # Organize tasks into sections
+    # Important tasks (with #i) go in Important section, regardless of #t
     important_tasks = [task for task in tasks if is_important_task(task)]
+    # Today tasks (with #t but not #i) go in Today section
     today_tasks = [task for task in tasks if is_today_task(task) and not is_important_task(task)]
+    # Regular tasks (no #i or #t) go in Open section
     open_tasks = [task for task in tasks if not is_important_task(task) and not is_today_task(task)]
 
     # Display Important section
@@ -1116,6 +1126,41 @@ def report(output_format, period, output, overdue):
         click.echo(report_content)
 
 
+@cli.command(name="config")
+@click.option("--auto-today", type=bool, help="Auto-add today label to important tasks")
+@click.option("--show-sections", type=bool, help="Show organized sections in task lists")
+@click.option("--default-days", type=int, help="Default number of days for task lists")
+@click.option("--default-editor", help="Default editor for task editing")
+def config_command(auto_today, show_sections, default_days, default_editor):
+    """Manage FinCLI configuration."""
+    config = Config()
+    
+    if auto_today is not None:
+        config.set_auto_today_for_important(auto_today)
+        click.echo(f"✅ Auto-today for important tasks: {auto_today}")
+    
+    if show_sections is not None:
+        config.set_show_sections(show_sections)
+        click.echo(f"✅ Show organized sections: {show_sections}")
+    
+    if default_days is not None:
+        config.set_default_days(default_days)
+        click.echo(f"✅ Default days: {default_days}")
+    
+    if default_editor is not None:
+        config.set_default_editor(default_editor)
+        click.echo(f"✅ Default editor: {default_editor}")
+    
+    # Show current configuration
+    if all(param is None for param in [auto_today, show_sections, default_days, default_editor]):
+        click.echo("📋 Current Configuration:")
+        click.echo(f"  Auto-today for important tasks: {config.get_auto_today_for_important()}")
+        click.echo(f"  Show organized sections: {config.get_show_sections()}")
+        click.echo(f"  Default days: {config.get_default_days()}")
+        click.echo(f"  Default editor: {config.get_default_editor() or 'system default'}")
+        click.echo(f"  Config file: {config.config_file}")
+
+
 def main():
     """Main entry point that handles direct task addition."""
     args = sys.argv[1:]
@@ -1189,6 +1234,7 @@ def main():
             "list-backups",
             "restore",
             "restore-latest",
+            "config",
             "fins",
             "--help",
             "-h",
