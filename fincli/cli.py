@@ -146,21 +146,12 @@ def init(db_path: str):
     click.echo("✅ Database initialized successfully!")
 
 
-@cli.command(name="list-tasks")
-@click.option("--days", "-d", default=1, help="Show tasks from the past N days (default: 1)")
-@click.option("--label", "-l", multiple=True, help="Filter by labels")
-@click.option(
-    "--status", "-s",
-    type=click.Choice(["open", "completed", "done", "all"]),
-    default="open",
-    help="Filter by status",
-)
-def list_tasks(days, label, status):
-    """Query and display tasks based on time and status criteria."""
+def _list_tasks_impl(days, label, status):
+    """Implementation for listing tasks."""
     db_manager = DatabaseManager()
     task_manager = TaskManager(db_manager)
 
-    # Get tasks (include completed tasks if we need them for status filtering)
+    # Get tasks (include completed tasks for status filtering)
     tasks = task_manager.list_tasks(include_completed=True)
 
     # Apply date filtering first
@@ -194,6 +185,34 @@ def list_tasks(days, label, status):
     for task in tasks:
         formatted_task = format_task_for_display(task)
         click.echo(formatted_task)
+
+
+@cli.command(name="list-tasks")
+@click.option("--days", "-d", default=1, help="Show tasks from the past N days (default: 1)")
+@click.option("--label", "-l", multiple=True, help="Filter by labels")
+@click.option(
+    "--status", "-s",
+    type=click.Choice(["open", "completed", "done", "all"]),
+    default="open",
+    help="Filter by status",
+)
+def list_tasks(days, label, status):
+    """Query and display tasks based on time and status criteria."""
+    _list_tasks_impl(days, label, status)
+
+
+@cli.command(name="list")
+@click.option("--days", "-d", default=1, help="Show tasks from the past N days (default: 1)")
+@click.option("--label", "-l", multiple=True, help="Filter by labels")
+@click.option(
+    "--status", "-s",
+    type=click.Choice(["open", "completed", "done", "all"]),
+    default="open",
+    help="Filter by status",
+)
+def list_tasks_alias(days, label, status):
+    """Alias for list-tasks command."""
+    _list_tasks_impl(days, label, status)
 
 
 @cli.command(name="open-editor")
@@ -727,6 +746,7 @@ def main():
             "add",
             "init",
             "list-tasks",
+            "list",
             "open-editor",
             "list-labels",
             "import",

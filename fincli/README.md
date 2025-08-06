@@ -98,11 +98,17 @@ fins -s all -d 10
 # List today and yesterday's open tasks (default)
 fin list-tasks
 
+# List today and yesterday's open tasks (alias)
+fin list
+
 # List today and yesterday's completed tasks
 fin list-tasks -s completed
 
 # List today and yesterday's completed tasks (alias)
 fin list-tasks -s done
+
+# List today and yesterday's completed tasks (command alias)
+fin list -s completed
 
 # Filter by label
 fins --label work

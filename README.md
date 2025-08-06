@@ -236,6 +236,7 @@ fin/
 | `fin add-task <content>` | Add a new task |
 | `fin <content>` | Add a new task (shortcut) |
 | `fin list-tasks` | List all tasks |
+| `fin list` | List all tasks (alias) |
 | `fin open-editor` | Edit tasks in external editor |
 | `fine` | Edit tasks in external editor (shortcut) |
 | `fins` | List completed tasks from past week (shortcut) |
@@ -278,6 +279,9 @@ fin "Call client about requirements" -l urgent
 
 # List today's work tasks
 fin list-tasks --label work
+
+# List today's work tasks (alias)
+fin list --label work
 
 # Edit tasks in editor
 fin open-editor
