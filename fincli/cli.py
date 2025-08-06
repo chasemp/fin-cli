@@ -331,7 +331,7 @@ def fine_command():
     import click
     
     # Create a standalone Click command
-    @click.command()
+    @click.command(context_settings=dict(help_option_names=["-h", "--help"]))
     @click.option("--label", "-l", multiple=True, help="Filter by labels")
     @click.option("--date", help="Filter by date (YYYY-MM-DD)")
     @click.option("--days", "-d", default=1, help="Show tasks from the past N days (default: 1)")
@@ -496,7 +496,7 @@ def fins_command():
     import click
     
     # Create a standalone Click command
-    @click.command()
+    @click.command(context_settings=dict(help_option_names=["-h", "--help"]))
     @click.argument("content", nargs=-1, required=False)
     @click.option("--days", "-d", default=7, help="Show tasks from the past N days (default: 7)")
     @click.option("--label", "-l", multiple=True, help="Filter by labels")
