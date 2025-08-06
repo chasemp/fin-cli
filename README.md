@@ -64,7 +64,7 @@ fin "weekly review #recur:weekly"
 fin "implement feature #depends:task123"
 ```
 
-**Note:** The words `and` and `or` are reserved and cannot be used as labels. Use complex filtering instead: `fin list -l "work and urgent"`.
+**Note:** The words `and`, `or`, `ref`, `due`, `recur`, `depends`, and `not` are reserved and cannot be used as labels. Use complex filtering instead: `fin list -l "work and urgent"`, or use special patterns: `fin "project deadline #due:2025-08-10"`.
 
 ### Listing Tasks
 
@@ -156,17 +156,29 @@ fin list -l "work and urgent" -l "personal"
 ```
 
 #### Reserved Words
-The following words are reserved and cannot be used as labels because they're used for complex filtering:
+The following words are reserved and cannot be used as labels because they're used for complex filtering or special patterns:
 - `and` - Used for AND logic in filtering
 - `or` - Used for OR logic in filtering
+- `ref` - Used in task references (`#ref:task123`)
+- `due` - Used in due date patterns (`#due:2025-08-10`)
+- `recur` - Used in recurring task patterns (`#recur:daily`)
+- `depends` - Used in dependency patterns (`#depends:task123`)
+- `not` - Reserved for potential future NOT logic in filtering
 
 **Example:**
 ```bash
-# ❌ This will fail
+# ❌ These will fail
 fin "Task with reserved label #and"
+fin "Task with reserved label #ref"
+fin "Task with reserved label #due"
 
 # ✅ Use complex filtering instead
 fin list -l "work and urgent"
+
+# ✅ Use special patterns
+fin "project deadline #due:2025-08-10"
+fin "daily standup #recur:daily"
+fin "implement feature #depends:task123"
 ```
 
 #### Bulk Operations in Editor

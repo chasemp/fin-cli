@@ -209,6 +209,11 @@ class TestCLI:
             assert "Reserved words:" in output
             assert "and" in output
             assert "or" in output
+            assert "ref" in output
+            assert "due" in output
+            assert "recur" in output
+            assert "depends" in output
+            assert "not" in output
         finally:
             sys.argv = original_argv
 
@@ -243,6 +248,11 @@ class TestCLI:
             assert "Reserved words:" in output
             assert "and" in output
             assert "or" in output
+            assert "ref" in output
+            assert "due" in output
+            assert "recur" in output
+            assert "depends" in output
+            assert "not" in output
         finally:
             sys.argv = original_argv
 
@@ -302,6 +312,102 @@ class TestCLI:
             
             output = f.getvalue()
             assert '✅ Task added: "Test task" [work]' in output
+        finally:
+            sys.argv = original_argv
+
+    def test_cli_reserved_word_validation_ref(self, temp_db_path, monkeypatch):
+        """Test that reserved word 'ref' cannot be used as a label."""
+        # Mock the database path
+        monkeypatch.setattr(
+            "fincli.db.DatabaseManager.__init__",
+            lambda self, db_path=None: self._init_mock_db(temp_db_path),
+        )
+        
+        # Mock sys.argv to simulate direct task addition
+        import sys
+        original_argv = sys.argv
+        sys.argv = ["fin", "Test task #ref"]
+        
+        try:
+            from fincli.cli import main
+            import io
+            from contextlib import redirect_stdout
+            
+            # Capture stdout and catch SystemExit
+            f = io.StringIO()
+            with redirect_stdout(f):
+                try:
+                    main()
+                except SystemExit:
+                    pass  # Expected when validation fails
+            
+            output = f.getvalue()
+            assert "Cannot use reserved words as labels: ref" in output
+            assert "Reserved words:" in output
+        finally:
+            sys.argv = original_argv
+
+    def test_cli_reserved_word_validation_due(self, temp_db_path, monkeypatch):
+        """Test that reserved word 'due' cannot be used as a label."""
+        # Mock the database path
+        monkeypatch.setattr(
+            "fincli.db.DatabaseManager.__init__",
+            lambda self, db_path=None: self._init_mock_db(temp_db_path),
+        )
+        
+        # Mock sys.argv to simulate direct task addition
+        import sys
+        original_argv = sys.argv
+        sys.argv = ["fin", "Test task #due"]
+        
+        try:
+            from fincli.cli import main
+            import io
+            from contextlib import redirect_stdout
+            
+            # Capture stdout and catch SystemExit
+            f = io.StringIO()
+            with redirect_stdout(f):
+                try:
+                    main()
+                except SystemExit:
+                    pass  # Expected when validation fails
+            
+            output = f.getvalue()
+            assert "Cannot use reserved words as labels: due" in output
+            assert "Reserved words:" in output
+        finally:
+            sys.argv = original_argv
+
+    def test_cli_reserved_word_validation_not(self, temp_db_path, monkeypatch):
+        """Test that reserved word 'not' cannot be used as a label."""
+        # Mock the database path
+        monkeypatch.setattr(
+            "fincli.db.DatabaseManager.__init__",
+            lambda self, db_path=None: self._init_mock_db(temp_db_path),
+        )
+        
+        # Mock sys.argv to simulate direct task addition
+        import sys
+        original_argv = sys.argv
+        sys.argv = ["fin", "Test task #not"]
+        
+        try:
+            from fincli.cli import main
+            import io
+            from contextlib import redirect_stdout
+            
+            # Capture stdout and catch SystemExit
+            f = io.StringIO()
+            with redirect_stdout(f):
+                try:
+                    main()
+                except SystemExit:
+                    pass  # Expected when validation fails
+            
+            output = f.getvalue()
+            assert "Cannot use reserved words as labels: not" in output
+            assert "Reserved words:" in output
         finally:
             sys.argv = original_argv
 

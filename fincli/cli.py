@@ -36,12 +36,13 @@ def add_task(content: str, labels: tuple, source: str = "cli"):
     labels_list = list(labels) if labels else []
 
     # Validate labels for reserved words
-    reserved_words = {"and", "or"}
+    reserved_words = {"and", "or", "ref", "due", "recur", "depends", "not"}
     invalid_labels = [label for label in labels_list if label.lower() in reserved_words]
     if invalid_labels:
         click.echo(f"❌ Error: Cannot use reserved words as labels: {', '.join(invalid_labels)}")
-        click.echo(f"   Reserved words: {', '.join(reserved_words)}")
+        click.echo(f"   Reserved words: {', '.join(sorted(reserved_words))}")
         click.echo(f"   Use complex filtering instead: fin list -l 'work and urgent'")
+        click.echo(f"   Use special patterns: #due:2025-08-10, #recur:daily, #depends:task123")
         sys.exit(1)
 
     # Check if this is an important task and auto-add today label if configured
@@ -137,12 +138,13 @@ def handle_direct_task(args):
     hashtags = re.findall(r"#(?!task\d+|ref:task\d+)(\w+)", content)
     
     # Validate hashtags for reserved words
-    reserved_words = {"and", "or"}
+    reserved_words = {"and", "or", "ref", "due", "recur", "depends", "not"}
     invalid_hashtags = [tag for tag in hashtags if tag.lower() in reserved_words]
     if invalid_hashtags:
         click.echo(f"❌ Error: Cannot use reserved words as labels: {', '.join(invalid_hashtags)}")
-        click.echo(f"   Reserved words: {', '.join(reserved_words)}")
+        click.echo(f"   Reserved words: {', '.join(sorted(reserved_words))}")
         click.echo(f"   Use complex filtering instead: fin list -l 'work and urgent'")
+        click.echo(f"   Use special patterns: #due:2025-08-10, #recur:daily, #depends:task123")
         sys.exit(1)
     
     for hashtag in hashtags:
