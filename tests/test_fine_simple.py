@@ -46,6 +46,7 @@ class TestFineCommandSimple:
 
         # Test dry-run functionality
         from click.testing import CliRunner
+
         from fincli.cli import open_editor
 
         runner = CliRunner()
@@ -55,7 +56,10 @@ class TestFineCommandSimple:
         assert "📝 Found 2 tasks for editing:" in result.output
         assert "Work task" in result.output
         assert "Personal task" in result.output
-        assert "Use 'fin open-editor' (without --dry-run) to actually open the editor." in result.output
+        assert (
+            "Use 'fin open-editor' (without --dry-run) to actually open the editor."
+            in result.output
+        )
 
     def test_fine_command_task_filtering(self, temp_db_path, monkeypatch):
         """Test fine command task filtering logic."""
@@ -113,7 +117,9 @@ class TestFineCommandSimple:
         result = runner.invoke(open_editor, ["--help"])
 
         assert result.exit_code == 0
-        assert "Open tasks in your editor for editing completion status" in result.output
+        assert (
+            "Open tasks in your editor for editing completion status" in result.output
+        )
         assert "--label" in result.output
         assert "--date" in result.output
         assert "--dry-run" in result.output
@@ -164,6 +170,7 @@ class TestFineCommandSimple:
 
         # Test dry-run with label filtering
         from click.testing import CliRunner
+
         from fincli.cli import open_editor
 
         runner = CliRunner()

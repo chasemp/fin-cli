@@ -52,6 +52,16 @@ fin "critical deadline #i #t"
 
 # Add completed task directly
 fins "already done task"
+
+# Add task with due date
+fin "project deadline #due:2025-08-10"
+
+# Add recurring task
+fin "daily standup #recur:daily"
+fin "weekly review #recur:weekly"
+
+# Add task with dependencies
+fin "implement feature #depends:task123"
 ```
 
 ### Listing Tasks
@@ -70,6 +80,11 @@ fin list -s completed
 
 # List all tasks (open and completed)
 fin list -s all
+
+# Complex label filtering
+fin list -l "work and urgent"    # Tasks with both work AND urgent labels
+fin list -l "work or personal"   # Tasks with work OR personal labels
+fin list -l "urgent"             # Simple label filtering
 ```
 
 ### Priority System
@@ -94,19 +109,78 @@ fin "routine task"
 fin list
 ```
 
+### Advanced Features
+
+#### Due Dates
+```bash
+# Add task with due date
+fin "project deadline #due:2025-08-10"
+
+# Due dates are stored as labels for easy filtering
+fin list -l "due:2025-08-10"
+```
+
+#### Recurring Tasks
+```bash
+# Add daily recurring task
+fin "daily standup #recur:daily"
+
+# Add weekly recurring task
+fin "weekly review #recur:weekly"
+
+# Add monthly recurring task
+fin "monthly report #recur:monthly"
+```
+
+#### Task Dependencies
+```bash
+# Add task that depends on another
+fin "implement feature #depends:task123"
+
+# Dependencies are stored as labels
+fin list -l "depends:task123"
+```
+
+#### Complex Label Combinations
+```bash
+# Find tasks with multiple labels (AND)
+fin list -l "work and urgent"
+
+# Find tasks with any of several labels (OR)
+fin list -l "work or personal"
+
+# Combine multiple criteria
+fin list -l "work and urgent" -l "personal"
+```
+
+#### Bulk Operations in Editor
+```bash
+# Edit multiple tasks at once
+fine
+
+# In the editor, you can:
+# - Mark multiple tasks as complete: [ ] → [x]
+# - Reopen multiple tasks: [x] → [ ]
+# - Delete multiple tasks: Remove lines
+# - Add new tasks: Add lines with [ ] timestamp content
+# - Modify task content: Edit the text
+```
+
 **Example Output:**
 ```
 Important
 1
-[ ] 2025-08-06 15:00  urgent meeting  #i
+[ ] 2025-08-06 15:14  Urgent meeting #i
 
 Today
-1
-[ ] 2025-08-06 15:00  daily standup  #t
+2
+[ ] 2025-08-06 15:14  Daily standup #t
 
 Open
-1
-[ ] 2025-08-06 15:00  routine task
+3
+[ ] 2025-08-06 15:14  Project deadline #due:2025-08-10
+4
+[ ] 2025-08-06 15:14  Weekly review #recur:weekly
 ```
 
 ### Configuration
@@ -270,4 +344,6 @@ Configuration is stored at `~/fin/config.json` and includes:
 - `auto_today_for_important`: Auto-add today label to important tasks (default: true)
 - `show_sections`: Show organized sections in task lists (default: true)
 - `default_days`: Default number of days for task lists (default: 1)
-- `default_editor`: Default editor for task editing (default: system default) 
+- `default_editor`: Default editor for task editing (default: system default)
+
+**Note**: The config file is created automatically on first use with default values. Existing configurations are preserved and never overwritten during installation or updates. 

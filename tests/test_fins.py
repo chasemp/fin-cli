@@ -134,7 +134,9 @@ class TestFinsCommand:
         assert len(filtered_tasks) >= 1
         completed_tasks = [t for t in filtered_tasks if t.get("completed_at")]
         assert len(completed_tasks) >= 1
-        assert any("Yesterday's completed task" in t["content"] for t in completed_tasks)
+        assert any(
+            "Yesterday's completed task" in t["content"] for t in completed_tasks
+        )
 
     def test_query_tasks_week_flag(self, temp_db_path, monkeypatch):
         """Test querying tasks with week flag."""
@@ -188,8 +190,9 @@ class TestFinsCommand:
         """Test fins command with no tasks."""
         # Set up empty database
         import os
+
         os.environ["FIN_DB_PATH"] = temp_db_path
-        
+
         result = cli_runner.invoke(list_tasks)
         assert result.exit_code == 0
         assert "📝 No tasks found matching your criteria." in result.output
@@ -198,15 +201,16 @@ class TestFinsCommand:
         """Test fins command with tasks."""
         # Set up database with tasks
         import os
+
         os.environ["FIN_DB_PATH"] = temp_db_path
-        
+
         from fincli.db import DatabaseManager
         from fincli.tasks import TaskManager
-        
+
         db_manager = DatabaseManager(temp_db_path)
         task_manager = TaskManager(db_manager)
         task_manager.add_task("Test task", labels=["work"])
-        
+
         result = cli_runner.invoke(list_tasks)
         assert result.exit_code == 0
         assert "Test task" in result.output
@@ -219,15 +223,16 @@ class TestFinsIntegration:
         """Test fins command execution via subprocess."""
         # Set up database with tasks
         import os
+
         os.environ["FIN_DB_PATH"] = temp_db_path
-        
+
         from fincli.db import DatabaseManager
         from fincli.tasks import TaskManager
-        
+
         db_manager = DatabaseManager(temp_db_path)
         task_manager = TaskManager(db_manager)
         task_manager.add_task("Test task", labels=["work"])
-        
+
         # Run fins command
         result = subprocess.run(
             [sys.executable, "-m", "fincli.cli", "list-tasks"],
@@ -235,7 +240,7 @@ class TestFinsIntegration:
             text=True,
             env={"FIN_DB_PATH": temp_db_path},
         )
-        
+
         assert result.returncode == 0
         assert "Test task" in result.stdout
 
@@ -243,14 +248,15 @@ class TestFinsIntegration:
         """Test fins command with days flag."""
         # Set up database with tasks
         import os
+
         os.environ["FIN_DB_PATH"] = temp_db_path
-        
+
         from fincli.db import DatabaseManager
         from fincli.tasks import TaskManager
-        
+
         db_manager = DatabaseManager(temp_db_path)
         task_manager = TaskManager(db_manager)
-        
+
         # Clear existing tasks
         with db_manager.get_connection() as conn:
             cursor = conn.cursor()
@@ -279,7 +285,16 @@ class TestFinsIntegration:
         import subprocess
 
         result = subprocess.run(
-            [sys.executable, "-m", "fincli.cli", "list-tasks", "--days", "7", "--status", "all"],
+            [
+                sys.executable,
+                "-m",
+                "fincli.cli",
+                "list-tasks",
+                "--days",
+                "7",
+                "--status",
+                "all",
+            ],
             capture_output=True,
             text=True,
             env={"FIN_DB_PATH": temp_db_path},
@@ -293,15 +308,16 @@ class TestFinsIntegration:
         """Test fins output format."""
         # Set up database with tasks
         import os
+
         os.environ["FIN_DB_PATH"] = temp_db_path
-        
+
         from fincli.db import DatabaseManager
         from fincli.tasks import TaskManager
-        
+
         db_manager = DatabaseManager(temp_db_path)
         task_manager = TaskManager(db_manager)
         task_manager.add_task("Test task", labels=["work"])
-        
+
         # Run fins command
         result = subprocess.run(
             [sys.executable, "-m", "fincli.cli", "list-tasks"],
@@ -309,7 +325,7 @@ class TestFinsIntegration:
             text=True,
             env={"FIN_DB_PATH": temp_db_path},
         )
-        
+
         assert result.returncode == 0
         lines = result.stdout.strip().split("\n")
         # Filter out the database path line
@@ -326,15 +342,23 @@ class TestFinsStandaloneCommand:
         """Test fins command help output."""
         # Create a mock Click command for testing
         import click
-        
+
         @click.command()
-        @click.option("--days", default=7, help="Show completed tasks from the past N days (default: 7)")
+        @click.option(
+            "--days",
+            default=7,
+            help="Show completed tasks from the past N days (default: 7)",
+        )
         @click.option("--label", "-l", multiple=True, help="Filter by labels")
-        @click.option("--today", is_flag=True, help="Show only today's tasks (overrides default days behavior)")
+        @click.option(
+            "--today",
+            is_flag=True,
+            help="Show only today's tasks (overrides default days behavior)",
+        )
         def mock_fins_cli(days, label, today):
             """Query and display completed tasks (defaults to completed tasks from past 7 days)."""
             return "Mock fins command"
-        
+
         result = cli_runner.invoke(mock_fins_cli, ["--help"])
         assert result.exit_code == 0
         assert "Query and display completed tasks" in result.output
@@ -343,21 +367,23 @@ class TestFinsStandaloneCommand:
         """Test fins command default behavior (completed tasks from past 7 days)."""
         # Set up database with completed tasks
         import os
+
         os.environ["FIN_DB_PATH"] = temp_db_path
-        
-        from fincli.db import DatabaseManager
-        from fincli.tasks import TaskManager
+
         import sqlite3
         from datetime import datetime, timedelta
-        
+
+        from fincli.db import DatabaseManager
+        from fincli.tasks import TaskManager
+
         db_manager = DatabaseManager(temp_db_path)
         task_manager = TaskManager(db_manager)
-        
+
         # Add a completed task from yesterday
         task_id = task_manager.add_task("Completed task", labels=["work"])
         yesterday = datetime.now() - timedelta(days=1)
         yesterday_str = yesterday.strftime("%Y-%m-%d %H:%M:%S")
-        
+
         with sqlite3.connect(db_manager.db_path) as conn:
             cursor = conn.cursor()
             cursor.execute(
@@ -365,13 +391,13 @@ class TestFinsStandaloneCommand:
                 (yesterday_str, task_id),
             )
             conn.commit()
-        
+
         # Test by calling the underlying functionality directly
         from fincli.utils import filter_tasks_by_date_range
-        
+
         all_tasks = task_manager.list_tasks(include_completed=True)
         filtered_tasks = filter_tasks_by_date_range(all_tasks, days=7)
-        
+
         assert len(filtered_tasks) == 1
         assert filtered_tasks[0]["content"] == "Completed task"
         assert filtered_tasks[0]["completed_at"] is not None
@@ -380,21 +406,23 @@ class TestFinsStandaloneCommand:
         """Test fins command with --today flag."""
         # Set up database with completed tasks
         import os
+
         os.environ["FIN_DB_PATH"] = temp_db_path
-        
-        from fincli.db import DatabaseManager
-        from fincli.tasks import TaskManager
+
         import sqlite3
         from datetime import datetime, timedelta
-        
+
+        from fincli.db import DatabaseManager
+        from fincli.tasks import TaskManager
+
         db_manager = DatabaseManager(temp_db_path)
         task_manager = TaskManager(db_manager)
-        
+
         # Add a completed task from yesterday (since --today shows only today's completed tasks)
         task_id = task_manager.add_task("Yesterday's completed task", labels=["work"])
         yesterday = datetime.now() - timedelta(days=1)
         yesterday_str = yesterday.strftime("%Y-%m-%d %H:%M:%S")
-        
+
         with sqlite3.connect(db_manager.db_path) as conn:
             cursor = conn.cursor()
             cursor.execute(
@@ -402,14 +430,14 @@ class TestFinsStandaloneCommand:
                 (yesterday_str, task_id),
             )
             conn.commit()
-        
+
         # Test by calling the underlying functionality directly
         from fincli.utils import filter_tasks_by_date_range
-        
+
         all_tasks = task_manager.list_tasks(include_completed=True)
         # For today flag, we use days=0 (only today's completed tasks)
         filtered_tasks = filter_tasks_by_date_range(all_tasks, days=0)
-        
+
         # Should not include yesterday's task when days=0
         assert len(filtered_tasks) == 0
 
@@ -417,23 +445,25 @@ class TestFinsStandaloneCommand:
         """Test fins command with label filtering."""
         # Set up database with completed tasks
         import os
+
         os.environ["FIN_DB_PATH"] = temp_db_path
-        
-        from fincli.db import DatabaseManager
-        from fincli.tasks import TaskManager
+
         import sqlite3
         from datetime import datetime, timedelta
-        
+
+        from fincli.db import DatabaseManager
+        from fincli.tasks import TaskManager
+
         db_manager = DatabaseManager(temp_db_path)
         task_manager = TaskManager(db_manager)
-        
+
         # Add completed tasks with different labels
         task1_id = task_manager.add_task("Work task", labels=["work"])
         task2_id = task_manager.add_task("Personal task", labels=["personal"])
-        
+
         yesterday = datetime.now() - timedelta(days=1)
         yesterday_str = yesterday.strftime("%Y-%m-%d %H:%M:%S")
-        
+
         with sqlite3.connect(db_manager.db_path) as conn:
             cursor = conn.cursor()
             cursor.execute(
@@ -441,17 +471,25 @@ class TestFinsStandaloneCommand:
                 (yesterday_str, task1_id, task2_id),
             )
             conn.commit()
-        
+
         # Test by calling the underlying functionality directly
         from fincli.utils import filter_tasks_by_date_range
-        
+
         all_tasks = task_manager.list_tasks(include_completed=True)
         filtered_tasks = filter_tasks_by_date_range(all_tasks, days=7)
-        
+
         # Apply label filtering manually
-        work_tasks = [task for task in filtered_tasks if task.get("labels") and "work" in task["labels"]]
-        personal_tasks = [task for task in filtered_tasks if task.get("labels") and "personal" in task["labels"]]
-        
+        work_tasks = [
+            task
+            for task in filtered_tasks
+            if task.get("labels") and "work" in task["labels"]
+        ]
+        personal_tasks = [
+            task
+            for task in filtered_tasks
+            if task.get("labels") and "personal" in task["labels"]
+        ]
+
         assert len(work_tasks) == 1
         assert work_tasks[0]["content"] == "Work task"
         assert len(personal_tasks) == 1
@@ -461,45 +499,47 @@ class TestFinsStandaloneCommand:
         """Test fins command with no tasks."""
         # Set up empty database
         import os
+
         os.environ["FIN_DB_PATH"] = temp_db_path
-        
+
         # Test by calling the underlying functionality directly
         from fincli.db import DatabaseManager
         from fincli.tasks import TaskManager
         from fincli.utils import filter_tasks_by_date_range
-        
+
         db_manager = DatabaseManager(temp_db_path)
         task_manager = TaskManager(db_manager)
         all_tasks = task_manager.list_tasks(include_completed=True)
         filtered_tasks = filter_tasks_by_date_range(all_tasks, days=7)
-        
+
         assert len(filtered_tasks) == 0
 
     def test_days_parameter_edge_cases(self, temp_db_path, monkeypatch):
         """Test --days parameter with edge cases."""
         # Set up database with tasks
         import os
+
         os.environ["FIN_DB_PATH"] = temp_db_path
-        
+
         from fincli.db import DatabaseManager
         from fincli.tasks import TaskManager
         from fincli.utils import filter_tasks_by_date_range
-        
+
         db_manager = DatabaseManager(temp_db_path)
         task_manager = TaskManager(db_manager)
-        
+
         # Add tasks from different days
         task1_id = task_manager.add_task("Today's task", labels=["work"])
         task2_id = task_manager.add_task("Yesterday's task", labels=["personal"])
         task3_id = task_manager.add_task("Week ago task", labels=["urgent"])
-        
+
         # Mark some as completed
         import sqlite3
         from datetime import datetime, timedelta
-        
+
         yesterday = datetime.now() - timedelta(days=1)
         week_ago = datetime.now() - timedelta(days=7)
-        
+
         with sqlite3.connect(db_manager.db_path) as conn:
             cursor = conn.cursor()
             cursor.execute(
@@ -511,23 +551,27 @@ class TestFinsStandaloneCommand:
                 (week_ago.strftime("%Y-%m-%d 12:00:00"), task3_id),
             )
             conn.commit()
-        
+
         # Test days=0 (only today)
         all_tasks = task_manager.list_tasks(include_completed=True)
         filtered_tasks = filter_tasks_by_date_range(all_tasks, days=0)
         today_tasks = [t for t in filtered_tasks if "Today's task" in t["content"]]
         assert len(today_tasks) == 1
-        
+
         # Test days=1 (today and yesterday)
         filtered_tasks = filter_tasks_by_date_range(all_tasks, days=1)
-        recent_tasks = [t for t in filtered_tasks if "Today's task" in t["content"] or "Yesterday's task" in t["content"]]
+        recent_tasks = [
+            t
+            for t in filtered_tasks
+            if "Today's task" in t["content"] or "Yesterday's task" in t["content"]
+        ]
         assert len(recent_tasks) == 2
-        
+
         # Test days=7 (past week)
         filtered_tasks = filter_tasks_by_date_range(all_tasks, days=7)
         week_tasks = [t for t in filtered_tasks if "Week ago task" in t["content"]]
         assert len(week_tasks) == 1
-        
+
         # Test days=30 (past month)
         filtered_tasks = filter_tasks_by_date_range(all_tasks, days=30)
         assert len(filtered_tasks) >= 3  # Should include all tasks
@@ -536,24 +580,25 @@ class TestFinsStandaloneCommand:
         """Test --days parameter through CLI commands."""
         # Set up database with tasks
         import os
+
         os.environ["FIN_DB_PATH"] = temp_db_path
-        
+
         from fincli.db import DatabaseManager
         from fincli.tasks import TaskManager
-        
+
         db_manager = DatabaseManager(temp_db_path)
         task_manager = TaskManager(db_manager)
-        
+
         # Add tasks from different days
         task1_id = task_manager.add_task("Today's task", labels=["work"])
         task2_id = task_manager.add_task("Yesterday's task", labels=["personal"])
-        
+
         # Mark one as completed
         import sqlite3
         from datetime import datetime, timedelta
-        
+
         yesterday = datetime.now() - timedelta(days=1)
-        
+
         with sqlite3.connect(db_manager.db_path) as conn:
             cursor = conn.cursor()
             cursor.execute(
@@ -561,29 +606,47 @@ class TestFinsStandaloneCommand:
                 (yesterday.strftime("%Y-%m-%d 12:00:00"), task2_id),
             )
             conn.commit()
-        
+
         # Test CLI commands with --days parameter
         import subprocess
-        
+
         # Test list-tasks with --days
         result = subprocess.run(
-            [sys.executable, "-m", "fincli.cli", "list-tasks", "--days", "1", "--status", "all"],
+            [
+                sys.executable,
+                "-m",
+                "fincli.cli",
+                "list-tasks",
+                "--days",
+                "1",
+                "--status",
+                "all",
+            ],
             capture_output=True,
             text=True,
             env={"FIN_DB_PATH": temp_db_path},
         )
-        
+
         assert result.returncode == 0
         assert "Today's task" in result.stdout
         assert "Yesterday's task" in result.stdout
-        
+
         # Test fins with --days
         result = subprocess.run(
-            [sys.executable, "-m", "fincli.cli", "list-tasks", "--days", "1", "--status", "completed"],
+            [
+                sys.executable,
+                "-m",
+                "fincli.cli",
+                "list-tasks",
+                "--days",
+                "1",
+                "--status",
+                "completed",
+            ],
             capture_output=True,
             text=True,
             env={"FIN_DB_PATH": temp_db_path},
         )
-        
+
         assert result.returncode == 0
         assert "Yesterday's task" in result.stdout  # Should show completed tasks

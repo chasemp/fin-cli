@@ -2,8 +2,6 @@
 Tests for label functionality
 """
 
-
-
 from fincli.cli import list_labels
 from fincli.db import DatabaseManager
 
@@ -301,9 +299,10 @@ class TestLabelFilteringInCommands:
             lambda self, db_path=None: self._init_mock_db(temp_db_path),
         )
 
-
     def test_fine_with_label_filter(self, cli_runner):
-        import tempfile, os
+        import os
+        import tempfile
+
         tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False, dir="/tmp")
         tmp.close()
         db_path = tmp.name
@@ -311,6 +310,7 @@ class TestLabelFilteringInCommands:
             os.environ["FIN_DB_PATH"] = db_path
             from fincli.db import DatabaseManager
             from fincli.tasks import TaskManager
+
             db_manager = DatabaseManager()
             task_manager = TaskManager(db_manager)
             task_manager.add_task("Work task", labels=["work"])
@@ -319,8 +319,10 @@ class TestLabelFilteringInCommands:
             del db_manager
             del task_manager
             from fincli.cli import open_editor
+
             def mock_subprocess_run(cmd, **kwargs):
                 import os
+
                 temp_file_path = cmd[-1] if cmd else None
                 if temp_file_path and os.path.exists(temp_file_path):
                     with open(temp_file_path, "r") as f:
@@ -328,10 +330,14 @@ class TestLabelFilteringInCommands:
                     content = content.replace("[ ]", "[x]", 1)
                     with open(temp_file_path, "w") as f:
                         f.write(content)
+
                 class MockResult:
                     returncode = 0
+
                 return MockResult()
+
             import pytest
+
             monkeypatch = pytest.MonkeyPatch()
             monkeypatch.setattr("subprocess.run", mock_subprocess_run)
             result = cli_runner.invoke(open_editor, ["--label", "work"])

@@ -74,7 +74,12 @@ class TestIntegration:
             for label in labels:
                 cmd.extend(["--label", label])
 
-            result = subprocess.run(cmd, capture_output=True, text=True, env={"FIN_DB_PATH": temp_db_path, **os.environ})
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                env={"FIN_DB_PATH": temp_db_path, **os.environ},
+            )
             assert result.returncode == 0
 
         # Verify all tasks in database
