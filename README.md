@@ -71,6 +71,12 @@ fins -s open
 # List all tasks from past 10 days
 fins -s all -d 10
 
+# Add a completed task
+fins 'task that is already done'
+
+# Add a completed task with labels
+fins 'finished task with labels' -l work -l urgent
+
 # Edit today and yesterday's open tasks (default)
 fine
 
@@ -240,6 +246,7 @@ fin/
 | `fin open-editor` | Edit tasks in external editor |
 | `fine` | Edit tasks in external editor (shortcut) |
 | `fins` | List completed tasks from past week (shortcut) |
+| `fins <content>` | Add a completed task |
 | `fin list-labels` | List all known labels |
 | `fin digest <period>` | Generate digest report |
 | `fin report <period>` | Generate detailed report |
@@ -276,6 +283,10 @@ fin/
 fin "Review email backlog" -l work
 fin "Update project documentation" -l docs
 fin "Call client about requirements" -l urgent
+
+# Add completed tasks
+fins 'Email backlog reviewed' -l work
+fins 'Documentation updated' -l docs
 
 # List today's work tasks
 fin list-tasks --label work

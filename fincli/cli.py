@@ -497,6 +497,7 @@ def fins_command():
     
     # Create a standalone Click command
     @click.command()
+    @click.argument("content", nargs=-1, required=False)
     @click.option("--days", "-d", default=7, help="Show tasks from the past N days (default: 7)")
     @click.option("--label", "-l", multiple=True, help="Filter by labels")
     @click.option("--today", is_flag=True, help="Show only today's tasks (overrides default days behavior)")
@@ -506,8 +507,24 @@ def fins_command():
         default="completed",
         help="Filter by status (default: completed)",
     )
-    def fins_cli(days, label, today, status):
-        """Query and display completed tasks (defaults to completed tasks from past 7 days)."""
+    def fins_cli(content, days, label, today, status):
+        """Query and display completed tasks, or add completed tasks."""
+        # If content is provided, add it as a completed task
+        if content:
+            task_content = " ".join(content)
+            db_manager = DatabaseManager()
+            task_manager = TaskManager(db_manager)
+            
+            # Add the task as completed
+            task_id = task_manager.add_task(task_content, labels=label, source="fins")
+            
+            # Mark it as completed immediately
+            task_manager.update_task_completion(task_id, True)
+            
+            click.echo(f"✅ Task added and marked as completed: {task_content}")
+            return
+        
+        # Otherwise, show tasks (existing behavior)
         db_manager = DatabaseManager()
         task_manager = TaskManager(db_manager)
 
@@ -752,6 +769,7 @@ def main():
             "import",
             "digest",
             "report",
+            "fins",
             "--help",
             "-h",
             "--version",

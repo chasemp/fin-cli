@@ -95,6 +95,12 @@ fins -s open
 # List all tasks from past 10 days
 fins -s all -d 10
 
+# Add a completed task
+fins 'task that is already done'
+
+# Add a completed task with labels
+fins 'finished task with labels' -l work -l urgent
+
 # List today and yesterday's open tasks (default)
 fin list-tasks
 
