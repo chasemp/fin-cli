@@ -36,7 +36,10 @@ class DatabaseManager:
 
         # Initialize database
         self._init_database()
-        print("DatabaseManager using path:", self.db_path)
+        
+        # Only print path if verbose mode is enabled
+        if os.environ.get("FIN_VERBOSE") == "1":
+            print("DatabaseManager using path:", self.db_path)
 
     def _init_database(self):
         """Initialize database schema."""
@@ -78,4 +81,7 @@ class DatabaseManager:
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._init_database()
-        print("DatabaseManager using path:", self.db_path)
+        
+        # Only print path if verbose mode is enabled
+        if os.environ.get("FIN_VERBOSE") == "1":
+            print("DatabaseManager using path:", self.db_path)

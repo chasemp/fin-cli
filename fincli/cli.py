@@ -30,7 +30,7 @@ def add_task(content: str, labels: tuple, source: str = "cli"):
     """Add a task to the database."""
     db_manager = DatabaseManager()
     task_manager = TaskManager(db_manager)
-    config = Config()
+    # config = Config()  # Temporarily disabled to debug hanging issue
 
     # Convert labels tuple to list for TaskManager
     labels_list = list(labels) if labels else []
@@ -46,9 +46,10 @@ def add_task(content: str, labels: tuple, source: str = "cli"):
         sys.exit(1)
 
     # Check if this is an important task and auto-add today label if configured
-    if "i" in labels_list and config.get_auto_today_for_important():
-        if "t" not in labels_list:
-            labels_list.append("t")
+    # Temporarily disabled to debug hanging issue
+    # if "i" in labels_list and config.get_auto_today_for_important():
+    #     if "t" not in labels_list:
+    #         labels_list.append("t")
 
     # Add the task with labels (TaskManager handles normalization)
     task_id = task_manager.add_task(content, labels_list, source)
@@ -178,8 +179,7 @@ def handle_direct_task(args):
 
 @click.group(context_settings=dict(help_option_names=["-h", "--help"]))
 def cli():
-    """
-    FinCLI - A lightweight task tracking system
+    """FinCLI - A lightweight task tracking system
 
     Manage your local task database with simple commands.
 
@@ -235,16 +235,32 @@ def init(db_path: str):
     click.echo("✅ Database initialized successfully!")
 
 
-def _list_tasks_impl(days, label, status):
+def _list_tasks_impl(days, label, status, verbose=False):
     """Implementation for listing tasks."""
     db_manager = DatabaseManager()
     task_manager = TaskManager(db_manager)
+    config = Config()
+    
+    # Show verbose information about filtering criteria
+    if verbose:
+        click.echo(f"🔍 Filtering criteria:")
+        click.echo(f"   • Days: {days} (looking back {days} day{'s' if days != 1 else ''})")
+        click.echo(f"   • Status: {status}")
+        if label:
+            click.echo(f"   • Labels: {', '.join(label)}")
+        weekdays_only = config.get_weekdays_only_lookback()
+        if weekdays_only:
+            click.echo(f"   • Weekdays only: True (Monday-Friday)")
+        else:
+            click.echo(f"   • Weekdays only: False (all days)")
+        click.echo()
 
     # Get tasks (include completed tasks for status filtering)
     tasks = task_manager.list_tasks(include_completed=True)
 
     # Apply date filtering first
-    tasks = filter_tasks_by_date_range(tasks, days=days)
+    weekdays_only = config.get_weekdays_only_lookback()
+    tasks = filter_tasks_by_date_range(tasks, days=days, weekdays_only=weekdays_only)
 
     # Apply status filtering
     if status == "open":
@@ -311,28 +327,25 @@ def _list_tasks_impl(days, label, status):
     # Display Important section
     if important_tasks:
         click.echo("Important")
-        for i, task in enumerate(important_tasks, 1):
+        for task in important_tasks:
             formatted_task = format_task_for_display(task)
-            click.echo(f"{i}")
-            click.echo(f"{formatted_task}")
+            click.echo(formatted_task)
         click.echo()
 
     # Display Today section
     if today_tasks:
         click.echo("Today")
-        for i, task in enumerate(today_tasks, 1):
+        for task in today_tasks:
             formatted_task = format_task_for_display(task)
-            click.echo(f"{i}")
-            click.echo(f"{formatted_task}")
+            click.echo(formatted_task)
         click.echo()
 
     # Display Open section
     if open_tasks:
         click.echo("Open")
-        for i, task in enumerate(open_tasks, 1):
+        for task in open_tasks:
             formatted_task = format_task_for_display(task)
-            click.echo(f"{i}")
-            click.echo(f"{formatted_task}")
+            click.echo(formatted_task)
 
 
 @cli.command(name="list-tasks")
@@ -347,9 +360,14 @@ def _list_tasks_impl(days, label, status):
     default="open",
     help="Filter by status",
 )
-def list_tasks(days, label, status):
-    """Query and display tasks based on time and status criteria."""
-    _list_tasks_impl(days, label, status)
+@click.option("--verbose", "-v", is_flag=True, help="Show verbose output including database path and filtering details")
+def list_tasks(days, label, status, verbose):
+    """List tasks with optional filtering."""
+    # Set verbose environment variable for DatabaseManager
+    if verbose:
+        import os
+        os.environ["FIN_VERBOSE"] = "1"
+    _list_tasks_impl(days, label, status, verbose)
 
 
 @cli.command(name="list")
@@ -364,9 +382,14 @@ def list_tasks(days, label, status):
     default="open",
     help="Filter by status",
 )
-def list_tasks_alias(days, label, status):
-    """Alias for list-tasks command."""
-    _list_tasks_impl(days, label, status)
+@click.option("--verbose", "-v", is_flag=True, help="Show verbose output including database path and filtering details")
+def list_tasks_alias(days, label, status, verbose):
+    """List tasks with optional filtering (alias for list-tasks)."""
+    # Set verbose environment variable for DatabaseManager
+    if verbose:
+        import os
+        os.environ["FIN_VERBOSE"] = "1"
+    _list_tasks_impl(days, label, status, verbose)
 
 
 @cli.command(name="open-editor")
@@ -536,11 +559,28 @@ def fine_command():
         default="open",
         help="Filter by status (default: open)",
     )
-    def fine_cli(label, date, days, dry_run, status):
+    @click.option("--verbose", "-v", is_flag=True, help="Show verbose output including database path and filtering details")
+    def fine_cli(label, date, days, dry_run, status, verbose):
         """Edit tasks in your editor (alias for fin open-editor)."""
+        # Set verbose environment variable for DatabaseManager
+        if verbose:
+            import os
+            os.environ["FIN_VERBOSE"] = "1"
+            
         # Call the original open_editor function directly
         db_manager = DatabaseManager()
         editor_manager = EditorManager(db_manager)
+        
+        # Show verbose information about filtering criteria
+        if verbose:
+            click.echo(f"🔍 Filtering criteria:")
+            click.echo(f"   • Days: {days} (looking back {days} day{'s' if days != 1 else ''})")
+            click.echo(f"   • Status: {status}")
+            if label:
+                click.echo(f"   • Labels: {', '.join(label)}")
+            if date:
+                click.echo(f"   • Date: {date}")
+            click.echo()
 
         # Get tasks for editing (without opening editor)
         label_filter = label[0] if label else None
@@ -551,7 +591,10 @@ def fine_command():
             all_tasks = editor_manager.task_manager.list_tasks(include_completed=True)
             from fincli.utils import filter_tasks_by_date_range
 
-            tasks = filter_tasks_by_date_range(all_tasks, days=days)
+            # Get weekdays_only configuration
+            config = Config()
+            weekdays_only = config.get_weekdays_only_lookback()
+            tasks = filter_tasks_by_date_range(all_tasks, days=days, weekdays_only=weekdays_only)
 
             # Apply status filtering
             if status == "open":
@@ -571,9 +614,13 @@ def fine_command():
             all_tasks = editor_manager.task_manager.list_tasks(include_completed=True)
             from fincli.utils import filter_tasks_by_date_range
 
+            # Get weekdays_only configuration
+            config = Config()
+            weekdays_only = config.get_weekdays_only_lookback()
+            
             # Apply date filtering
             tasks = filter_tasks_by_date_range(
-                all_tasks, days=0
+                all_tasks, days=0, weekdays_only=weekdays_only
             )  # Use 0 for specific date
 
             # Apply status filtering
@@ -724,7 +771,7 @@ def fins_command():
     @click.command(context_settings=dict(help_option_names=["-h", "--help"]))
     @click.argument("content", nargs=-1, required=False)
     @click.option(
-        "--days", "-d", default=7, help="Show tasks from the past N days (default: 7)"
+        "--days", "-d", default=2, help="Show tasks from the past N days (default: 2 for today and yesterday)"
     )
     @click.option("--label", "-l", multiple=True, help="Filter by labels")
     @click.option(
@@ -739,8 +786,14 @@ def fins_command():
         default="completed",
         help="Filter by status (default: completed)",
     )
-    def fins_cli(content, days, label, today, status):
+    @click.option("--verbose", "-v", is_flag=True, help="Show verbose output including database path and filtering details")
+    def fins_cli(content, days, label, today, status, verbose):
         """Query and display completed tasks, or add completed tasks."""
+        # Set verbose environment variable for DatabaseManager
+        if verbose:
+            import os
+            os.environ["FIN_VERBOSE"] = "1"
+            
         # If content is provided, add it as a completed task
         if content:
             task_content = " ".join(content)
@@ -759,6 +812,18 @@ def fins_command():
         # Otherwise, show tasks (existing behavior)
         db_manager = DatabaseManager()
         task_manager = TaskManager(db_manager)
+        
+        # Only show verbose information about filtering criteria when -v flag is used
+        if verbose:
+            click.echo(f"🔍 Filtering criteria:")
+            if today:
+                click.echo(f"   • Today only (overrides days)")
+            else:
+                click.echo(f"   • Days: {days} (looking back {days} day{'s' if days != 1 else ''})")
+            click.echo(f"   • Status: {status}")
+            if label:
+                click.echo(f"   • Labels: {', '.join(label)}")
+            click.echo()
 
         # Get tasks (include completed tasks for status filtering)
         tasks = task_manager.list_tasks(include_completed=True)
@@ -766,10 +831,14 @@ def fins_command():
         # Apply date filtering first
         if today:
             # Override to show only today's tasks
-            tasks = filter_tasks_by_date_range(tasks, days=0)
+            config = Config()
+            weekdays_only = config.get_weekdays_only_lookback()
+            tasks = filter_tasks_by_date_range(tasks, days=0, weekdays_only=weekdays_only)
         else:
             # Default: show tasks from past N days
-            tasks = filter_tasks_by_date_range(tasks, days=days)
+            config = Config()
+            weekdays_only = config.get_weekdays_only_lookback()
+            tasks = filter_tasks_by_date_range(tasks, days=days, weekdays_only=weekdays_only)
 
         # Apply status filtering
         if status == "open":
@@ -796,12 +865,251 @@ def fins_command():
             click.echo("📝 No tasks found matching your criteria.")
             return
 
+        # Default behavior: just show the tasks cleanly
+        # Verbose mode: show with additional context
         for task in tasks:
-            formatted_task = format_task_for_display(task)
-            click.echo(formatted_task)
+            if verbose:
+                # Show with full formatting including task ID
+                formatted_task = format_task_for_display(task)
+                click.echo(formatted_task)
+            else:
+                # Show clean format without task ID - just the essential info
+                status_symbol = "[x]" if task.get("completed_at") else "[ ]"
+                content = task["content"]
+                labels_display = ""
+                if task.get("labels"):
+                    hashtags = [f"#{label}" for label in task["labels"]]
+                    labels_display = f"  {','.join(hashtags)}"
+                click.echo(f"{status_symbol} {content}{labels_display}")
 
     # Run the fins CLI
     fins_cli()
+
+
+@cli.command(name="complete")
+@click.argument("task_identifier", nargs=-1)
+@click.option("--verbose", "-v", is_flag=True, help="Show verbose output")
+def complete_task(task_identifier, verbose):
+    """Mark task(s) as completed by ID or content pattern."""
+    if not task_identifier:
+        click.echo("❌ Error: Please specify task ID(s) or content pattern")
+        click.echo("   Examples: fin complete 1")
+        click.echo("            fin complete 'flight'")
+        click.echo("            fin complete 1 2 3")
+        return
+    
+    # Set verbose environment variable for DatabaseManager
+    if verbose:
+        import os
+        os.environ["FIN_VERBOSE"] = "1"
+    
+    db_manager = DatabaseManager()
+    task_manager = TaskManager(db_manager)
+    
+    # Get all tasks to search through
+    all_tasks = task_manager.list_tasks(include_completed=True)
+    
+    completed_count = 0
+    
+    for identifier in task_identifier:
+        # Try to parse as integer (task ID)
+        try:
+            task_id = int(identifier)
+            # Find task by ID
+            task = next((t for t in all_tasks if t["id"] == task_id), None)
+            if task:
+                if task["completed_at"]:
+                    click.echo(f"⚠️  Task {task_id} is already completed")
+                else:
+                    task_manager.update_task_completion(task_id, True)
+                    click.echo(f"✅ Marked task {task_id} as completed: {task['content']}")
+                    completed_count += 1
+            else:
+                click.echo(f"❌ Task {task_id} not found")
+        except ValueError:
+            # Treat as content pattern
+            matching_tasks = [t for t in all_tasks if identifier.lower() in t["content"].lower() and not t["completed_at"]]
+            if matching_tasks:
+                # Take the first matching task
+                task = matching_tasks[0]
+                task_manager.update_task_completion(task["id"], True)
+                click.echo(f"✅ Marked task {task['id']} as completed: {task['content']}")
+                completed_count += 1
+            else:
+                click.echo(f"❌ No open tasks found containing '{identifier}'")
+    
+    if completed_count > 0:
+        click.echo(f"🎉 Completed {completed_count} task(s)")
+
+
+@cli.command(name="done")
+@click.argument("task_identifier", nargs=-1)
+@click.option("--verbose", "-v", is_flag=True, help="Show verbose output")
+def done_task(task_identifier, verbose):
+    """Mark task(s) as completed by ID or content pattern (alias for complete)."""
+    # Set verbose environment variable for DatabaseManager
+    if verbose:
+        import os
+        os.environ["FIN_VERBOSE"] = "1"
+    
+    # Reuse the complete logic
+    if not task_identifier:
+        click.echo("❌ Error: Please specify task ID(s) or content pattern")
+        click.echo("   Examples: fin done 1")
+        click.echo("            fin done 'flight'")
+        click.echo("            fin done 1 2 3")
+        return
+    
+    db_manager = DatabaseManager()
+    task_manager = TaskManager(db_manager)
+    
+    # Get all tasks to search through
+    all_tasks = task_manager.list_tasks(include_completed=True)
+    
+    completed_count = 0
+    
+    for identifier in task_identifier:
+        # Try to parse as integer (task ID)
+        try:
+            task_id = int(identifier)
+            # Find task by ID
+            task = next((t for t in all_tasks if t["id"] == task_id), None)
+            if task:
+                if task["completed_at"]:
+                    click.echo(f"⚠️  Task {task_id} is already completed")
+                else:
+                    task_manager.update_task_completion(task_id, True)
+                    click.echo(f"✅ Marked task {task_id} as completed: {task['content']}")
+                    completed_count += 1
+            else:
+                click.echo(f"❌ Task {task_id} not found")
+        except ValueError:
+            # Treat as content pattern
+            matching_tasks = [t for t in all_tasks if identifier.lower() in t["content"].lower() and not t["completed_at"]]
+            if matching_tasks:
+                # Take the first matching task
+                task = matching_tasks[0]
+                task_manager.update_task_completion(task["id"], True)
+                click.echo(f"✅ Marked task {task['id']} as completed: {task['content']}")
+                completed_count += 1
+            else:
+                click.echo(f"❌ No open tasks found containing '{identifier}'")
+    
+    if completed_count > 0:
+        click.echo(f"🎉 Completed {completed_count} task(s)")
+
+
+@cli.command(name="reopen")
+@click.argument("task_identifier", nargs=-1)
+@click.option("--verbose", "-v", is_flag=True, help="Show verbose output")
+def reopen_task(task_identifier, verbose):
+    """Reopen completed task(s) by ID or content pattern."""
+    if not task_identifier:
+        click.echo("❌ Error: Please specify task ID(s) or content pattern")
+        click.echo("   Examples: fin reopen 1")
+        click.echo("            fin reopen 'flight'")
+        click.echo("            fin reopen 1 2 3")
+        return
+    
+    # Set verbose environment variable for DatabaseManager
+    if verbose:
+        import os
+        os.environ["FIN_VERBOSE"] = "1"
+    
+    db_manager = DatabaseManager()
+    task_manager = TaskManager(db_manager)
+    
+    # Get all tasks to search through
+    all_tasks = task_manager.list_tasks(include_completed=True)
+    
+    reopened_count = 0
+    
+    for identifier in task_identifier:
+        # Try to parse as integer (task ID)
+        try:
+            task_id = int(identifier)
+            # Find task by ID
+            task = next((t for t in all_tasks if t["id"] == task_id), None)
+            if task:
+                if not task["completed_at"]:
+                    click.echo(f"⚠️  Task {task_id} is already open")
+                else:
+                    task_manager.update_task_completion(task_id, False)
+                    click.echo(f"✅ Reopened task {task_id}: {task['content']}")
+                    reopened_count += 1
+            else:
+                click.echo(f"❌ Task {task_id} not found")
+        except ValueError:
+            # Treat as content pattern
+            matching_tasks = [t for t in all_tasks if identifier.lower() in t["content"].lower() and t["completed_at"]]
+            if matching_tasks:
+                # Take the first matching task
+                task = matching_tasks[0]
+                task_manager.update_task_completion(task["id"], False)
+                click.echo(f"✅ Reopened task {task['id']}: {task['content']}")
+                reopened_count += 1
+            else:
+                click.echo(f"❌ No completed tasks found containing '{identifier}'")
+    
+    if reopened_count > 0:
+        click.echo(f"🎉 Reopened {reopened_count} task(s)")
+
+
+@cli.command(name="toggle")
+@click.argument("task_identifier", nargs=-1)
+@click.option("--verbose", "-v", is_flag=True, help="Show verbose output")
+def toggle_task(task_identifier, verbose):
+    """Toggle task completion status by ID or content pattern."""
+    if not task_identifier:
+        click.echo("❌ Error: Please specify task ID(s) or content pattern")
+        click.echo("   Examples: fin toggle 1")
+        click.echo("            fin toggle 'flight'")
+        click.echo("            fin toggle 1 2 3")
+        return
+    
+    # Set verbose environment variable for DatabaseManager
+    if verbose:
+        import os
+        os.environ["FIN_VERBOSE"] = "1"
+    
+    db_manager = DatabaseManager()
+    task_manager = TaskManager(db_manager)
+    
+    # Get all tasks to search through
+    all_tasks = task_manager.list_tasks(include_completed=True)
+    
+    toggled_count = 0
+    
+    for identifier in task_identifier:
+        # Try to parse as integer (task ID)
+        try:
+            task_id = int(identifier)
+            # Find task by ID
+            task = next((t for t in all_tasks if t["id"] == task_id), None)
+            if task:
+                new_status = not task["completed_at"]
+                task_manager.update_task_completion(task_id, new_status)
+                status_text = "completed" if new_status else "reopened"
+                click.echo(f"✅ {status_text.title()} task {task_id}: {task['content']}")
+                toggled_count += 1
+            else:
+                click.echo(f"❌ Task {task_id} not found")
+        except ValueError:
+            # Treat as content pattern
+            matching_tasks = [t for t in all_tasks if identifier.lower() in t["content"].lower()]
+            if matching_tasks:
+                # Take the first matching task
+                task = matching_tasks[0]
+                new_status = not task["completed_at"]
+                task_manager.update_task_completion(task["id"], new_status)
+                status_text = "completed" if new_status else "reopened"
+                click.echo(f"✅ {status_text.title()} task {task['id']}: {task['content']}")
+                toggled_count += 1
+            else:
+                click.echo(f"❌ No tasks found containing '{identifier}'")
+    
+    if toggled_count > 0:
+        click.echo(f"🎉 Toggled {toggled_count} task(s)")
 
 
 @cli.command(name="list-labels")
@@ -1361,7 +1669,9 @@ def report(output_format, period, output, overdue):
 )
 @click.option("--default-days", type=int, help="Default number of days for task lists")
 @click.option("--default-editor", help="Default editor for task editing")
-def config_command(auto_today, show_sections, default_days, default_editor):
+@click.option("--show-all-open", type=bool, help="Show all open tasks by default (vs. just recent ones)")
+@click.option("--weekdays-only", type=bool, help="Count only weekdays (Monday-Friday) for date lookback")
+def config_command(auto_today, show_sections, default_days, default_editor, show_all_open, weekdays_only):
     """Manage FinCLI configuration."""
     config = Config()
 
@@ -1381,10 +1691,18 @@ def config_command(auto_today, show_sections, default_days, default_editor):
         config.set_default_editor(default_editor)
         click.echo(f"✅ Default editor: {default_editor}")
 
+    if show_all_open is not None:
+        config.set_show_all_open_by_default(show_all_open)
+        click.echo(f"✅ Show all open tasks by default: {show_all_open}")
+
+    if weekdays_only is not None:
+        config.set_weekdays_only_lookback(weekdays_only)
+        click.echo(f"✅ Weekdays only lookback: {weekdays_only}")
+
     # Show current configuration
     if all(
         param is None
-        for param in [auto_today, show_sections, default_days, default_editor]
+        for param in [auto_today, show_sections, default_days, default_editor, show_all_open, weekdays_only]
     ):
         click.echo("📋 Current Configuration:")
         click.echo(
@@ -1395,6 +1713,8 @@ def config_command(auto_today, show_sections, default_days, default_editor):
         click.echo(
             f"  Default editor: {config.get_default_editor() or 'system default'}"
         )
+        click.echo(f"  Show all open tasks by default: {config.get_show_all_open_by_default()}")
+        click.echo(f"  Weekdays only lookback: {config.get_weekdays_only_lookback()}")
         click.echo(f"  Config file: {config.config_file}")
 
 
@@ -1402,18 +1722,80 @@ def main():
     """Main entry point that handles direct task addition."""
     args = sys.argv[1:]
 
-    # If no arguments provided, default to list behavior
-    if not args:
+    # Check for Click-specific flags that should always be handled by Click
+    if args and any(arg in ["--help", "-h", "--version"] for arg in args):
+        # Normal Click processing for help and version flags
+        cli()
+        return
+
+    # Check for verbose flag (which we handle specially)
+    verbose = "--verbose" in args or "-v" in args
+
+    # Check for days flag (-d) when used standalone
+    days_arg = None
+    if args and "-d" in args:
+        try:
+            d_index = args.index("-d")
+            if d_index + 1 < len(args) and args[d_index + 1].isdigit():
+                days_arg = int(args[d_index + 1])
+                # Remove the -d and its value from args for further processing
+                args = args[:d_index] + args[d_index + 2:]
+        except (ValueError, IndexError):
+            pass
+
+    # If no arguments provided or only verbose/days flags, default to list behavior
+    if not args or (args and all(arg in ["--verbose", "-v"] for arg in args)):
+        if verbose:
+            import os
+            os.environ["FIN_VERBOSE"] = "1"
+            
         db_manager = DatabaseManager()
         task_manager = TaskManager(db_manager)
+        config = Config()
 
-        # Get tasks with default filtering (today and yesterday, open tasks)
-        tasks = task_manager.list_tasks(include_completed=True)
-        tasks = filter_tasks_by_date_range(tasks, days=1)
-        tasks = [task for task in tasks if task["completed_at"] is None]
+        # Determine whether to show all open tasks or just recent ones
+        show_all_open = config.get_show_all_open_by_default()
+        
+        # If days flag was specified, override the default behavior
+        if days_arg is not None:
+            show_all_open = False
+        
+        if show_all_open:
+            # Show all open tasks (no date filtering)
+            tasks = task_manager.list_tasks(include_completed=True)
+            tasks = [task for task in tasks if task["completed_at"] is None]
+            
+            if verbose:
+                click.echo(f"🔍 Default filtering criteria:")
+                click.echo(f"   • Status: open (all open tasks)")
+                click.echo()
+        else:
+            # Show recent open tasks (default behavior or days-specified)
+            days = days_arg if days_arg is not None else config.get_default_days()
+            weekdays_only = config.get_weekdays_only_lookback()
+            tasks = task_manager.list_tasks(include_completed=True)
+            tasks = filter_tasks_by_date_range(tasks, days=days, weekdays_only=weekdays_only)
+            tasks = [task for task in tasks if task["completed_at"] is None]
+            
+            if verbose:
+                click.echo(f"🔍 Default filtering criteria:")
+                if days_arg is not None:
+                    click.echo(f"   • Days: {days} (looking back {days} day{'s' if days != 1 else ''})")
+                else:
+                    click.echo(f"   • Days: {days} (looking back {days} day{'s' if days != 1 else ''})")
+                click.echo(f"   • Status: open")
+                if weekdays_only:
+                    click.echo(f"   • Weekdays only: True (Monday-Friday)")
+                else:
+                    click.echo(f"   • Weekdays only: False (all days)")
+                click.echo()
 
         if not tasks:
-            click.echo("📝 No open tasks found for today and yesterday.")
+            if show_all_open:
+                click.echo("📝 No open tasks found.")
+            else:
+                days = days_arg if days_arg is not None else config.get_default_days()
+                click.echo(f"📝 No open tasks found for the past {days} day{'s' if days != 1 else ''}.")
             click.echo("💡 Try adding a task: fin 'your task here'")
             click.echo("💡 Or see all commands: fin --help")
             return
@@ -1470,6 +1852,10 @@ def main():
             "list-tasks",
             "list",
             "open-editor",
+            "complete",
+            "done",
+            "reopen",
+            "toggle",
             "list-labels",
             "import",
             "export",
@@ -1481,10 +1867,7 @@ def main():
             "restore-latest",
             "config",
             "fins",
-            "--help",
-            "-h",
-            "--version",
-            "-v",
+            "fine",
         ]
     ):
         # This looks like a direct task addition

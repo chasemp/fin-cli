@@ -5,6 +5,7 @@ Tests for fins command functionality.
 import subprocess
 import sys
 from datetime import date, timedelta
+import re
 
 from fincli.cli import list_tasks
 from fincli.db import DatabaseManager
@@ -27,7 +28,7 @@ class TestFinsCommand:
 
         formatted = format_task_for_display(task)
 
-        assert formatted.startswith("[ ]")
+        assert formatted.startswith(f"{task_id} [ ]")
         assert "Test open task" in formatted
         assert "#urgent,#work" in formatted
 
@@ -56,7 +57,7 @@ class TestFinsCommand:
         task = task_manager.get_task(task_id)
         formatted = format_task_for_display(task)
 
-        assert formatted.startswith("[x]")
+        assert formatted.startswith(f"{task_id} [x]")
         assert "Test completed task" in formatted
         assert "#work" in formatted
 
@@ -64,11 +65,11 @@ class TestFinsCommand:
         """Test get_date_range function."""
         from fincli.utils import get_date_range
 
-        today, lookback_date = get_date_range(days=1)
+        today, lookback_date = get_date_range(days=1, weekdays_only=False)
         assert today == date.today()
         assert lookback_date == date.today() - timedelta(days=1)
 
-        today, lookback_date = get_date_range(days=7)
+        today, lookback_date = get_date_range(days=7, weekdays_only=False)
         assert today == date.today()
         assert lookback_date == date.today() - timedelta(days=7)
 
@@ -88,14 +89,14 @@ class TestFinsCommand:
 
         task_manager = TaskManager(db_manager)
 
-        task_manager.add_task("Today's task")
+        task_id = task_manager.add_task("Today's task")
 
         tasks = task_manager.list_tasks(include_completed=True)
         formatted_tasks = [format_task_for_display(task) for task in tasks]
 
         assert len(formatted_tasks) == 1
         assert "Today's task" in formatted_tasks[0]
-        assert formatted_tasks[0].startswith("[ ]")
+        assert formatted_tasks[0].startswith(f"{task_id} [ ]")
 
     def test_query_tasks_yesterday_completed(self, temp_db_path, monkeypatch):
         """Test querying tasks from yesterday that are completed."""
@@ -184,7 +185,7 @@ class TestFinsCommand:
         """Test fins command help."""
         result = cli_runner.invoke(list_tasks, ["--help"])
         assert result.exit_code == 0
-        assert "Query and display tasks" in result.output
+        assert "List tasks with optional filtering" in result.output
 
     def test_fins_command_no_tasks(self, cli_runner, temp_db_path, monkeypatch):
         """Test fins command with no tasks."""
@@ -328,10 +329,9 @@ class TestFinsIntegration:
 
         assert result.returncode == 0
         lines = result.stdout.strip().split("\n")
-        # Filter out the database path line
-        task_lines = [line for line in lines if line.startswith("[")]
+        # Filter out the database path line and look for task lines (new format: "1 [ ] ...")
+        task_lines = [line for line in lines if re.match(r"^\d+ \[", line)]
         assert len(task_lines) == 1
-        assert task_lines[0].startswith("[ ]")
         assert "Test task" in task_lines[0]
 
 

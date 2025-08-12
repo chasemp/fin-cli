@@ -80,3 +80,14 @@ def mock_home_dir(monkeypatch):
     with tempfile.TemporaryDirectory() as tmp_dir:
         monkeypatch.setenv("HOME", tmp_dir)
         yield tmp_dir
+
+
+@pytest.fixture
+def weekdays_only_disabled(monkeypatch):
+    """Disable weekdays-only lookback for tests that expect all-days behavior."""
+    # Mock the config to return False for weekdays_only_lookback
+    def mock_get_weekdays_only_lookback():
+        return False
+    
+    # Apply the mock to the Config class
+    monkeypatch.setattr("fincli.config.Config.get_weekdays_only_lookback", mock_get_weekdays_only_lookback)

@@ -39,6 +39,8 @@ class Config:
                 "default_editor": None,
                 "default_days": 1,
                 "show_sections": True,
+                "show_all_open_by_default": True,
+                "weekdays_only_lookback": True,
             }
             self._save_config(default_config)
             return default_config
@@ -53,6 +55,8 @@ class Config:
                 "default_editor": None,
                 "default_days": 1,
                 "show_sections": True,
+                "show_all_open_by_default": True,
+                "weekdays_only_lookback": True,
             }
             self._save_config(default_config)
             return default_config
@@ -121,3 +125,19 @@ class Config:
     def set_show_sections(self, enabled: bool) -> None:
         """Set whether to show organized sections."""
         self.set("show_sections", enabled)
+
+    def get_show_all_open_by_default(self) -> bool:
+        """Get whether to show all open tasks by default (vs. just recent ones)."""
+        return self.get("show_all_open_by_default", True)
+
+    def set_show_all_open_by_default(self, enabled: bool) -> None:
+        """Set whether to show all open tasks by default."""
+        self.set("show_all_open_by_default", enabled)
+
+    def get_weekdays_only_lookback(self) -> bool:
+        """Get whether date lookback should consider only weekdays (vs. all days)."""
+        return self.get("weekdays_only_lookback", True)
+
+    def set_weekdays_only_lookback(self, enabled: bool) -> None:
+        """Set whether date lookback should consider only weekdays."""
+        self.set("weekdays_only_lookback", enabled)
