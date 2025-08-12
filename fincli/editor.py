@@ -75,46 +75,77 @@ class EditorManager:
         Returns:
             Dictionary with task info or None if not a valid task line
         """
-        # Match task line pattern: [ ] or [x] followed by timestamp, content, and optional reference
-        # Format: [ ] 2024-01-01 10:00  Task content  #labels  #ref:task_123
-        # First, try to match with reference
-        pattern_with_ref = r"^(\[ \]|\[x\]) (\d{4}-\d{2}-\d{2} \d{2}:\d{2})  (.+?)(  #.+)?  #ref:([^ ]+)$"
-        match = re.match(pattern_with_ref, line.strip())
+        # Match task line pattern: task_id [ ] or [x] followed by timestamp, content, and optional reference
+        # Format: 1 [ ] 2024-01-01 10:00  Task content  #labels  #ref:task_123
+        # First, try to match with reference and task_id
+        pattern_with_ref_and_id = r"^(\d+) (\[ \]|\[x\]) (\d{4}-\d{2}-\d{2} \d{2}:\d{2})  (.+?)(  #.+)?  #ref:([^ ]+)$"
+        match = re.match(pattern_with_ref_and_id, line.strip())
 
         if match:
-            # Line has a reference
-            status = match.group(1)
-            timestamp = match.group(2)
-            content = match.group(3)
-            labels_part = match.group(4) or ""
-            reference_part = match.group(5) or ""
+            # Line has a reference and task_id
+            task_id = int(match.group(1))
+            status = match.group(2)
+            timestamp = match.group(3)
+            content = match.group(4)
+            labels_part = match.group(5) or ""
+            reference_part = match.group(6) or ""
         else:
-            # Try to match without reference (for new tasks)
-            pattern_without_ref = (
-                r"^(\[ \]|\[x\]) (\d{4}-\d{2}-\d{2} \d{2}:\d{2})  (.+?)(  #.+)?$"
+            # Try to match with task_id but without reference
+            pattern_with_id_no_ref = (
+                r"^(\d+) (\[ \]|\[x\]) (\d{4}-\d{2}-\d{2} \d{2}:\d{2})  (.+?)(  #.+)?$"
             )
-            match = re.match(pattern_without_ref, line.strip())
+            match = re.match(pattern_with_id_no_ref, line.strip())
 
             if match:
-                # Line has timestamp but no reference
-                status = match.group(1)
-                timestamp = match.group(2)
-                content = match.group(3)
-                labels_part = match.group(4) or ""
+                # Line has task_id but no reference
+                task_id = int(match.group(1))
+                status = match.group(2)
+                timestamp = match.group(3)
+                content = match.group(4)
+                labels_part = match.group(5) or ""
                 reference_part = ""
             else:
-                # Try to match new tasks without timestamp (just checkbox and content)
-                pattern_new_task = r"^(\[ \]|\[\]|\[x\]) (.+?)(  #.+)?$"
-                match = re.match(pattern_new_task, line.strip())
+                # Try to match old format without task_id (for backward compatibility)
+                pattern_old_format_with_ref = r"^(\[ \]|\[x\]) (\d{4}-\d{2}-\d{2} \d{2}:\d{2})  (.+?)(  #.+)?  #ref:([^ ]+)$"
+                match = re.match(pattern_old_format_with_ref, line.strip())
 
-                if not match:
-                    return None
+                if match:
+                    # Line has reference but no task_id (old format)
+                    task_id = None  # Will be extracted from reference
+                    status = match.group(1)
+                    timestamp = match.group(2)
+                    content = match.group(3)
+                    labels_part = match.group(4) or ""
+                    reference_part = match.group(5) or ""
+                else:
+                    # Try to match old format without reference
+                    pattern_old_format_no_ref = (
+                        r"^(\[ \]|\[x\]) (\d{4}-\d{2}-\d{2} \d{2}:\d{2})  (.+?)(  #.+)?$"
+                    )
+                    match = re.match(pattern_old_format_no_ref, line.strip())
 
-                status = match.group(1)
-                timestamp = ""  # No timestamp for new tasks
-                content = match.group(2)
-                labels_part = match.group(3) or ""
-                reference_part = ""
+                    if match:
+                        # Line has no task_id and no reference (old format)
+                        task_id = None
+                        status = match.group(1)
+                        timestamp = match.group(2)
+                        content = match.group(3)
+                        labels_part = match.group(4) or ""
+                        reference_part = ""
+                    else:
+                        # Try to match new tasks without timestamp (just checkbox and content)
+                        pattern_new_task = r"^(\[ \]|\[\]|\[x\]) (.+?)(  #.+)?$"
+                        match = re.match(pattern_new_task, line.strip())
+
+                        if not match:
+                            return None
+
+                        task_id = None  # No task ID for new tasks
+                        status = match.group(1)
+                        timestamp = ""  # No timestamp for new tasks
+                        content = match.group(2)
+                        labels_part = match.group(3) or ""
+                        reference_part = ""
 
         # Extract labels from hashtags (excluding the reference)
         labels = []
@@ -126,7 +157,12 @@ class EditorManager:
         is_completed = status == "[x]"
         if status == "[]":
             status = "[ ]"  # Normalize to standard format
-        task_id = self._extract_task_id_from_reference(reference_part)
+        
+        # For existing tasks, use the task_id from the line; for new tasks, extract from reference
+        if task_id is not None:
+            final_task_id = task_id
+        else:
+            final_task_id = self._extract_task_id_from_reference(reference_part)
 
         return {
             "status": status,
@@ -134,7 +170,7 @@ class EditorManager:
             "content": content,
             "labels": labels,
             "is_completed": is_completed,
-            "task_id": task_id,  # None for new tasks
+            "task_id": final_task_id,  # None for new tasks
         }
 
     def find_matching_task(self, task_info: Dict[str, Any]) -> Optional[int]:
@@ -260,7 +296,7 @@ class EditorManager:
         Returns:
             Formatted task line with reference
         """
-        # Get the base formatted line
+        # Get the base formatted line (already includes task_id)
         base_line = format_task_for_display(task)
 
         # Add the reference ID

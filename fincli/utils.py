@@ -48,8 +48,11 @@ def format_task_for_display(task: Dict[str, Any]) -> str:
         task: Task dictionary from database
 
     Returns:
-        Formatted string: [ ] 2025-07-30 09:15  Task content  #label1,label2
+        Formatted string: 1 [ ] 2025-07-30 09:15  Task content  #label1,label2
     """
+    # Get task ID
+    task_id = task["id"]
+    
     # Determine status
     status = "[x]" if task["completed_at"] else "[ ]"
 
@@ -69,27 +72,42 @@ def format_task_for_display(task: Dict[str, Any]) -> str:
         hashtags = [f"#{label}" for label in task["labels"]]
         labels_display = f"  {','.join(hashtags)}"
 
-    return f"{status} {formatted_time}  {task['content']}{labels_display}"
+    return f"{task_id} {status} {formatted_time}  {task['content']}{labels_display}"
 
 
-def get_date_range(days: int = 1) -> tuple:
+def get_date_range(days: int = 1, weekdays_only: bool = True) -> tuple:
     """
     Get date ranges for task filtering.
 
     Args:
         days: Number of days to look back (default: 1 for today and yesterday)
+        weekdays_only: If True, count only weekdays (Monday-Friday)
 
     Returns:
         Tuple of (today, lookback_date) dates
     """
     today = date.today()
-    lookback_date = today - timedelta(days=days)
+    
+    if weekdays_only:
+        # Count only weekdays (Monday=0, Sunday=6)
+        lookback_date = today
+        weekdays_counted = 0
+        
+        # Count backwards until we've counted the required number of weekdays
+        while weekdays_counted < days:
+            lookback_date = lookback_date - timedelta(days=1)
+            # Monday=0, Tuesday=1, Wednesday=2, Thursday=3, Friday=4
+            if lookback_date.weekday() < 5:  # 0-4 are Monday through Friday
+                weekdays_counted += 1
+    else:
+        # Count all days (original behavior)
+        lookback_date = today - timedelta(days=days)
 
     return today, lookback_date
 
 
 def filter_tasks_by_date_range(
-    tasks: List[Dict[str, Any]], days: int = 1
+    tasks: List[Dict[str, Any]], days: int = 1, weekdays_only: bool = True
 ) -> List[Dict[str, Any]]:
     """
     Filter tasks based on time and status criteria.
@@ -97,29 +115,36 @@ def filter_tasks_by_date_range(
     Args:
         tasks: List of task dictionaries
         days: Number of days to look back (default: 1 for today and yesterday)
+        weekdays_only: If True, count only weekdays (Monday-Friday)
 
     Returns:
         List of filtered tasks
     """
-    today, lookback_date = get_date_range(days)
+    today, lookback_date = get_date_range(days, weekdays_only)
 
     # Filter tasks based on criteria
     filtered_tasks = []
 
     for task in tasks:
-        # Always include open tasks regardless of creation date
-        if task["completed_at"] is None:
-            filtered_tasks.append(task)
-        else:
-            # For completed tasks, apply date filtering
+        task_date = None
+        
+        # Determine the relevant date for filtering
+        if task["completed_at"]:
+            # For completed tasks, use completion date
             completed_dt = datetime.fromisoformat(
                 task["completed_at"].replace("Z", "+00:00")
             )
             task_date = completed_dt.date()
+        else:
+            # For open tasks, use creation date
+            created_dt = datetime.fromisoformat(
+                task["created_at"].replace("Z", "+00:00")
+            )
+            task_date = created_dt.date()
 
-            # Include completed tasks from the lookback period
-            if lookback_date <= task_date <= today:
-                filtered_tasks.append(task)
+        # Include tasks from the lookback period
+        if lookback_date <= task_date <= today:
+            filtered_tasks.append(task)
 
     # Sort by priority first, then by created_at ascending
     # Important tasks (#i) come first, then today tasks (#t), then regular tasks

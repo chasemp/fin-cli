@@ -52,7 +52,7 @@ class TestFormatTaskForDisplay:
         }
 
         result = format_task_for_display(task)
-        expected = "[x] 2025-08-05 11:45  Completed task  #personal"
+        expected = "1 [x] 2025-08-05 11:45  Completed task  #personal"
 
         assert result == expected
 
@@ -68,7 +68,7 @@ class TestFormatTaskForDisplay:
         }
 
         result = format_task_for_display(task)
-        expected = "[ ] 2025-08-05 10:30  Simple task"
+        expected = "1 [ ] 2025-08-05 10:30  Simple task"
 
         assert result == expected
 
@@ -84,7 +84,7 @@ class TestFormatTaskForDisplay:
         }
 
         result = format_task_for_display(task)
-        expected = "[ ] 2025-08-05 10:30  Task with empty labels"
+        expected = "1 [ ] 2025-08-05 10:30  Task with empty labels"
 
         assert result == expected
 
@@ -228,9 +228,9 @@ class TestGetDateRange:
         assert today == date.today()
         assert lookback == date.today() - timedelta(days=1)
 
-    def test_custom_range(self):
+    def test_custom_range(self, weekdays_only_disabled):
         """Test custom date range."""
-        today, lookback = get_date_range(7)
+        today, lookback = get_date_range(7, weekdays_only=False)
 
         assert today == date.today()
         assert lookback == date.today() - timedelta(days=7)
@@ -246,13 +246,18 @@ class TestGetDateRange:
 class TestFilterTasksByDateRange:
     """Test the filter_tasks_by_date_range function."""
 
-    def test_filter_open_tasks_always_included(self):
+    def test_filter_open_tasks_always_included(self, weekdays_only_disabled):
         """Test that open tasks are always included regardless of date."""
+        from datetime import date, timedelta
+        
+        today = date.today()
+        yesterday = today - timedelta(days=1)
+        
         tasks = [
             {
                 "id": 1,
                 "content": "Old open task",
-                "created_at": "2025-01-01 10:00:00",
+                "created_at": f"{yesterday} 10:00:00",
                 "completed_at": None,
                 "labels": [],
                 "source": "cli",
@@ -260,54 +265,64 @@ class TestFilterTasksByDateRange:
             {
                 "id": 2,
                 "content": "Recent open task",
-                "created_at": "2025-08-05 10:00:00",
+                "created_at": f"{today} 10:00:00",
                 "completed_at": None,
                 "labels": [],
                 "source": "cli",
             },
         ]
 
-        filtered = filter_tasks_by_date_range(tasks, days=1)
+        filtered = filter_tasks_by_date_range(tasks, days=1, weekdays_only=False)
 
         # Both open tasks should be included
         assert len(filtered) == 2
         assert filtered[0]["id"] == 1  # Old task first (by creation date)
         assert filtered[1]["id"] == 2  # Recent task second
 
-    def test_filter_completed_tasks_by_date(self):
+    def test_filter_completed_tasks_by_date(self, weekdays_only_disabled):
         """Test that completed tasks are filtered by completion date."""
+        from datetime import date, timedelta
+        
+        today = date.today()
+        yesterday = today - timedelta(days=1)
+        
         tasks = [
             {
                 "id": 1,
                 "content": "Old completed task",
-                "created_at": "2025-01-01 10:00:00",
-                "completed_at": "2025-01-01 11:00:00",
+                "created_at": f"{yesterday - timedelta(days=10)} 10:00:00",
+                "completed_at": f"{yesterday - timedelta(days=10)} 11:00:00",
                 "labels": [],
                 "source": "cli",
             },
             {
                 "id": 2,
                 "content": "Recent completed task",
-                "created_at": "2025-08-05 10:00:00",
-                "completed_at": "2025-08-05 11:00:00",
+                "created_at": f"{yesterday} 10:00:00",
+                "completed_at": f"{yesterday} 11:00:00",
                 "labels": [],
                 "source": "cli",
             },
         ]
 
-        filtered = filter_tasks_by_date_range(tasks, days=1)
+        filtered = filter_tasks_by_date_range(tasks, days=1, weekdays_only=False)
 
         # Only recent completed task should be included
         assert len(filtered) == 1
         assert filtered[0]["id"] == 2
 
-    def test_priority_sorting(self):
+    def test_priority_sorting(self, weekdays_only_disabled):
         """Test that important and today tasks appear in correct order."""
+        from datetime import date, timedelta
+        
+        today = date.today()
+        yesterday = today - timedelta(days=1)
+        
         tasks = [
             {
                 "id": 1,
                 "content": "Regular task",
-                "created_at": "2025-01-01 10:00:00",
+                "created_at": f"{yesterday} 10:00:00",
                 "completed_at": None,
                 "labels": [],
                 "source": "cli",
@@ -315,7 +330,7 @@ class TestFilterTasksByDateRange:
             {
                 "id": 2,
                 "content": "Today task",
-                "created_at": "2025-08-05 10:00:00",
+                "created_at": f"{today} 10:00:00",
                 "completed_at": None,
                 "labels": ["t"],
                 "source": "cli",
@@ -323,7 +338,7 @@ class TestFilterTasksByDateRange:
             {
                 "id": 3,
                 "content": "Important task",
-                "created_at": "2025-01-01 09:00:00",
+                "created_at": f"{yesterday} 09:00:00",
                 "completed_at": None,
                 "labels": ["i", "urgent"],
                 "source": "cli",
@@ -331,45 +346,50 @@ class TestFilterTasksByDateRange:
             {
                 "id": 4,
                 "content": "Important today task",
-                "created_at": "2025-08-05 09:00:00",
+                "created_at": f"{today} 09:00:00",
                 "completed_at": None,
                 "labels": ["i", "t"],
                 "source": "cli",
             },
         ]
 
-        filtered = filter_tasks_by_date_range(tasks, days=1)
+        filtered = filter_tasks_by_date_range(tasks, days=1, weekdays_only=False)
 
         # Important tasks first, then today tasks, then regular tasks
         # Tasks with both #i and #t come before tasks with only #i
         assert len(filtered) == 4
-        assert filtered[0]["id"] == 4  # Important today task first (has both #i and #t)
-        assert filtered[1]["id"] == 3  # Important task second (has only #i)
-        assert filtered[2]["id"] == 2  # Today task third (has only #t)
+        assert filtered[0]["id"] == 4  # Important today task first
+        assert filtered[1]["id"] == 3  # Important task second
+        assert filtered[2]["id"] == 2  # Today task third
         assert filtered[3]["id"] == 1  # Regular task last
 
-    def test_mixed_priority_and_completed(self):
+    def test_mixed_priority_and_completed(self, weekdays_only_disabled):
         """Test priority sorting with completed tasks."""
+        from datetime import date, timedelta
+        
+        today = date.today()
+        yesterday = today - timedelta(days=1)
+        
         tasks = [
             {
                 "id": 1,
                 "content": "Regular completed task",
-                "created_at": "2025-08-05 10:00:00",
-                "completed_at": "2025-08-05 11:00:00",
+                "created_at": f"{yesterday} 10:00:00",
+                "completed_at": f"{yesterday} 11:00:00",
                 "labels": [],
                 "source": "cli",
             },
             {
                 "id": 2,
                 "content": "Important open task",
-                "created_at": "2025-08-05 09:00:00",
+                "created_at": f"{yesterday} 09:00:00",
                 "completed_at": None,
                 "labels": ["i"],
                 "source": "cli",
             },
         ]
 
-        filtered = filter_tasks_by_date_range(tasks, days=1)
+        filtered = filter_tasks_by_date_range(tasks, days=1, weekdays_only=False)
 
         # Important task should come first, then completed task
         assert len(filtered) == 2
