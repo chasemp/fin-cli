@@ -1,6 +1,6 @@
 # FinCLI - A lightweight task tracking system
 
-A simple command-line tool for managing your local task database.
+A simple command-line tool for managing your local task database with enhanced filtering, task modification tracking, and flexible status management.
 
 ## Quick Start
 
@@ -14,14 +14,20 @@ fin "urgent meeting #i"
 # Add a today task (shows in Today section)
 fin "daily standup #t"
 
-# List today's tasks with organized sections
-fin list
+# List all open tasks (default behavior)
+fin
+
+# List tasks with custom filtering
+fin -d 7 -s "done,open" -v
 
 # List completed tasks from last week
 fins
 
 # Edit tasks in your editor
 fine
+
+# View all time completed tasks (limited by max_limit)
+fins -d 0 -v
 ```
 
 ## Installation
@@ -68,25 +74,82 @@ fin "implement feature #depends:task123"
 
 ### Listing Tasks
 
-Tasks are displayed in organized sections:
+Tasks are displayed in organized sections with enhanced filtering options:
 
 ```bash
-# List today and yesterday's open tasks (default)
-fin list
+# List all open tasks (default behavior)
+fin
 
 # List with custom date range
-fin list -d 7
+fin -d 7
 
-# List completed tasks
-fin list -s completed
+# List with status filtering
+fin -s completed
+fin -s "done,open"
+fin -s "open, done"
 
-# List all tasks (open and completed)
-fin list -s all
+# List with both date and status
+fin -d 3 -s "done,open"
+
+# List all time (no date restriction, limited by max_limit)
+fin -d 0
+
+# List with verbose output
+fin -v
+fin -d 7 -s "done,open" -v
 
 # Complex label filtering
-fin list -l "work and urgent"    # Tasks with both work AND urgent labels
-fin list -l "work or personal"   # Tasks with work OR personal labels
-fin list -l "urgent"             # Simple label filtering
+fin -l "work and urgent"    # Tasks with both work AND urgent labels
+fin -l "work or personal"   # Tasks with work OR personal labels
+fin -l "urgent"             # Simple label filtering
+```
+
+### Enhanced Status Filtering (`-s` flag)
+
+The `-s` flag accepts comma-separated status values with flexible spacing:
+
+```bash
+# Single status
+fin -s done
+fin -s open
+
+# Multiple statuses (any of these)
+fin -s "done,open"
+fin -s "done, open"
+fin -s "done , open"
+
+# Combine with date filtering
+fin -d 7 -s "done,open"
+fin -d 0 -s completed  # All completed tasks from all time
+```
+
+### Date Filtering (`-d` flag)
+
+```bash
+# Default: today and yesterday
+fin
+
+# Last N days (including today)
+fin -d 3
+fin -d 7
+
+# All time (no date restriction, limited by max_limit)
+fin -d 0
+
+# Weekdays only (configurable)
+fin -d 5  # Last 5 weekdays
+```
+
+### Max Limit and Warnings
+
+All commands respect a `max_limit` parameter (default: 100) to prevent overwhelming output:
+
+```bash
+# When max_limit is hit, a warning is shown
+fin -v  # Shows "Max limit: 100" and "Total available: X"
+
+# For fin command, warnings appear even without -v when open tasks exceed limit
+fin  # Shows warning if more than 100 open tasks exist
 ```
 
 ### Priority System
@@ -183,32 +246,40 @@ fin "implement feature #depends:task123"
 
 #### Bulk Operations in Editor
 ```bash
-# Edit multiple tasks at once
+# Edit all open tasks
 fine
 
-# In the editor, you can:
-# - Mark multiple tasks as complete: [ ] → [x]
-# - Reopen multiple tasks: [x] → [ ]
-# - Delete multiple tasks: Remove lines
-# - Add new tasks: Add lines with [ ] timestamp content
-# - Modify task content: Edit the text
+# Edit tasks from last 3 days
+fine -d 3
+
+# Edit completed tasks from last 3 days
+fine -d 3 -s done
+
+# Edit all time completed tasks (limited by max_limit)
+fine -d 0 -s done
+
+# Preview what would be edited
+fine --dry-run
 ```
+
+**In the editor, you can:**
+- Mark multiple tasks as complete: `[ ]` → `[x]`
+- Reopen multiple tasks: `[x]` → `[ ]`
+- Delete multiple tasks: Remove lines
+- Add new tasks: Add lines with `[ ] timestamp content`
+- Modify task content: Edit the text (tracks `modified_at`)
 
 **Example Output:**
 ```
 Important
-1
-[ ] 2025-08-06 15:14  Urgent meeting #i
+1 [ ] 2025-08-06 15:14  Urgent meeting #i
 
 Today
-2
-[ ] 2025-08-06 15:14  Daily standup #t
+2 [ ] 2025-08-06 15:14  Daily standup #t
 
 Open
-3
-[ ] 2025-08-06 15:14  Project deadline #due:2025-08-10
-4
-[ ] 2025-08-06 15:14  Weekly review #recur:weekly
+3 [ ] 2025-08-06 15:14  Project deadline #due:2025-08-10
+4 [ ] 2025-08-06 15:14  Weekly review #recur:weekly
 ```
 
 ### Configuration
@@ -230,6 +301,9 @@ fin config --default-days 7
 
 # Set default editor
 fin config --default-editor vim
+
+# Configure weekday-only lookback
+fin config --weekdays-only true
 ```
 
 #### Auto-Today for Important Tasks
@@ -244,7 +318,7 @@ Tasks with both `#i` and `#t` appear only in the Important section, not duplicat
 ### Task Editing
 
 ```bash
-# Edit today's tasks in your editor
+# Edit all open tasks in your editor
 fine
 
 # Edit with custom date range
@@ -253,6 +327,9 @@ fine -d 7
 # Edit completed tasks
 fine -s completed
 
+# Edit all time completed tasks
+fine -d 0 -s done
+
 # Preview what would be edited
 fine --dry-run
 ```
@@ -260,11 +337,17 @@ fine --dry-run
 ### Viewing Completed Tasks
 
 ```bash
-# View recent completed tasks
+# View recent completed tasks (default: today and yesterday)
 fins
 
-# View completed tasks from last 30 days
+# View completed tasks from last N days
 fins -d 30
+
+# View all time completed tasks (limited by max_limit)
+fins -d 0
+
+# View with status filtering
+fins -s "done,open"
 
 # Add completed task directly
 fins "task I already finished"
@@ -308,17 +391,25 @@ fin restore 001
 fin restore-latest --yes
 ```
 
+**Enhanced Backup System:**
+- Automatic backups before and after editor sessions
+- Tracks task changes: completed, reopened, new, content_modified, deleted
+- Change summaries in backup metadata
+
 ## Command Reference
 
 | Command | Description |
 |---------|-------------|
 | `fin "task"` | Add task directly |
-| `fin list` | List today's open tasks (organized sections) |
-| `fin list -d 7` | List tasks from last 7 days |
-| `fin list -s completed` | List completed tasks |
-| `fin list -s all` | List all tasks |
+| `fin` | List all open tasks (organized sections) |
+| `fin -d 7` | List tasks from last 7 days |
+| `fin -s completed` | List completed tasks |
+| `fin -s "done,open"` | List both completed and open tasks |
+| `fin -d 0` | List all time (limited by max_limit) |
 | `fine` | Edit tasks in editor |
+| `fine -d 3 -s done` | Edit completed tasks from last 3 days |
 | `fins` | View completed tasks |
+| `fins -d 0` | View all time completed tasks |
 | `fin config` | Manage configuration |
 | `fin export file.csv` | Export tasks |
 | `fin import file.csv` | Import tasks |
@@ -327,9 +418,12 @@ fin restore-latest --yes
 
 ## Options
 
-- `-d, --days N` - Show tasks from last N days
-- `-s, --status [open\|completed\|done\|all]` - Filter by status
+- `-d, --days N` - Show tasks from last N days (use 0 for all time)
+- `-s, --status STATUS` - Filter by status: open, completed, done, or comma-separated list
 - `-l, --label LABEL` - Filter by label
+- `--max-limit N` - Maximum number of tasks to show (default: 100)
+- `--today` - Show only today's tasks (overrides days)
+- `--verbose, -v` - Show verbose output including filtering details
 - `--force, --yes` - Skip confirmation prompts
 
 ## Examples
@@ -345,22 +439,35 @@ fin "daily standup #t"
 fin "critical deadline #i #t"
 
 # List with organized sections
-fin list
+fin
 
-# Filter by today label (shows important + today tasks)
-fin list -l t
+# Filter by status combinations
+fin -s "done,open"
+fin -s "done, open"
 
-# Edit important tasks
-fine
+# Filter by date and status
+fin -d 7 -s "done,open"
 
-# Export important tasks
-fin export priority.csv
+# List all time with verbose output
+fin -d 0 -v
+
+# Edit tasks from last week
+fine -d 7
+
+# Edit completed tasks from last 3 days
+fine -d 3 -s done
+
+# View all time completed tasks
+fins -d 0 -v
+
+# Export with filtering
+fin export priority.csv -l "i,t"
 
 # Import with priority labels
 fin import tasks.csv -l i -l t
 
-# Configure auto-today behavior
-fin config --auto-today false
+# Configure weekday-only lookback
+fin config --weekdays-only true
 ```
 
 ## Configuration
@@ -373,5 +480,35 @@ Configuration is stored at `~/fin/config.json` and includes:
 - `show_sections`: Show organized sections in task lists (default: true)
 - `default_days`: Default number of days for task lists (default: 1)
 - `default_editor`: Default editor for task editing (default: system default)
+- `weekdays_only_lookback`: Count only weekdays for date filtering (default: true)
+- `show_all_open_by_default`: Show all open tasks by default instead of recent ones (default: true)
 
-**Note**: The config file is created automatically on first use with default values. Existing configurations are preserved and never overwritten during installation or updates. 
+**Note**: The config file is created automatically on first use with default values. Existing configurations are preserved and never overwritten during installation or updates.
+
+## Task Modification Tracking
+
+FinCLI tracks three distinct dates for all tasks:
+
+- **`created_at`**: When the task was first created
+- **`modified_at`**: When the task content was last modified (via `fine` editor)
+- **`completed_at`**: When the task was marked as completed
+
+This provides a complete audit trail, including tasks modified after completion. The `modified_at` timestamp is automatically updated whenever:
+- Task content is changed via the editor
+- Task completion status changes
+- Task is reopened
+
+## Verbose Output
+
+Use the `-v` flag to see detailed information about filtering criteria:
+
+```bash
+fin -v
+# Output:
+# 🔍 Filtering criteria:
+#    • Days: 2 (default: today and yesterday)
+#    • Status: open
+#    • Max limit: 100
+#    • Weekdays only: True (Monday-Friday)
+# DatabaseManager using path: /path/to/tasks.db
+``` 

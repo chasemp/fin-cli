@@ -31,14 +31,15 @@ def test_task_completion_parsing(temp_db_path):
     # Simulate user editing (mark task as completed)
     edited_content = original_content.replace("[ ]", "[x]", 1)
     
-    # Test the parsing logic
-    completed_count, reopened_count, new_tasks_count, deleted_count = (
+    # Test the parsing logic - now returns 5 values
+    completed_count, reopened_count, new_tasks_count, content_modified_count, deleted_count = (
         editor_manager.parse_edited_content(edited_content)
     )
     
     # Verify results
     assert completed_count == 1
     assert reopened_count == 0
+    assert content_modified_count == 0
 ```
 
 ## 🔧 **Test Database Isolation**
@@ -53,6 +54,14 @@ def test_something(temp_db_path, monkeypatch):
     # Your test logic here
     db_manager = DatabaseManager(temp_db_path)
 ```
+
+### **Global Test Isolation**
+
+The test suite automatically isolates all tests from your personal database:
+
+- **`isolate_tests_from_real_database`** (autouse=True): Sets `FIN_DB_PATH` to a temporary location
+- **`temp_db_path`**: Provides a unique temporary database path for each test
+- **`allow_real_database`**: Optional fixture to override isolation for specific tests
 
 ## 📋 **Test Categories**
 
@@ -103,7 +112,7 @@ def test_safety():
     assert not editor_manager._editor_opened
     editor_manager._editor_opened = True
     with pytest.raises(RuntimeError):
-        editor_manager._check_safety()
+        editor_manager.edit_tasks()  # Should raise RuntimeError
 ```
 
 ## 🎯 **Testing Goals**
@@ -145,5 +154,64 @@ python -m pytest tests/ --cov=fincli
 4. **Keep tests focused** on a single piece of functionality
 5. **Clean up resources** in fixtures
 6. **Document complex test scenarios** with clear comments
+
+## 📝 **Current Return Values**
+
+The `parse_edited_content()` method now returns **5 values**:
+
+```python
+# Old (4 values) - DEPRECATED
+completed_count, reopened_count, new_tasks_count, deleted_count = (
+    editor_manager.parse_edited_content(content)
+)
+
+# New (5 values) - CURRENT
+completed_count, reopened_count, new_tasks_count, content_modified_count, deleted_count = (
+    editor_manager.parse_edited_content(content)
+)
+```
+
+**Return Value Breakdown:**
+- `completed_count`: Number of tasks marked as completed
+- `reopened_count`: Number of tasks reopened (unmarked as completed)
+- `new_tasks_count`: Number of new tasks added
+- `content_modified_count`: Number of tasks with content changes
+- `deleted_count`: Number of tasks deleted
+
+## 🔒 **Test Database Schema**
+
+Tests use the current database schema including:
+
+- `id`: Task identifier
+- `content`: Task description
+- `created_at`: Creation timestamp
+- `modified_at`: Last modification timestamp
+- `completed_at`: Completion timestamp (NULL if open)
+- `labels`: Comma-separated label string
+- `source`: Task source (cli, fins, etc.)
+
+**Important:** When testing database operations, account for the `modified_at` column in column mappings.
+
+## 🧪 **Test Data Setup**
+
+When setting up test data:
+
+```python
+# ✅ CORRECT - Use task_manager.add_task()
+task_id = task_manager.add_task("Test task", labels=["test"])
+
+# ✅ CORRECT - Update completion status
+task_manager.update_task_completion(task_id, True)
+
+# ✅ CORRECT - Update task content
+task_manager.update_task_content(task_id, "Updated content")
+```
+
+## 🚨 **Common Test Issues**
+
+1. **Column mapping mismatches**: Ensure test column mappings include `modified_at`
+2. **Return value count**: Always expect 5 values from `parse_edited_content`
+3. **Database isolation**: Never use real database paths in tests
+4. **Editor calls**: Never call actual editor methods in tests
 
 Remember: **Tests should be fast, reliable, and focused on logic, not external interactions!** 
