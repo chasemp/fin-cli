@@ -550,7 +550,10 @@ def fine_command():
     @click.option("--label", "-l", multiple=True, help="Filter by labels")
     @click.option("--date", help="Filter by date (YYYY-MM-DD)")
     @click.option(
-        "--days", "-d", help="Show tasks from the past N days (including today). Default: all open tasks"
+        "--days", "-d", help="Show tasks from the past N days (including today). Use -d 0 for all time (limited by max_limit)"
+    )
+    @click.option(
+        "--max-limit", default=100, help="Maximum number of tasks to show (default: 100)"
     )
     @click.option(
         "--dry-run",
@@ -560,18 +563,18 @@ def fine_command():
     @click.option(
         "--status",
         "-s",
-        type=click.Choice(["open", "completed", "done", "all"]),
-        default="open",
-        help="Filter by status (default: open)",
+        help="Filter by status(es): open, completed, done, or comma-separated list like 'done,open' (default: open)",
     )
     @click.option("--verbose", "-v", is_flag=True, help="Show verbose output including database path and filtering details")
-    def fine_cli(label, date, days, dry_run, status, verbose):
+    def fine_cli(label, date, days, max_limit, dry_run, status, verbose):
         """
         Edit tasks in your editor (alias for fin open-editor).
         
-        Default behavior: Shows all open tasks
+        Default behavior: Shows all open tasks (limited by max_limit)
         With -d N: Shows tasks from last N days (including today)
+        With -d 0: Shows all tasks from all time (limited by max_limit)
         With -s done: Shows completed tasks instead of open ones
+        With -s done,open: Shows both completed and open tasks
         """
         # Set verbose environment variable for DatabaseManager
         if verbose:
@@ -582,14 +585,28 @@ def fine_command():
         db_manager = DatabaseManager()
         editor_manager = EditorManager(db_manager)
         
+        # Parse status parameter (allow comma-separated values with flexible spacing)
+        status_list = []
+        if status:
+            # Split by comma and strip whitespace
+            status_list = [s.strip() for s in status.split(",")]
+        else:
+            # Default to open for fine command
+            status_list = ["open"]
+        
         # Show verbose information about filtering criteria
         if verbose:
             click.echo(f"🔍 Filtering criteria:")
             if days is not None:
-                click.echo(f"   • Days: {days} (looking back {days} day{'s' if days != 1 else ''})")
+                days_int = int(days)
+                if days_int == 0:
+                    click.echo(f"   • Days: all time (no date restriction)")
+                else:
+                    click.echo(f"   • Days: {days_int} (looking back {days_int} day{'s' if days_int != 1 else ''})")
             else:
                 click.echo(f"   • Days: all open tasks (no date restriction)")
-            click.echo(f"   • Status: {status}")
+            click.echo(f"   • Status: {', '.join(status_list)}")
+            click.echo(f"   • Max limit: {max_limit}")
             if label:
                 click.echo(f"   • Labels: {', '.join(label)}")
             if date:
@@ -612,33 +629,57 @@ def fine_command():
                 
                 # Convert days to integer (Click passes it as string)
                 days_int = int(days)
-                tasks = filter_tasks_by_date_range(all_tasks, days=days_int, weekdays_only=weekdays_only)
+                
+                if days_int == 0:
+                    # -d 0 means all time, no date filtering
+                    tasks = all_tasks
+                else:
+                    # Apply date filtering
+                    tasks = filter_tasks_by_date_range(all_tasks, days=days_int, weekdays_only=weekdays_only)
 
                 # Apply status filtering
-                if status == "open":
-                    tasks = [task for task in tasks if task["completed_at"] is None]
-                elif status in ["completed", "done"]:
-                    tasks = [task for task in tasks if task["completed_at"] is not None]
-                # For "all", we keep all tasks (both open and completed)
+                filtered_tasks = []
+                for task in tasks:
+                    if "open" in status_list and task["completed_at"] is None:
+                        filtered_tasks.append(task)
+                    elif "completed" in status_list and task["completed_at"] is not None:
+                        filtered_tasks.append(task)
+                    elif "done" in status_list and task["completed_at"] is not None:
+                        filtered_tasks.append(task)
+                    elif "all" in status_list:
+                        filtered_tasks.append(task)
+
+                # Apply max limit
+                if len(filtered_tasks) > max_limit:
+                    if verbose:
+                        click.echo(f"⚠️  Warning: Found {len(filtered_tasks)} tasks, showing first {max_limit} due to max_limit")
+                    filtered_tasks = filtered_tasks[:max_limit]
 
                 # Convert back to the format expected by editor_manager
-                task_ids = [task["id"] for task in tasks]
+                task_ids = [task["id"] for task in filtered_tasks]
                 tasks = editor_manager.get_tasks_for_editing(all_tasks=True)
-                # Filter to only include tasks from our date range and status
+                # Filter to only include tasks from our filtered list
                 tasks = [task for task in tasks if task["id"] in task_ids]
             else:
                 # Default behavior: show all open tasks (no date restriction)
-                if status == "open":
-                    # Get all open tasks
-                    tasks = editor_manager.get_tasks_for_editing(all_tasks=True)
-                    tasks = [task for task in tasks if task["completed_at"] is None]
-                elif status in ["completed", "done"]:
-                    # Get all completed tasks
-                    tasks = editor_manager.get_tasks_for_editing(all_tasks=True)
-                    tasks = [task for task in tasks if task["completed_at"] is not None]
-                else:  # status == "all"
-                    # Get all tasks
-                    tasks = editor_manager.get_tasks_for_editing(all_tasks=True)
+                filtered_tasks = []
+                for task in editor_manager.get_tasks_for_editing(all_tasks=True):
+                    if "open" in status_list and task["completed_at"] is None:
+                        filtered_tasks.append(task)
+                    elif "completed" in status_list and task["completed_at"] is not None:
+                        filtered_tasks.append(task)
+                    elif "done" in status_list and task["completed_at"] is not None:
+                        filtered_tasks.append(task)
+                    elif "all" in status_list:
+                        filtered_tasks.append(task)
+
+                # Apply max limit
+                if len(filtered_tasks) > max_limit:
+                    if verbose:
+                        click.echo(f"⚠️  Warning: Found {len(filtered_tasks)} tasks, showing first {max_limit} due to max_limit")
+                    filtered_tasks = filtered_tasks[:max_limit]
+
+                tasks = filtered_tasks
         else:
             # For date-based filtering, we need to handle status filtering differently
             # since editor_manager.get_tasks_for_editing doesn't support status filtering
@@ -655,14 +696,25 @@ def fine_command():
             )  # Use 0 for specific date
 
             # Apply status filtering
-            if status == "open":
-                tasks = [task for task in tasks if task["completed_at"] is None]
-            elif status in ["completed", "done"]:
-                tasks = [task for task in tasks if task["completed_at"] is not None]
-            # For "all", we keep all tasks (both open and completed)
+            filtered_tasks = []
+            for task in tasks:
+                if "open" in status_list and task["completed_at"] is None:
+                    filtered_tasks.append(task)
+                elif "completed" in status_list and task["completed_at"] is not None:
+                    filtered_tasks.append(task)
+                elif "done" in status_list and task["completed_at"] is not None:
+                    filtered_tasks.append(task)
+                elif "all" in status_list:
+                    filtered_tasks.append(task)
+
+            # Apply max limit
+            if len(filtered_tasks) > max_limit:
+                if verbose:
+                    click.echo(f"⚠️  Warning: Found {len(filtered_tasks)} tasks, showing first {max_limit} due to max_limit")
+                filtered_tasks = filtered_tasks[:max_limit]
 
             # Convert to editor format
-            task_ids = [task["id"] for task in tasks]
+            task_ids = [task["id"] for task in filtered_tasks]
             tasks = editor_manager.get_tasks_for_editing(all_tasks=True)
             tasks = [task for task in tasks if task["id"] in task_ids]
 
@@ -700,7 +752,7 @@ def fine_command():
             original_completed = [t for t in original_tasks if t.get("completed_at")]
             original_open = [t for t in original_tasks if not t.get("completed_at")]
 
-            completed_count, reopened_count, new_tasks_count, deleted_count = (
+            completed_count, reopened_count, new_tasks_count, content_modified_count, deleted_count = (
                 editor_manager.edit_tasks(
                     label=label_filter, target_date=date, all_tasks=True
                 )
@@ -717,6 +769,7 @@ def fine_command():
                 completed_count > 0
                 or reopened_count > 0
                 or new_tasks_count > 0
+                or content_modified_count > 0
                 or deleted_count > 0
             )
 
@@ -747,6 +800,12 @@ def fine_command():
                         click.echo(f"  • {task['content']}")
                     click.echo()
 
+                # Show content modifications
+                if content_modified_count > 0:
+                    click.echo(f"✏️  Content Modified ({content_modified_count}):")
+                    click.echo(f"  • {content_modified_count} tasks had their content updated")
+                    click.echo()
+
                 # Show new tasks
                 if new_tasks_count > 0:
                     click.echo(f"📝 Added ({new_tasks_count}):")
@@ -773,7 +832,7 @@ def fine_command():
 
                 # Show overall summary
                 total_changes = (
-                    completed_count + reopened_count + new_tasks_count + deleted_count
+                    completed_count + reopened_count + new_tasks_count + content_modified_count + deleted_count
                 )
                 click.echo(f"📈 Total changes: {total_changes}")
 
@@ -804,7 +863,10 @@ def fins_command():
     @click.command(context_settings=dict(help_option_names=["-h", "--help"]))
     @click.argument("content", nargs=-1, required=False)
     @click.option(
-        "--days", "-d", default=2, help="Show tasks from the past N days (default: 2 for today and yesterday)"
+        "--days", "-d", help="Show tasks from the past N days (including today). Use -d 0 for all time (limited by max_limit)"
+    )
+    @click.option(
+        "--max-limit", default=100, help="Maximum number of tasks to show (default: 100)"
     )
     @click.option("--label", "-l", multiple=True, help="Filter by labels")
     @click.option(
@@ -815,17 +877,24 @@ def fins_command():
     @click.option(
         "--status",
         "-s",
-        type=click.Choice(["open", "completed", "done", "all"]),
-        default="completed",
-        help="Filter by status (default: completed)",
+        help="Filter by status(es): open, completed, done, or comma-separated list like 'done,open' (default: completed)",
     )
     @click.option("--verbose", "-v", is_flag=True, help="Show verbose output including database path and filtering details")
-    def fins_cli(content, days, label, today, status, verbose):
+    def fins_cli(content, days, max_limit, label, today, status, verbose):
         """Query and display completed tasks, or add completed tasks."""
         # Set verbose environment variable for DatabaseManager
         if verbose:
             import os
             os.environ["FIN_VERBOSE"] = "1"
+            
+        # Parse status parameter (allow comma-separated values with flexible spacing)
+        status_list = []
+        if status:
+            # Split by comma and strip whitespace
+            status_list = [s.strip() for s in status.split(",")]
+        else:
+            # Default to completed for fins command
+            status_list = ["completed"]
             
         # If content is provided, add it as a completed task
         if content:
@@ -851,9 +920,16 @@ def fins_command():
             click.echo(f"🔍 Filtering criteria:")
             if today:
                 click.echo(f"   • Today only (overrides days)")
+            elif days is not None:
+                days_int = int(days)
+                if days_int == 0:
+                    click.echo(f"   • Days: all time (no date restriction)")
+                else:
+                    click.echo(f"   • Days: {days_int} (looking back {days_int} day{'s' if days_int != 1 else ''})")
             else:
-                click.echo(f"   • Days: {days} (looking back {days} day{'s' if days != 1 else ''})")
-            click.echo(f"   • Status: {status}")
+                click.echo(f"   • Days: 2 (default: today and yesterday)")
+            click.echo(f"   • Status: {', '.join(status_list)}")
+            click.echo(f"   • Max limit: {max_limit}")
             if label:
                 click.echo(f"   • Labels: {', '.join(label)}")
             
@@ -875,40 +951,64 @@ def fins_command():
             config = Config()
             weekdays_only = config.get_weekdays_only_lookback()
             tasks = filter_tasks_by_date_range(tasks, days=0, weekdays_only=weekdays_only)
-        else:
-            # Default: show tasks from past N days
+        elif days is not None:
+            # User specified days
+            days_int = int(days)
             config = Config()
             weekdays_only = config.get_weekdays_only_lookback()
-            tasks = filter_tasks_by_date_range(tasks, days=days, weekdays_only=weekdays_only)
+            
+            if days_int == 0:
+                # -d 0 means all time, no date filtering
+                pass  # Keep all tasks
+            else:
+                # Apply date filtering
+                tasks = filter_tasks_by_date_range(tasks, days=days_int, weekdays_only=weekdays_only)
+        else:
+            # Default: show tasks from past 2 days
+            config = Config()
+            weekdays_only = config.get_weekdays_only_lookback()
+            tasks = filter_tasks_by_date_range(tasks, days=2, weekdays_only=weekdays_only)
 
         # Apply status filtering
-        if status == "open":
-            tasks = [task for task in tasks if task["completed_at"] is None]
-        elif status in ["completed", "done"]:
-            tasks = [task for task in tasks if task["completed_at"] is not None]
-        # For "all", we keep all tasks (both open and completed)
+        filtered_tasks = []
+        for task in tasks:
+            if "open" in status_list and task["completed_at"] is None:
+                filtered_tasks.append(task)
+            elif "completed" in status_list and task["completed_at"] is not None:
+                filtered_tasks.append(task)
+            elif "done" in status_list and task["completed_at"] is not None:
+                filtered_tasks.append(task)
+            elif "all" in status_list:
+                filtered_tasks.append(task)
+
+        # Apply max limit
+        total_tasks = len(filtered_tasks)
+        if total_tasks > max_limit:
+            if verbose:
+                click.echo(f"⚠️  Warning: Found {total_tasks} tasks, showing first {max_limit} due to max_limit")
+            filtered_tasks = filtered_tasks[:max_limit]
 
         # Apply label filtering if requested
         if label:
             # Simple label filtering - could be enhanced
-            filtered_tasks = []
-            for task in tasks:
+            label_filtered_tasks = []
+            for task in filtered_tasks:
                 if task.get("labels"):
                     task_labels = [l.lower() for l in task["labels"]]
                     for requested_label in label:
                         if requested_label.lower() in task_labels:
-                            filtered_tasks.append(task)
+                            label_filtered_tasks.append(task)
                             break
-            tasks = filtered_tasks
+            filtered_tasks = label_filtered_tasks
 
         # Display tasks
-        if not tasks:
+        if not filtered_tasks:
             click.echo("📝 No tasks found matching your criteria.")
             return
 
         # Default behavior: just show the tasks cleanly
         # Verbose mode: show with additional context
-        for task in tasks:
+        for task in filtered_tasks:
             if verbose:
                 # Show with full formatting including task ID
                 formatted_task = format_task_for_display(task)
@@ -1801,14 +1901,26 @@ def main():
         if days_arg is not None:
             show_all_open = False
         
+        # Set max limit for open tasks
+        max_limit = 100
+        
         if show_all_open:
             # Show all open tasks (no date filtering)
             tasks = task_manager.list_tasks(include_completed=True)
             tasks = [task for task in tasks if task["completed_at"] is None]
             
+            # Apply max limit and show warning if needed
+            total_tasks = len(tasks)
+            if total_tasks > max_limit:
+                click.echo(f"⚠️  Warning: Found {total_tasks} open tasks, showing first {max_limit} due to max_limit")
+                tasks = tasks[:max_limit]
+            
             if verbose:
                 click.echo(f"🔍 Default filtering criteria:")
                 click.echo(f"   • Status: open (all open tasks)")
+                click.echo(f"   • Max limit: {max_limit}")
+                if total_tasks > max_limit:
+                    click.echo(f"   • Total available: {total_tasks}")
                 click.echo()
         else:
             # Show recent open tasks (default behavior or days-specified)

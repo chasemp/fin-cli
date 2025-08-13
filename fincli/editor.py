@@ -306,7 +306,7 @@ class EditorManager:
         return f"{base_line}  #ref:{reference}"
 
     def parse_edited_content(
-        self, content: str, original_task_ids: Optional[Set[int]] = None
+        self, content: str, original_task_ids: Optional[Set[int]] = None, original_tasks: Optional[List[Dict[str, Any]]] = None
     ) -> tuple:
         """
         Parse edited content and return completion statistics.
@@ -315,14 +315,21 @@ class EditorManager:
         Args:
             content: The edited file content as a string
             original_task_ids: Set of task IDs that were in the original file (for deletion tracking)
+            original_tasks: List of original tasks to compare content changes
 
         Returns:
-            Tuple of (completed_count, reopened_count, new_tasks_count)
+            Tuple of (completed_count, reopened_count, new_tasks_count, content_modified_count, deleted_count)
         """
         completed_count = 0
         reopened_count = 0
         new_tasks_count = 0
+        content_modified_count = 0
         processed_task_ids = set()
+
+        # Create a mapping of task_id to original content for comparison
+        original_content_map = {}
+        if original_tasks:
+            original_content_map = {task["id"]: task["content"] for task in original_tasks}
 
         for line in content.splitlines():
             # Skip header lines and empty lines
@@ -353,8 +360,8 @@ class EditorManager:
                         with self.db_manager.get_connection() as conn:
                             cursor = conn.cursor()
                             cursor.execute(
-                                "UPDATE tasks SET created_at = ? WHERE id = ?",
-                                (current_time, task_id),
+                                "UPDATE tasks SET created_at = ?, modified_at = ? WHERE id = ?",
+                                (current_time, current_time, task_id),
                             )
                             conn.commit()
                 continue
@@ -366,6 +373,14 @@ class EditorManager:
 
             # Track that we've processed this task
             processed_task_ids.add(task_id)
+
+            # Check for content changes
+            if original_content_map and task_id in original_content_map:
+                original_content = original_content_map[task_id]
+                if task_info["content"] != original_content:
+                    # Content was modified
+                    if self.task_manager.update_task_content(task_id, task_info["content"]):
+                        content_modified_count += 1
 
             # Update completion status if changed
             if self.task_manager.update_task_completion(
@@ -388,7 +403,7 @@ class EditorManager:
                     # Task might already be deleted or not exist
                     pass
 
-        return completed_count, reopened_count, new_tasks_count, deleted_count
+        return completed_count, reopened_count, new_tasks_count, content_modified_count, deleted_count
 
     def edit_tasks(
         self,
@@ -448,31 +463,48 @@ class EditorManager:
             # Open the editor - this is the only blocking operation
             result = subprocess.run(editor_parts + [temp_file_path])
 
-            if result.returncode != 0:
-                # Editor was closed with error, clean up and return
-                try:
-                    os.unlink(temp_file_path)
-                except OSError:
-                    pass
-                return 0, 0, 0, 0
+            # Reset the flag after editor closes
+            self._editor_opened = False
 
-            # Read the edited file
+            # Read the edited content
             with open(temp_file_path, "r") as f:
                 edited_content = f.read()
 
-            # Parse changes and update database
-            completed_count, reopened_count, new_tasks_count, deleted_count = (
-                self.parse_edited_content(edited_content, original_task_ids)
+            # Parse the edited content
+            completed_count, reopened_count, new_tasks_count, content_modified_count, deleted_count = (
+                self.parse_edited_content(edited_content, original_task_ids, tasks)
             )
 
-        finally:
-            # Clean up temporary file
-            try:
-                os.unlink(temp_file_path)
-            except OSError:
-                pass  # File might already be deleted
+            # Create a backup after editing with change details
+            task_changes = {
+                "completed_count": completed_count,
+                "reopened_count": reopened_count,
+                "new_tasks_count": new_tasks_count,
+                "content_modified_count": content_modified_count,
+                "deleted_count": deleted_count,
+            }
+            
+            # Only create backup if there were actual changes
+            if any(task_changes.values()):
+                self.backup_manager.create_backup(
+                    "Auto-backup after editor session with changes",
+                    task_changes
+                )
 
-        return completed_count, reopened_count, new_tasks_count, deleted_count
+            # Clean up temporary file
+            os.unlink(temp_file_path)
+
+            return completed_count, reopened_count, new_tasks_count, deleted_count
+
+        except Exception as e:
+            # Reset the flag on error
+            self._editor_opened = False
+            
+            # Clean up temporary file
+            if os.path.exists(temp_file_path):
+                os.unlink(temp_file_path)
+            
+            raise e
 
     def simulate_edit_with_content(
         self, original_content: str, modified_content: str

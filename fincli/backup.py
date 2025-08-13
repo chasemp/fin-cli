@@ -40,12 +40,13 @@ class DatabaseBackup:
         """Get path for backup metadata."""
         return self.backup_dir / f"backup_{backup_id:03d}.meta"
 
-    def create_backup(self, description: str = "") -> int:
+    def create_backup(self, description: str = "", task_changes: Optional[dict] = None) -> int:
         """
         Create a new backup of the current database.
 
         Args:
             description: Optional description of what changed
+            task_changes: Optional dict with details about what tasks changed
 
         Returns:
             Backup ID of the created backup
@@ -60,7 +61,7 @@ class DatabaseBackup:
         backup_path = self._get_backup_path(backup_id)
         shutil.copy2(self.db_path, backup_path)
 
-        # Create metadata
+        # Create metadata with enhanced information
         metadata = {
             "backup_id": backup_id,
             "timestamp": datetime.now().isoformat(),
@@ -68,6 +69,17 @@ class DatabaseBackup:
             "original_path": str(self.db_path),
             "task_count": self._get_task_count(self.db_path),
         }
+        
+        # Add task change details if provided
+        if task_changes:
+            metadata["task_changes"] = task_changes
+            metadata["change_summary"] = {
+                "completed": task_changes.get("completed_count", 0),
+                "reopened": task_changes.get("reopened_count", 0),
+                "new": task_changes.get("new_tasks_count", 0),
+                "content_modified": task_changes.get("content_modified_count", 0),
+                "deleted": task_changes.get("deleted_count", 0),
+            }
 
         self._save_metadata(backup_id, metadata)
 
