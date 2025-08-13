@@ -823,6 +823,14 @@ def fins_command():
             click.echo(f"   • Status: {status}")
             if label:
                 click.echo(f"   • Labels: {', '.join(label)}")
+            
+            # Show weekday configuration information
+            config = Config()
+            weekdays_only = config.get_weekdays_only_lookback()
+            if weekdays_only:
+                click.echo(f"   • Weekdays only: True (Monday-Friday)")
+            else:
+                click.echo(f"   • Weekdays only: False (all days)")
             click.echo()
 
         # Get tasks (include completed tasks for status filtering)
