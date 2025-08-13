@@ -1,35 +1,30 @@
 """
 JSON importer for FinCLI
 
-Handles importing tasks from local JSON files.
+Imports tasks from JSON files with label support.
 """
 
 import json
 import os
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from ..db import DatabaseManager
 from ..tasks import TaskManager
 
 
-def import_json_tasks(file_path: str = None, **kwargs) -> Dict[str, Any]:
+def import_json_tasks(file_path: str = None, db_manager: Optional[DatabaseManager] = None, **kwargs) -> Dict[str, Any]:
     """
     Import tasks from a JSON file.
 
     Expected JSON format:
     [
-        {
-            "task": "Finish sync script",
-            "labels": ["planning", "backend"]
-        },
-        {
-            "task": "Review PR",
-            "labels": ["review", "urgent"]
-        }
+        {"task": "Finish sync script", "labels": ["planning", "work"]},
+        {"task": "Review PR", "labels": ["backend", "urgent"]}
     ]
 
     Args:
         file_path: Path to JSON file (defaults to ~/.fin/tasks.json)
+        db_manager: Database manager instance (optional, will create one if not provided)
         **kwargs: Additional arguments
 
     Returns:
@@ -46,8 +41,9 @@ def import_json_tasks(file_path: str = None, **kwargs) -> Dict[str, Any]:
             "skipped": 0,
         }
 
-    # Initialize managers
-    db_manager = DatabaseManager()
+    # Initialize managers - use provided db_manager or create one
+    if db_manager is None:
+        db_manager = DatabaseManager()
     task_manager = TaskManager(db_manager)
 
     imported_count = 0
