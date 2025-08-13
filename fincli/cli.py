@@ -1045,11 +1045,26 @@ def fins_command():
                 # Show clean format without task ID - just the essential info
                 status_symbol = "[x]" if task.get("completed_at") else "[ ]"
                 content = task["content"]
+                
+                # Add completion date for completed tasks
+                date_display = ""
+                if task.get("completed_at"):
+                    try:
+                        from datetime import datetime
+                        completed_dt = datetime.fromisoformat(
+                            task["completed_at"].replace("Z", "+00:00")
+                        )
+                        date_display = f" {completed_dt.strftime('%Y-%m-%d')}"
+                    except:
+                        # Fallback if date parsing fails
+                        date_display = ""
+                
                 labels_display = ""
                 if task.get("labels"):
                     hashtags = [f"#{label}" for label in task["labels"]]
                     labels_display = f"  {','.join(hashtags)}"
-                click.echo(f"{status_symbol} {content}{labels_display}")
+                
+                click.echo(f"{status_symbol}{date_display} {content}{labels_display}")
 
     # Run the fins CLI
     fins_cli()
