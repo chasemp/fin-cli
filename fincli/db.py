@@ -36,7 +36,7 @@ class DatabaseManager:
 
         # Initialize database
         self._init_database()
-        
+
         # Only print path if verbose mode is enabled
         if os.environ.get("FIN_VERBOSE") == "1":
             print("DatabaseManager using path:", self.db_path)
@@ -64,14 +64,16 @@ class DatabaseManager:
             # Check if modified_at column exists, add it if it doesn't
             cursor.execute("PRAGMA table_info(tasks)")
             columns = [column[1] for column in cursor.fetchall()]
-            
+
             if "modified_at" not in columns:
                 # SQLite doesn't allow non-constant defaults in ALTER TABLE
                 # So we add the column without a default
                 cursor.execute("ALTER TABLE tasks ADD COLUMN modified_at TIMESTAMP")
-                
+
                 # Update existing tasks to have modified_at = created_at
-                cursor.execute("UPDATE tasks SET modified_at = created_at WHERE modified_at IS NULL")
+                cursor.execute(
+                    "UPDATE tasks SET modified_at = created_at WHERE modified_at IS NULL"
+                )
 
             conn.commit()
 
@@ -94,7 +96,7 @@ class DatabaseManager:
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._init_database()
-        
+
         # Only print path if verbose mode is enabled
         if os.environ.get("FIN_VERBOSE") == "1":
             print("DatabaseManager using path:", self.db_path)

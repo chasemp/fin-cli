@@ -43,7 +43,7 @@ def import_from_source(source: str, db_manager=None, **kwargs) -> Dict[str, Any]
         raise ValueError(f"Unknown source: {source}")
 
     importer_func = SOURCES[source]
-    
+
     # Pass db_manager if provided, otherwise let the importer create its own
     if db_manager is not None:
         return importer_func(db_manager=db_manager, **kwargs)
@@ -54,7 +54,7 @@ def import_from_source(source: str, db_manager=None, **kwargs) -> Dict[str, Any]
 def import_from_source_with_db(source: str, db_manager, **kwargs) -> Dict[str, Any]:
     """
     Import tasks from a specific source with explicit database manager.
-    
+
     This function ensures dependency injection is used and prevents
     the importer from creating its own database connection.
 

@@ -12,7 +12,9 @@ from ..db import DatabaseManager
 from ..tasks import TaskManager
 
 
-def import_json_tasks(file_path: str = None, db_manager: Optional[DatabaseManager] = None, **kwargs) -> Dict[str, Any]:
+def import_json_tasks(
+    file_path: str = None, db_manager: Optional[DatabaseManager] = None, **kwargs
+) -> Dict[str, Any]:
     """
     Import tasks from a JSON file.
 

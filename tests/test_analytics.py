@@ -47,8 +47,6 @@ class TestAnalyticsManager:
             )
             conn.commit()
 
-
-
         # Add a recurring task
         task_manager.add_task("Daily routine", labels=["recurring", "daily"])
 
@@ -101,8 +99,6 @@ class TestAnalyticsManager:
         parsed = analytics_manager._parse_date(invalid_date)
         assert isinstance(parsed, datetime)
         # Should return current time for invalid dates
-
-
 
     def test_get_recurring_tasks(self, populated_analytics):
         """Test recurring task detection."""

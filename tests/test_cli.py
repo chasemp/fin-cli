@@ -186,17 +186,18 @@ class TestCLI:
             lambda self, db_path=None: self._init_mock_db(temp_db_path),
         )
         monkeypatch.setenv("FIN_DB_PATH", temp_db_path)
-        
+
         # Mock sys.argv to simulate direct task addition
         import sys
+
         original_argv = sys.argv
         sys.argv = ["fin", "Test task #and"]
-        
+
         try:
             from fincli.cli import main
             import io
             from contextlib import redirect_stdout
-            
+
             # Capture stdout and catch SystemExit
             f = io.StringIO()
             with redirect_stdout(f):
@@ -204,7 +205,7 @@ class TestCLI:
                     main()
                 except SystemExit:
                     pass  # Expected when validation fails
-            
+
             output = f.getvalue()
             assert "Cannot use reserved words as labels: and" in output
             assert "Reserved words:" in output
@@ -226,17 +227,18 @@ class TestCLI:
             lambda self, db_path=None: self._init_mock_db(temp_db_path),
         )
         monkeypatch.setenv("FIN_DB_PATH", temp_db_path)
-        
+
         # Mock sys.argv to simulate direct task addition
         import sys
+
         original_argv = sys.argv
         sys.argv = ["fin", "Test task #or"]
-        
+
         try:
             from fincli.cli import main
             import io
             from contextlib import redirect_stdout
-            
+
             # Capture stdout and catch SystemExit
             f = io.StringIO()
             with redirect_stdout(f):
@@ -244,7 +246,7 @@ class TestCLI:
                     main()
                 except SystemExit:
                     pass  # Expected when validation fails
-            
+
             output = f.getvalue()
             assert "Cannot use reserved words as labels: or" in output
             assert "Reserved words:" in output
@@ -258,7 +260,9 @@ class TestCLI:
         finally:
             sys.argv = original_argv
 
-    def test_cli_reserved_word_validation_case_insensitive(self, temp_db_path, monkeypatch):
+    def test_cli_reserved_word_validation_case_insensitive(
+        self, temp_db_path, monkeypatch
+    ):
         """Test that reserved word validation is case insensitive."""
         # Mock the database path and set environment variable
         monkeypatch.setattr(
@@ -266,17 +270,18 @@ class TestCLI:
             lambda self, db_path=None: self._init_mock_db(temp_db_path),
         )
         monkeypatch.setenv("FIN_DB_PATH", temp_db_path)
-        
+
         # Mock sys.argv to simulate direct task addition
         import sys
+
         original_argv = sys.argv
         sys.argv = ["fin", "Test task #AND"]
-        
+
         try:
             from fincli.cli import main
             import io
             from contextlib import redirect_stdout
-            
+
             # Capture stdout and catch SystemExit
             f = io.StringIO()
             with redirect_stdout(f):
@@ -284,7 +289,7 @@ class TestCLI:
                     main()
                 except SystemExit:
                     pass  # Expected when validation fails
-            
+
             output = f.getvalue()
             assert "Cannot use reserved words as labels: AND" in output
         finally:
@@ -298,22 +303,23 @@ class TestCLI:
             lambda self, db_path=None: self._init_mock_db(temp_db_path),
         )
         monkeypatch.setenv("FIN_DB_PATH", temp_db_path)
-        
+
         # Mock sys.argv to simulate direct task addition
         import sys
+
         original_argv = sys.argv
         sys.argv = ["fin", "Test task #work"]
-        
+
         try:
             from fincli.cli import main
             import io
             from contextlib import redirect_stdout
-            
+
             # Capture stdout
             f = io.StringIO()
             with redirect_stdout(f):
                 main()
-            
+
             output = f.getvalue()
             assert '✅ Task added: "Test task" [work]' in output
         finally:
@@ -327,17 +333,18 @@ class TestCLI:
             lambda self, db_path=None: self._init_mock_db(temp_db_path),
         )
         monkeypatch.setenv("FIN_DB_PATH", temp_db_path)
-        
+
         # Mock sys.argv to simulate direct task addition
         import sys
+
         original_argv = sys.argv
         sys.argv = ["fin", "Test task #ref"]
-        
+
         try:
             from fincli.cli import main
             import io
             from contextlib import redirect_stdout
-            
+
             # Capture stdout and catch SystemExit
             f = io.StringIO()
             with redirect_stdout(f):
@@ -345,7 +352,7 @@ class TestCLI:
                     main()
                 except SystemExit:
                     pass  # Expected when validation fails
-            
+
             output = f.getvalue()
             assert "Cannot use reserved words as labels: ref" in output
             assert "Reserved words:" in output
@@ -360,17 +367,18 @@ class TestCLI:
             lambda self, db_path=None: self._init_mock_db(temp_db_path),
         )
         monkeypatch.setenv("FIN_DB_PATH", temp_db_path)
-        
+
         # Mock sys.argv to simulate direct task addition
         import sys
+
         original_argv = sys.argv
         sys.argv = ["fin", "Test task #due"]
-        
+
         try:
             from fincli.cli import main
             import io
             from contextlib import redirect_stdout
-            
+
             # Capture stdout and catch SystemExit
             f = io.StringIO()
             with redirect_stdout(f):
@@ -378,7 +386,7 @@ class TestCLI:
                     main()
                 except SystemExit:
                     pass  # Expected when validation fails
-            
+
             output = f.getvalue()
             assert "Cannot use reserved words as labels: due" in output
             assert "Reserved words:" in output
@@ -393,17 +401,18 @@ class TestCLI:
             lambda self, db_path=None: self._init_mock_db(temp_db_path),
         )
         monkeypatch.setenv("FIN_DB_PATH", temp_db_path)
-        
+
         # Mock sys.argv to simulate direct task addition
         import sys
+
         original_argv = sys.argv
         sys.argv = ["fin", "Test task #not"]
-        
+
         try:
             from fincli.cli import main
             import io
             from contextlib import redirect_stdout
-            
+
             # Capture stdout and catch SystemExit
             f = io.StringIO()
             with redirect_stdout(f):
@@ -411,7 +420,7 @@ class TestCLI:
                     main()
                 except SystemExit:
                     pass  # Expected when validation fails
-            
+
             output = f.getvalue()
             assert "Cannot use reserved words as labels: not" in output
             assert "Reserved words:" in output
@@ -426,22 +435,23 @@ class TestCLI:
             lambda self, db_path=None: self._init_mock_db(temp_db_path),
         )
         monkeypatch.setenv("FIN_DB_PATH", temp_db_path)
-        
+
         # Mock sys.argv to simulate direct task addition
         import sys
+
         original_argv = sys.argv
         sys.argv = ["fin", "Project deadline #due:2025-08-10"]
-        
+
         try:
             from fincli.cli import main
             import io
             from contextlib import redirect_stdout
-            
+
             # Capture stdout
             f = io.StringIO()
             with redirect_stdout(f):
                 main()
-            
+
             output = f.getvalue()
             assert '✅ Task added: "Project deadline" [due:2025-08-10]' in output
         finally:
@@ -455,22 +465,23 @@ class TestCLI:
             lambda self, db_path=None: self._init_mock_db(temp_db_path),
         )
         monkeypatch.setenv("FIN_DB_PATH", temp_db_path)
-        
+
         # Mock sys.argv to simulate direct task addition
         import sys
+
         original_argv = sys.argv
         sys.argv = ["fin", "Daily standup #recur:daily"]
-        
+
         try:
             from fincli.cli import main
             import io
             from contextlib import redirect_stdout
-            
+
             # Capture stdout
             f = io.StringIO()
             with redirect_stdout(f):
                 main()
-            
+
             output = f.getvalue()
             assert '✅ Task added: "Daily standup" [recur:daily]' in output
         finally:
@@ -484,22 +495,23 @@ class TestCLI:
             lambda self, db_path=None: self._init_mock_db(temp_db_path),
         )
         monkeypatch.setenv("FIN_DB_PATH", temp_db_path)
-        
+
         # Mock sys.argv to simulate direct task addition
         import sys
+
         original_argv = sys.argv
         sys.argv = ["fin", "Implement feature #depends:task123"]
-        
+
         try:
             from fincli.cli import main
             import io
             from contextlib import redirect_stdout
-            
+
             # Capture stdout
             f = io.StringIO()
             with redirect_stdout(f):
                 main()
-            
+
             output = f.getvalue()
             assert '✅ Task added: "Implement feature" [depends:task123]' in output
         finally:
@@ -513,24 +525,25 @@ class TestCLI:
             lambda self, db_path=None: self._init_mock_db(temp_db_path),
         )
         monkeypatch.setenv("FIN_DB_PATH", temp_db_path)
-        
+
         # Add some test tasks first
         import sys
+
         original_argv = sys.argv
-        
+
         # Add tasks with different label combinations
         test_tasks = [
             ["fin", "Work task #work"],
             ["fin", "Urgent work task #work #urgent"],
             ["fin", "Personal task #personal"],
         ]
-        
+
         try:
             from fincli.cli import main
             import io
             from contextlib import redirect_stdout
             from click.exceptions import Exit
-            
+
             # Add test tasks
             for task_args in test_tasks:
                 sys.argv = task_args
@@ -540,7 +553,7 @@ class TestCLI:
                         main()
                     except (SystemExit, Exit):
                         pass  # Expected when command completes
-            
+
             # Test AND filtering
             sys.argv = ["fin", "list", "-l", "work and urgent"]
             f = io.StringIO()
@@ -549,10 +562,12 @@ class TestCLI:
                     main()
                 except (SystemExit, Exit):
                     pass  # Expected when command completes
-            
+
             output = f.getvalue()
             assert "Urgent work task" in output
-            assert "Work task" not in output  # Should not appear (only has work, not urgent)
+            assert (
+                "Work task" not in output
+            )  # Should not appear (only has work, not urgent)
             assert "Personal task" not in output  # Should not appear (has neither)
         finally:
             sys.argv = original_argv
@@ -565,24 +580,25 @@ class TestCLI:
             lambda self, db_path=None: self._init_mock_db(temp_db_path),
         )
         monkeypatch.setenv("FIN_DB_PATH", temp_db_path)
-        
+
         # Add some test tasks first
         import sys
+
         original_argv = sys.argv
-        
+
         # Add tasks with different label combinations
         test_tasks = [
             ["fin", "Work task #work"],
             ["fin", "Urgent work task #work #urgent"],
             ["fin", "Personal task #personal"],
         ]
-        
+
         try:
             from fincli.cli import main
             import io
             from contextlib import redirect_stdout
             from click.exceptions import Exit
-            
+
             # Add test tasks
             for task_args in test_tasks:
                 sys.argv = task_args
@@ -592,7 +608,7 @@ class TestCLI:
                         main()
                     except (SystemExit, Exit):
                         pass  # Expected when command completes
-            
+
             # Test OR filtering
             sys.argv = ["fin", "list", "-l", "work or personal"]
             f = io.StringIO()
@@ -601,7 +617,7 @@ class TestCLI:
                     main()
                 except (SystemExit, Exit):
                     pass  # Expected when command completes
-            
+
             output = f.getvalue()
             assert "Work task" in output
             assert "Urgent work task" in output  # Has work label
@@ -617,24 +633,25 @@ class TestCLI:
             lambda self, db_path=None: self._init_mock_db(temp_db_path),
         )
         monkeypatch.setenv("FIN_DB_PATH", temp_db_path)
-        
+
         # Add some test tasks first
         import sys
+
         original_argv = sys.argv
-        
+
         # Add tasks with different label combinations
         test_tasks = [
             ["fin", "Work task #work"],
             ["fin", "Urgent work task #work #urgent"],
             ["fin", "Personal task #personal"],
         ]
-        
+
         try:
             from fincli.cli import main
             import io
             from contextlib import redirect_stdout
             from click.exceptions import Exit
-            
+
             # Add test tasks
             for task_args in test_tasks:
                 sys.argv = task_args
@@ -644,7 +661,7 @@ class TestCLI:
                         main()
                     except (SystemExit, Exit):
                         pass  # Expected when command completes
-            
+
             # Test multiple criteria (should match any of the criteria)
             sys.argv = ["fin", "list", "-l", "work and urgent", "-l", "personal"]
             f = io.StringIO()
@@ -653,11 +670,11 @@ class TestCLI:
                     main()
                 except (SystemExit, Exit):
                     pass  # Expected when command completes
-            
+
             output = f.getvalue()
             assert "Urgent work task" in output  # Matches "work and urgent"
-            assert "Personal task" in output     # Matches "personal"
-            assert "Work task" not in output     # Only has work, not urgent
+            assert "Personal task" in output  # Matches "personal"
+            assert "Work task" not in output  # Only has work, not urgent
         finally:
             sys.argv = original_argv
 

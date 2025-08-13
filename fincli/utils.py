@@ -53,38 +53,50 @@ def format_task_for_display(task: Dict[str, Any]) -> str:
     """
     # Get task ID
     task_id = task["id"]
-    
+
     # Determine status
     status = "[x]" if task["completed_at"] else "[ ]"
 
     # Format primary timestamp
     if task["completed_at"]:
         # Use completed_at for completed tasks
-        primary_timestamp = datetime.fromisoformat(task["completed_at"].replace("Z", "+00:00"))
+        primary_timestamp = datetime.fromisoformat(
+            task["completed_at"].replace("Z", "+00:00")
+        )
         primary_time_str = primary_timestamp.strftime("%Y-%m-%d %H:%M")
     else:
         # Use created_at for open tasks
-        primary_timestamp = datetime.fromisoformat(task["created_at"].replace("Z", "+00:00"))
+        primary_timestamp = datetime.fromisoformat(
+            task["created_at"].replace("Z", "+00:00")
+        )
         primary_time_str = primary_timestamp.strftime("%Y-%m-%d %H:%M")
 
     # Check if task was modified after creation/completion
     modified_after_primary = False
     modification_indicator = ""
-    
+
     if task.get("modified_at"):
-        modified_timestamp = datetime.fromisoformat(task["modified_at"].replace("Z", "+00:00"))
-        
+        modified_timestamp = datetime.fromisoformat(
+            task["modified_at"].replace("Z", "+00:00")
+        )
+
         if task["completed_at"]:
             # For completed tasks, check if modified after completion
-            completed_timestamp = datetime.fromisoformat(task["completed_at"].replace("Z", "+00:00"))
+            completed_timestamp = datetime.fromisoformat(
+                task["completed_at"].replace("Z", "+00:00")
+            )
             if modified_timestamp > completed_timestamp:
                 modified_after_primary = True
-                modification_indicator = f" (mod: {modified_timestamp.strftime('%Y-%m-%d %H:%M')})"
+                modification_indicator = (
+                    f" (mod: {modified_timestamp.strftime('%Y-%m-%d %H:%M')})"
+                )
         else:
             # For open tasks, check if modified after creation
             if modified_timestamp > primary_timestamp:
                 modified_after_primary = True
-                modification_indicator = f" (mod: {modified_timestamp.strftime('%Y-%m-%d %H:%M')})"
+                modification_indicator = (
+                    f" (mod: {modified_timestamp.strftime('%Y-%m-%d %H:%M')})"
+                )
 
     # Format labels as hashtags
     labels_display = ""
@@ -108,16 +120,16 @@ def get_date_range(days: int = 1, weekdays_only: bool = True) -> tuple:
         If days=0, returns (today, None) to indicate no date restriction
     """
     today = date.today()
-    
+
     # Special case: days=0 means all time (no date restriction)
     if days == 0:
         return today, None
-    
+
     if weekdays_only:
         # Count only weekdays (Monday=0, Sunday=6)
         lookback_date = today
         weekdays_counted = 0
-        
+
         # Count backwards until we've counted the required number of weekdays
         while weekdays_counted < days:
             lookback_date = lookback_date - timedelta(days=1)
@@ -157,7 +169,7 @@ def filter_tasks_by_date_range(
 
         for task in tasks:
             task_date = None
-            
+
             # Determine the relevant date for filtering
             if task["completed_at"]:
                 # For completed tasks, use completion date

@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="fin",
-    version="0.2.0",
+    version="0.2.1",
     description="A lightweight, macOS-first local task-tracking system",
     author="Chase Pettet (+AI)",
     author_email="chase@owenv.org",

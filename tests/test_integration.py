@@ -43,7 +43,10 @@ class TestIntegration:
         )
 
         assert result.returncode == 0
-        assert '✅ Task added: "Integration test task" [integration, test]' in result.stdout
+        assert (
+            '✅ Task added: "Integration test task" [integration, test]'
+            in result.stdout
+        )
 
         # Verify in database
         db_manager = DatabaseManager(temp_db_path)
