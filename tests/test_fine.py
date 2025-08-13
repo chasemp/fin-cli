@@ -55,75 +55,60 @@ class TestFineCommand:
         finally:
             os.unlink(db_path)
 
-    def test_parse_task_line_completed(self):
+    def test_parse_task_line_completed(self, temp_db_path, monkeypatch):
         """Test parsing a completed task line."""
-        import tempfile
+        # Set environment variable to use temp database
+        monkeypatch.setenv("FIN_DB_PATH", temp_db_path)
+        
+        from fincli.db import DatabaseManager
+        from fincli.editor import EditorManager
 
-        tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False, dir="/tmp")
-        tmp.close()
-        db_path = tmp.name
-        try:
-            os.environ["FIN_DB_PATH"] = db_path
-            from fincli.db import DatabaseManager
+        db_manager = DatabaseManager(temp_db_path)
+        line = "[x] 2025-07-29 17:10  Fix bug in cron task runner  #automation"
+        editor_manager = EditorManager(db_manager)
+        result = editor_manager.parse_task_line(line)
 
-            db_manager = DatabaseManager()
-            line = "[x] 2025-07-29 17:10  Fix bug in cron task runner  #automation"
-            editor_manager = EditorManager(db_manager)
-            result = editor_manager.parse_task_line(line)
+        assert result is not None
+        assert result["status"] == "[x]"
+        assert result["timestamp"] == "2025-07-29 17:10"
+        assert result["content"] == "Fix bug in cron task runner"
+        assert result["labels"] == ["automation"]
+        assert result["is_completed"] is True
 
-            assert result is not None
-            assert result["status"] == "[x]"
-            assert result["timestamp"] == "2025-07-29 17:10"
-            assert result["content"] == "Fix bug in cron task runner"
-            assert result["labels"] == ["automation"]
-            assert result["is_completed"] is True
-        finally:
-            os.unlink(db_path)
-
-    def test_parse_task_line_no_labels(self):
+    def test_parse_task_line_no_labels(self, temp_db_path, monkeypatch):
         """Test parsing a task line without labels."""
-        import tempfile
+        # Set environment variable to use temp database
+        monkeypatch.setenv("FIN_DB_PATH", temp_db_path)
+        
+        from fincli.db import DatabaseManager
+        from fincli.editor import EditorManager
 
-        tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False, dir="/tmp")
-        tmp.close()
-        db_path = tmp.name
-        try:
-            os.environ["FIN_DB_PATH"] = db_path
-            from fincli.db import DatabaseManager
+        db_manager = DatabaseManager(temp_db_path)
+        line = "[ ] 2025-07-30 10:30  Simple task"
+        editor_manager = EditorManager(db_manager)
+        result = editor_manager.parse_task_line(line)
 
-            db_manager = DatabaseManager()
-            line = "[ ] 2025-07-30 10:30  Simple task"
-            editor_manager = EditorManager(db_manager)
-            result = editor_manager.parse_task_line(line)
+        assert result is not None
+        assert result["status"] == "[ ]"
+        assert result["timestamp"] == "2025-07-30 10:30"
+        assert result["content"] == "Simple task"
+        assert result["labels"] == []
+        assert result["is_completed"] is False
 
-            assert result is not None
-            assert result["status"] == "[ ]"
-            assert result["timestamp"] == "2025-07-30 10:30"
-            assert result["content"] == "Simple task"
-            assert result["labels"] == []
-            assert result["is_completed"] is False
-        finally:
-            os.unlink(db_path)
-
-    def test_parse_task_line_invalid(self):
+    def test_parse_task_line_invalid(self, temp_db_path, monkeypatch):
         """Test parsing an invalid task line."""
-        import tempfile
+        # Set environment variable to use temp database
+        monkeypatch.setenv("FIN_DB_PATH", temp_db_path)
+        
+        from fincli.db import DatabaseManager
+        from fincli.editor import EditorManager
 
-        tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False, dir="/tmp")
-        tmp.close()
-        db_path = tmp.name
-        try:
-            os.environ["FIN_DB_PATH"] = db_path
-            from fincli.db import DatabaseManager
+        db_manager = DatabaseManager(temp_db_path)
+        line = "Invalid task line format"
+        editor_manager = EditorManager(db_manager)
+        result = editor_manager.parse_task_line(line)
 
-            db_manager = DatabaseManager()
-            line = "Invalid task line format"
-            editor_manager = EditorManager(db_manager)
-            result = editor_manager.parse_task_line(line)
-
-            assert result is None
-        finally:
-            os.unlink(db_path)
+        assert result is None
 
     def test_find_matching_task(self, db_manager):
         """Test finding matching tasks."""
@@ -143,56 +128,42 @@ class TestFineCommand:
         found_id = editor_manager.find_matching_task(task_info)
         assert found_id == task_id
 
-    def test_fine_command_with_tasks(self, cli_runner):
+    def test_fine_command_with_tasks(self, temp_db_path, monkeypatch):
         """Test fine command with existing tasks."""
-        # Create a temporary database
-        import tempfile
-
+        # Set environment variable to use temp database
+        monkeypatch.setenv("FIN_DB_PATH", temp_db_path)
+        
         from fincli.db import DatabaseManager
         from fincli.tasks import TaskManager
 
-        tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
-        tmp.close()
-        db_path = tmp.name
+        db_manager = DatabaseManager(temp_db_path)
+        task_manager = TaskManager(db_manager)
+        task_manager.add_task("Work task", labels=["work"])
+        task_manager.add_task("Personal task", labels=["personal"])
 
-        try:
-            # Set the database path environment variable
+        from fincli.cli import open_editor
+
+        def mock_subprocess_run(cmd, **kwargs):
             import os
 
-            os.environ["FIN_DB_PATH"] = db_path
+            temp_file_path = cmd[-1] if cmd else None
+            if temp_file_path and os.path.exists(temp_file_path):
+                with open(temp_file_path, "r") as f:
+                    content = f.read()
+                content = content.replace("[ ]", "[x]", 1)
+                with open(temp_file_path, "w") as f:
+                    f.write(content)
 
-            # Set up database with tasks
-            db_manager = DatabaseManager(db_path)
-            task_manager = TaskManager(db_manager)
-            task_manager.add_task("Test task 1", labels=["work"])
-            task_manager.add_task("Test task 2", labels=["personal"])
+            class MockResult:
+                returncode = 0
 
-            # Mock subprocess.run to avoid opening actual editor
-            def mock_subprocess_run(cmd, **kwargs):
-                class MockResult:
-                    returncode = 0
-                    stdout = ""
-                    stderr = ""
+            return MockResult()
 
-                return MockResult()
-
-            # Patch subprocess.run
-            import subprocess
-
-            original_run = subprocess.run
-            subprocess.run = mock_subprocess_run
-
-            try:
-                # Test the command with label filtering to ensure tasks are found
-                result = cli_runner.invoke(open_editor, ["--label", "work"])
-                assert result.exit_code == 0
-                assert "📝 Opening" in result.output
-            finally:
-                # Restore original subprocess.run
-                subprocess.run = original_run
-
-        finally:
-            os.unlink(db_path)
+        monkeypatch.setattr("subprocess.run", mock_subprocess_run)
+        result = open_editor(label="work")
+        assert result[0] == 1  # 1 task completed
+        assert result[1] == 0  # 0 tasks reopened
+        assert result[2] == 0  # 0 new tasks
 
     def test_fine_command_safety_checks(self, cli_runner):
         """Test that the fine command has proper safety checks."""
