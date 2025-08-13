@@ -537,6 +537,11 @@ def fine_command():
 
     This function creates a standalone command that acts as an alias for the open-editor
     functionality, allowing users to run 'fine' directly with the same options.
+    
+    IMPORTANT FOR TESTING:
+    - Tests should NEVER call the actual editor (edit_tasks)
+    - Tests should use parse_edited_content with text files to test parsing logic
+    - See TESTING.md for the correct testing approach
     """
     import click
 
@@ -545,7 +550,7 @@ def fine_command():
     @click.option("--label", "-l", multiple=True, help="Filter by labels")
     @click.option("--date", help="Filter by date (YYYY-MM-DD)")
     @click.option(
-        "--days", "-d", default=1, help="Show tasks from the past N days (default: 1)"
+        "--days", "-d", help="Show tasks from the past N days (including today). Default: all open tasks"
     )
     @click.option(
         "--dry-run",
@@ -561,7 +566,13 @@ def fine_command():
     )
     @click.option("--verbose", "-v", is_flag=True, help="Show verbose output including database path and filtering details")
     def fine_cli(label, date, days, dry_run, status, verbose):
-        """Edit tasks in your editor (alias for fin open-editor)."""
+        """
+        Edit tasks in your editor (alias for fin open-editor).
+        
+        Default behavior: Shows all open tasks
+        With -d N: Shows tasks from last N days (including today)
+        With -s done: Shows completed tasks instead of open ones
+        """
         # Set verbose environment variable for DatabaseManager
         if verbose:
             import os
@@ -574,7 +585,10 @@ def fine_command():
         # Show verbose information about filtering criteria
         if verbose:
             click.echo(f"🔍 Filtering criteria:")
-            click.echo(f"   • Days: {days} (looking back {days} day{'s' if days != 1 else ''})")
+            if days is not None:
+                click.echo(f"   • Days: {days} (looking back {days} day{'s' if days != 1 else ''})")
+            else:
+                click.echo(f"   • Days: all open tasks (no date restriction)")
             click.echo(f"   • Status: {status}")
             if label:
                 click.echo(f"   • Labels: {', '.join(label)}")
@@ -582,32 +596,49 @@ def fine_command():
                 click.echo(f"   • Date: {date}")
             click.echo()
 
-        # Get tasks for editing (without opening editor)
+        # Get tasks for editing
         label_filter = label[0] if label else None
 
-        # If no specific date is provided, use days filtering
+        # If no specific date is provided, use days filtering or show all open tasks
         if not date:
-            # Get all tasks and apply days filtering
-            all_tasks = editor_manager.task_manager.list_tasks(include_completed=True)
-            from fincli.utils import filter_tasks_by_date_range
+            if days is not None:
+                # Get all tasks and apply days filtering
+                all_tasks = editor_manager.task_manager.list_tasks(include_completed=True)
+                from fincli.utils import filter_tasks_by_date_range
 
-            # Get weekdays_only configuration
-            config = Config()
-            weekdays_only = config.get_weekdays_only_lookback()
-            tasks = filter_tasks_by_date_range(all_tasks, days=days, weekdays_only=weekdays_only)
+                # Get weekdays_only configuration
+                config = Config()
+                weekdays_only = config.get_weekdays_only_lookback()
+                
+                # Convert days to integer (Click passes it as string)
+                days_int = int(days)
+                tasks = filter_tasks_by_date_range(all_tasks, days=days_int, weekdays_only=weekdays_only)
 
-            # Apply status filtering
-            if status == "open":
-                tasks = [task for task in tasks if task["completed_at"] is None]
-            elif status in ["completed", "done"]:
-                tasks = [task for task in tasks if task["completed_at"] is not None]
-            # For "all", we keep all tasks (both open and completed)
+                # Apply status filtering
+                if status == "open":
+                    tasks = [task for task in tasks if task["completed_at"] is None]
+                elif status in ["completed", "done"]:
+                    tasks = [task for task in tasks if task["completed_at"] is not None]
+                # For "all", we keep all tasks (both open and completed)
 
-            # Convert back to the format expected by editor_manager
-            task_ids = [task["id"] for task in tasks]
-            tasks = editor_manager.get_tasks_for_editing(all_tasks=True)
-            # Filter to only include tasks from our date range and status
-            tasks = [task for task in tasks if task["id"] in task_ids]
+                # Convert back to the format expected by editor_manager
+                task_ids = [task["id"] for task in tasks]
+                tasks = editor_manager.get_tasks_for_editing(all_tasks=True)
+                # Filter to only include tasks from our date range and status
+                tasks = [task for task in tasks if task["id"] in task_ids]
+            else:
+                # Default behavior: show all open tasks (no date restriction)
+                if status == "open":
+                    # Get all open tasks
+                    tasks = editor_manager.get_tasks_for_editing(all_tasks=True)
+                    tasks = [task for task in tasks if task["completed_at"] is None]
+                elif status in ["completed", "done"]:
+                    # Get all completed tasks
+                    tasks = editor_manager.get_tasks_for_editing(all_tasks=True)
+                    tasks = [task for task in tasks if task["completed_at"] is not None]
+                else:  # status == "all"
+                    # Get all tasks
+                    tasks = editor_manager.get_tasks_for_editing(all_tasks=True)
         else:
             # For date-based filtering, we need to handle status filtering differently
             # since editor_manager.get_tasks_for_editing doesn't support status filtering
@@ -661,6 +692,8 @@ def fine_command():
         )
 
         # Only open editor at the very last moment when user explicitly requests it
+        # NOTE: Tests should NEVER reach this point - they should use dry-run or test
+        # the parsing logic directly with parse_edited_content
         try:
             # Get the state before editing for comparison
             original_tasks = tasks.copy()
