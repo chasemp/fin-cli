@@ -216,17 +216,19 @@ class EditorManager:
             # Return all tasks when --all flag is used
             return self.task_manager.list_tasks(include_completed=True)
         elif label:
-            # Filter by label - handle both string and tuple
+            # Filter by label - include completed tasks when filtering by label
+            # This allows editing of completed tasks (e.g., to reopen them)
             label_str = label[0] if isinstance(label, (tuple, list)) else label
             return self.label_manager.filter_tasks_by_label(
                 label_str, include_completed=True
             )
         # Apply date filtering if no specific date is provided
         if not target_date:
-            all_tasks = self.task_manager.list_tasks(include_completed=all_tasks)
-            return filter_tasks_by_date_range(all_tasks, days=1)
+            # Only get open tasks by default (not completed ones)
+            # This prevents the fine command from showing too many completed tasks
+            open_tasks = self.task_manager.list_tasks(include_completed=False)
+            return filter_tasks_by_date_range(open_tasks, days=1)
         else:
-            # Filter by date
             all_tasks = self.task_manager.list_tasks(include_completed=True)
             filtered_tasks = []
 
@@ -234,11 +236,13 @@ class EditorManager:
                 task_date = None
 
                 if task["completed_at"]:
+                    # For completed tasks, use completion date
                     completed_dt = datetime.fromisoformat(
                         task["completed_at"].replace("Z", "+00:00")
                     )
                     task_date = completed_dt.date()
                 else:
+                    # For open tasks, use creation date
                     created_dt = datetime.fromisoformat(
                         task["created_at"].replace("Z", "+00:00")
                     )
