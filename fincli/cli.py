@@ -622,74 +622,15 @@ def fine_command():
         # Get tasks for editing
         label_filter = label[0] if label else None
 
-        # If no specific date is provided, use days filtering or show all open tasks
-        if not date:
-            if days is not None:
-                # Get all tasks and apply days filtering
-                all_tasks = editor_manager.task_manager.list_tasks(include_completed=True)
-                from fincli.utils import filter_tasks_by_date_range
-
-                # Get weekdays_only configuration
-                config = Config()
-                weekdays_only = config.get_weekdays_only_lookback()
-                
-                # Convert days to integer (Click passes it as string)
-                days_int = int(days)
-                
-                if days_int == 0:
-                    # -d 0 means all time, no date filtering
-                    tasks = all_tasks
-                else:
-                    # Apply date filtering
-                    tasks = filter_tasks_by_date_range(all_tasks, days=days_int, weekdays_only=weekdays_only)
-
-                # Apply status filtering
-                filtered_tasks = []
-                for task in tasks:
-                    if "open" in status_list and task["completed_at"] is None:
-                        filtered_tasks.append(task)
-                    elif "completed" in status_list and task["completed_at"] is not None:
-                        filtered_tasks.append(task)
-                    elif "done" in status_list and task["completed_at"] is not None:
-                        filtered_tasks.append(task)
-                    elif "all" in status_list:
-                        filtered_tasks.append(task)
-
-                # Apply max limit
-                if len(filtered_tasks) > max_limit:
-                    if verbose:
-                        click.echo(f"⚠️  Warning: Found {len(filtered_tasks)} tasks, showing first {max_limit} due to max_limit")
-                    filtered_tasks = filtered_tasks[:max_limit]
-
-                # Convert back to the format expected by editor_manager
-                task_ids = [task["id"] for task in filtered_tasks]
-                tasks = editor_manager.get_tasks_for_editing(all_tasks=True)
-                # Filter to only include tasks from our filtered list
-                tasks = [task for task in tasks if task["id"] in task_ids]
-            else:
-                # Default behavior: show all open tasks (no date restriction)
-                filtered_tasks = []
-                all_tasks = editor_manager.task_manager.list_tasks(include_completed=True)
-                for task in all_tasks:
-                    if "open" in status_list and task["completed_at"] is None:
-                        filtered_tasks.append(task)
-                    elif "completed" in status_list and task["completed_at"] is not None:
-                        filtered_tasks.append(task)
-                    elif "done" in status_list and task["completed_at"] is not None:
-                        filtered_tasks.append(task)
-                    elif "all" in status_list:
-                        filtered_tasks.append(task)
-
-                # Apply max limit
-                if len(filtered_tasks) > max_limit:
-                    if verbose:
-                        click.echo(f"⚠️  Warning: Found {len(filtered_tasks)} tasks, showing first {max_limit} due to max_limit")
-                    filtered_tasks = filtered_tasks[:max_limit]
-
-                tasks = filtered_tasks
-        else:
-            # For date-based filtering, we need to handle status filtering differently
-            # since editor_manager.get_tasks_for_editing doesn't support status filtering
+        # Use the editor_manager's built-in filtering which properly handles open vs completed tasks
+        if date:
+            # For date-based filtering, use the editor's date filtering
+            tasks = editor_manager.get_tasks_for_editing(target_date=date)
+        elif label:
+            # For label-based filtering, use the editor's label filtering
+            tasks = editor_manager.get_tasks_for_editing(label=label)
+        elif days is not None:
+            # For days-based filtering, we need to handle this specially since editor doesn't support days
             all_tasks = editor_manager.task_manager.list_tasks(include_completed=True)
             from fincli.utils import filter_tasks_by_date_range
 
@@ -697,10 +638,15 @@ def fine_command():
             config = Config()
             weekdays_only = config.get_weekdays_only_lookback()
             
-            # Apply date filtering
-            tasks = filter_tasks_by_date_range(
-                all_tasks, days=0, weekdays_only=weekdays_only
-            )  # Use 0 for specific date
+            # Convert days to integer (Click passes it as string)
+            days_int = int(days)
+            
+            if days_int == 0:
+                # -d 0 means all time, no date filtering
+                tasks = all_tasks
+            else:
+                # Apply date filtering
+                tasks = filter_tasks_by_date_range(all_tasks, days=days_int, weekdays_only=weekdays_only)
 
             # Apply status filtering
             filtered_tasks = []
@@ -720,10 +666,10 @@ def fine_command():
                     click.echo(f"⚠️  Warning: Found {len(filtered_tasks)} tasks, showing first {max_limit} due to max_limit")
                 filtered_tasks = filtered_tasks[:max_limit]
 
-            # Convert to editor format
-            task_ids = [task["id"] for task in filtered_tasks]
-            tasks = editor_manager.get_tasks_for_editing(all_tasks=True)
-            tasks = [task for task in tasks if task["id"] in task_ids]
+            tasks = filtered_tasks
+        else:
+            # Default behavior: use editor's built-in filtering which shows only open tasks
+            tasks = editor_manager.get_tasks_for_editing()
 
         if not tasks:
             click.echo("📝 No tasks found for editing.")
@@ -761,13 +707,13 @@ def fine_command():
 
             completed_count, reopened_count, new_tasks_count, content_modified_count, deleted_count = (
                 editor_manager.edit_tasks(
-                    label=label_filter, target_date=date, all_tasks=True
+                    label=label_filter, target_date=date
                 )
             )
 
             # Get the state after editing for detailed comparison
             updated_tasks = editor_manager.get_tasks_for_editing(
-                label=label_filter, target_date=date, all_tasks=True
+                label=label_filter, target_date=date
             )
             updated_completed = [t for t in updated_tasks if t.get("completed_at")]
             updated_open = [t for t in updated_tasks if not t.get("completed_at")]
