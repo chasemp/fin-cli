@@ -1,18 +1,18 @@
 """
 CSV importer for FinCLI
 
-Handles importing tasks from local CSV files.
+Imports tasks from CSV files with label support.
 """
 
 import csv
 import os
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from ..db import DatabaseManager
 from ..tasks import TaskManager
 
 
-def import_csv_tasks(file_path: str = None, **kwargs) -> Dict[str, Any]:
+def import_csv_tasks(file_path: str = None, db_manager: Optional[DatabaseManager] = None, **kwargs) -> Dict[str, Any]:
     """
     Import tasks from a CSV file.
 
@@ -23,6 +23,7 @@ def import_csv_tasks(file_path: str = None, **kwargs) -> Dict[str, Any]:
 
     Args:
         file_path: Path to CSV file (defaults to ~/.fin/tasks.csv)
+        db_manager: Database manager instance (optional, will create one if not provided)
         **kwargs: Additional arguments
 
     Returns:
@@ -39,8 +40,9 @@ def import_csv_tasks(file_path: str = None, **kwargs) -> Dict[str, Any]:
             "skipped": 0,
         }
 
-    # Initialize managers
-    db_manager = DatabaseManager()
+    # Initialize managers - use provided db_manager or create one
+    if db_manager is None:
+        db_manager = DatabaseManager()
     task_manager = TaskManager(db_manager)
 
     imported_count = 0

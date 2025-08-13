@@ -4,7 +4,7 @@ Intake module for FinCLI
 Handles importing tasks from external sources with a plugin architecture.
 """
 
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable, Dict, List, Optional
 
 from .csv_importer import import_csv_tasks
 from .excel_importer import import_excel_tasks
@@ -27,12 +27,13 @@ def get_available_sources() -> List[str]:
     return list(SOURCES.keys())
 
 
-def import_from_source(source: str, **kwargs) -> Dict[str, Any]:
+def import_from_source(source: str, db_manager=None, **kwargs) -> Dict[str, Any]:
     """
     Import tasks from a specific source.
 
     Args:
         source: Source name (csv, json, text, sheets, excel)
+        db_manager: Optional database manager instance for dependency injection
         **kwargs: Additional arguments for the importer
 
     Returns:
@@ -41,4 +42,32 @@ def import_from_source(source: str, **kwargs) -> Dict[str, Any]:
     if source not in SOURCES:
         raise ValueError(f"Unknown source: {source}")
 
-    return SOURCES[source](**kwargs)
+    importer_func = SOURCES[source]
+    
+    # Pass db_manager if provided, otherwise let the importer create its own
+    if db_manager is not None:
+        return importer_func(db_manager=db_manager, **kwargs)
+    else:
+        return importer_func(**kwargs)
+
+
+def import_from_source_with_db(source: str, db_manager, **kwargs) -> Dict[str, Any]:
+    """
+    Import tasks from a specific source with explicit database manager.
+    
+    This function ensures dependency injection is used and prevents
+    the importer from creating its own database connection.
+
+    Args:
+        source: Source name (csv, json, text, sheets, excel)
+        db_manager: Database manager instance (required)
+        **kwargs: Additional arguments for the importer
+
+    Returns:
+        Dictionary with import results
+    """
+    if source not in SOURCES:
+        raise ValueError(f"Unknown source: {source}")
+
+    importer_func = SOURCES[source]
+    return importer_func(db_manager=db_manager, **kwargs)

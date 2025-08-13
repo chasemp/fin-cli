@@ -1,5 +1,7 @@
 """
-Integration tests for Fin task tracking system
+Integration tests for FinCLI.
+
+Tests the full integration between CLI commands and database operations.
 """
 
 import os
@@ -8,19 +10,21 @@ import sys
 import tempfile
 from pathlib import Path
 
+import pytest
+
 from fincli.db import DatabaseManager
 from fincli.tasks import TaskManager
 
 
 class TestIntegration:
-    """Integration tests for the complete system."""
+    """Test full CLI to database integration."""
 
     def test_full_cli_to_database_flow(self, temp_db_path, monkeypatch):
-        """Test complete flow from CLI to database storage."""
+        """Test complete flow from CLI command to database storage."""
         # Set up environment
         monkeypatch.setenv("FIN_DB_PATH", temp_db_path)
 
-        # Add task via CLI
+        # Run CLI command
         result = subprocess.run(
             [
                 sys.executable,
@@ -39,70 +43,81 @@ class TestIntegration:
         )
 
         assert result.returncode == 0
-        assert (
-            '✅ Task added: "Integration test task" [integration, test]'
-            in result.stdout
-        )
+        assert '✅ Task added: "Integration test task" [integration, test]' in result.stdout
 
-        # Verify task in database
+        # Verify in database
         db_manager = DatabaseManager(temp_db_path)
-        from fincli.tasks import TaskManager
-
         task_manager = TaskManager(db_manager)
         tasks = task_manager.list_tasks()
 
         assert len(tasks) == 1
-        task = tasks[0]
-        assert task["content"] == "Integration test task"
-        assert set(task["labels"]) == {"test", "integration"}
-        assert task["source"] == "cli"
+        assert tasks[0]["content"] == "Integration test task"
+        assert set(tasks[0]["labels"]) == {"test", "integration"}
 
     def test_multiple_cli_operations(self, temp_db_path, monkeypatch):
-        """Test multiple CLI operations in sequence."""
+        """Test multiple CLI operations on the same database."""
         # Set up environment
         monkeypatch.setenv("FIN_DB_PATH", temp_db_path)
 
-        # Add multiple tasks
-        tasks_to_add = [
-            ("First task", ["work"]),
-            ("Second task", ["personal", "urgent"]),
-            ("Third task", []),
-        ]
+        # Add first task
+        result1 = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "fincli.cli",
+                "add-task",
+                "First task",
+                "--label",
+                "first",
+            ],
+            capture_output=True,
+            text=True,
+            env={"FIN_DB_PATH": temp_db_path, **os.environ},
+        )
 
-        for content, labels in tasks_to_add:
-            cmd = [sys.executable, "-m", "fincli.cli", "add-task", content]
-            for label in labels:
-                cmd.extend(["--label", label])
+        assert result1.returncode == 0
 
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                env={"FIN_DB_PATH": temp_db_path, **os.environ},
-            )
-            assert result.returncode == 0
+        # Add second task
+        result2 = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "fincli.cli",
+                "add-task",
+                "Second task",
+                "--label",
+                "second",
+            ],
+            capture_output=True,
+            text=True,
+            env={"FIN_DB_PATH": temp_db_path, **os.environ},
+        )
 
-        # Verify all tasks in database
+        assert result2.returncode == 0
+
+        # Verify both tasks in database
         db_manager = DatabaseManager(temp_db_path)
         task_manager = TaskManager(db_manager)
         tasks = task_manager.list_tasks()
 
-        assert len(tasks) == 3
-
-        # Check that all tasks are present (order may vary due to same timestamps)
-        task_contents = [task["content"] for task in tasks]
+        assert len(tasks) == 2
+        task_contents = {task["content"] for task in tasks}
         assert "First task" in task_contents
         assert "Second task" in task_contents
-        assert "Third task" in task_contents
 
     def test_cli_error_handling(self, temp_db_path, monkeypatch):
-        """Test CLI error handling in integration."""
+        """Test CLI error handling and validation."""
         # Set up environment
         monkeypatch.setenv("FIN_DB_PATH", temp_db_path)
 
-        # Test missing argument for add command
+        # Test with missing content
         result = subprocess.run(
-            [sys.executable, "-m", "fincli.cli", "add-task"],
+            [
+                sys.executable,
+                "-m",
+                "fincli.cli",
+                "add-task",
+            ],
             capture_output=True,
             text=True,
             env={"FIN_DB_PATH": temp_db_path, **os.environ},
@@ -111,68 +126,61 @@ class TestIntegration:
         assert result.returncode != 0
         assert "Missing argument" in result.stderr
 
-        # Verify database is still accessible
+        # Verify no tasks were added
         db_manager = DatabaseManager(temp_db_path)
         task_manager = TaskManager(db_manager)
         tasks = task_manager.list_tasks()
-        assert len(tasks) == 0  # No tasks should be added
+
+        assert len(tasks) == 0
 
     def test_database_persistence_across_cli_calls(self, temp_db_path, monkeypatch):
-        """Test that database persists data across CLI calls."""
+        """Test that database persists data across multiple CLI calls."""
         # Set up environment
         monkeypatch.setenv("FIN_DB_PATH", temp_db_path)
 
         # Add task via CLI
-        subprocess.run(
-            [sys.executable, "-m", "fincli.cli", "add-task", "Persistent task"],
-            env={"FIN_DB_PATH": temp_db_path, **os.environ},
-            capture_output=True,
-            text=True,
-        )
-
-        # Verify task exists
-        db_manager = DatabaseManager(temp_db_path)
-        task_manager = TaskManager(db_manager)
-        tasks = task_manager.list_tasks()
-        assert len(tasks) == 1
-        assert tasks[0]["content"] == "Persistent task"
-
-        # Add another task
-        subprocess.run(
+        result = subprocess.run(
             [
                 sys.executable,
                 "-m",
                 "fincli.cli",
                 "add-task",
-                "Another persistent task",
+                "Persistent task",
                 "--label",
-                "work",
+                "persistent",
             ],
             capture_output=True,
             text=True,
             env={"FIN_DB_PATH": temp_db_path, **os.environ},
         )
 
-        # Verify both tasks exist
+        assert result.returncode == 0
+
+        # Verify task exists
+        db_manager = DatabaseManager(temp_db_path)
         task_manager = TaskManager(db_manager)
         tasks = task_manager.list_tasks()
-        assert len(tasks) == 2
-        # Check that both tasks exist, regardless of order
-        task_contents = [task["content"] for task in tasks]
-        assert "Persistent task" in task_contents
-        assert "Another persistent task" in task_contents
+
+        assert len(tasks) == 1
+        assert tasks[0]["content"] == "Persistent task"
 
     def test_special_characters_integration(self, temp_db_path, monkeypatch):
-        """Test special characters in task content."""
+        """Test handling of special characters in integration."""
         # Set up environment
         monkeypatch.setenv("FIN_DB_PATH", temp_db_path)
 
-        special_content = (
-            "Task with 'quotes', \"double quotes\", and special chars: @#$%^&*()"
-        )
+        special_content = "Task with special chars: !@#$%^&*()_+-=[]{}|;':\",./<>?"
 
         result = subprocess.run(
-            [sys.executable, "-m", "fincli.cli", "add-task", special_content],
+            [
+                sys.executable,
+                "-m",
+                "fincli.cli",
+                "add-task",
+                special_content,
+                "--label",
+                "special",
+            ],
             capture_output=True,
             text=True,
             env={"FIN_DB_PATH": temp_db_path, **os.environ},

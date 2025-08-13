@@ -1,22 +1,21 @@
 """
-Text importer for FinCLI
+Text file importer for FinCLI
 
-Handles importing tasks from simple text files.
+Imports tasks from plain text files with optional label support.
 """
 
 import os
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from ..db import DatabaseManager
 from ..tasks import TaskManager
 
 
-def import_text_tasks(file_path: str = None, **kwargs) -> Dict[str, Any]:
+def import_text_tasks(file_path: str = None, db_manager: Optional[DatabaseManager] = None, **kwargs) -> Dict[str, Any]:
     """
     Import tasks from a text file.
 
-    Expected text format (one task per line):
-    Finish sync script
+    Expected format:
     Review PR
     Buy groceries
 
@@ -27,6 +26,7 @@ def import_text_tasks(file_path: str = None, **kwargs) -> Dict[str, Any]:
 
     Args:
         file_path: Path to text file (defaults to ~/.fin/tasks.txt)
+        db_manager: Database manager instance (optional, will create one if not provided)
         **kwargs: Additional arguments
 
     Returns:
@@ -43,8 +43,9 @@ def import_text_tasks(file_path: str = None, **kwargs) -> Dict[str, Any]:
             "skipped": 0,
         }
 
-    # Initialize managers
-    db_manager = DatabaseManager()
+    # Initialize managers - use provided db_manager or create one
+    if db_manager is None:
+        db_manager = DatabaseManager()
     task_manager = TaskManager(db_manager)
 
     imported_count = 0

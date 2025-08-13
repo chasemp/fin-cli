@@ -26,9 +26,14 @@ from fincli.utils import (
 )
 
 
+def _get_db_manager():
+    """Get database manager - lazy initialization to avoid import-time connections."""
+    return DatabaseManager()
+
 def add_task(content: str, labels: tuple, source: str = "cli"):
     """Add a task to the database."""
-    db_manager = DatabaseManager()
+    # Only create database connection when function is called, not at import time
+    db_manager = _get_db_manager()
     task_manager = TaskManager(db_manager)
     # config = Config()  # Temporarily disabled to debug hanging issue
 
@@ -445,7 +450,7 @@ def open_editor(label, date, all_tasks, dry_run):
         original_completed = [t for t in original_tasks if t.get("completed_at")]
         original_open = [t for t in original_tasks if not t.get("completed_at")]
 
-        completed_count, reopened_count, new_tasks_count, deleted_count = (
+        completed_count, reopened_count, new_tasks_count, content_modified_count, deleted_count = (
             editor_manager.edit_tasks(
                 label=label_filter, target_date=date, all_tasks=all_tasks
             )
@@ -462,6 +467,7 @@ def open_editor(label, date, all_tasks, dry_run):
             completed_count > 0
             or reopened_count > 0
             or new_tasks_count > 0
+            or content_modified_count > 0
             or deleted_count > 0
         )
 
@@ -582,7 +588,7 @@ def fine_command():
             os.environ["FIN_VERBOSE"] = "1"
             
         # Call the original open_editor function directly
-        db_manager = DatabaseManager()
+        db_manager = _get_db_manager()
         editor_manager = EditorManager(db_manager)
         
         # Parse status parameter (allow comma-separated values with flexible spacing)
@@ -663,7 +669,8 @@ def fine_command():
             else:
                 # Default behavior: show all open tasks (no date restriction)
                 filtered_tasks = []
-                for task in editor_manager.get_tasks_for_editing(all_tasks=True):
+                all_tasks = editor_manager.task_manager.list_tasks(include_completed=True)
+                for task in all_tasks:
                     if "open" in status_list and task["completed_at"] is None:
                         filtered_tasks.append(task)
                     elif "completed" in status_list and task["completed_at"] is not None:
@@ -912,7 +919,7 @@ def fins_command():
             return
 
         # Otherwise, show tasks (existing behavior)
-        db_manager = DatabaseManager()
+        db_manager = _get_db_manager()
         task_manager = TaskManager(db_manager)
         
         # Only show verbose information about filtering criteria when -v flag is used
