@@ -425,7 +425,7 @@ class EditorManager:
             target_date: Optional date to filter by
 
         Returns:
-            Tuple of (completed_count, reopened_count, new_tasks_count, deleted_count)
+            Tuple of (completed_count, reopened_count, new_tasks_count, content_modified_count, deleted_count)
         """
         # Safety check - prevent accidental editor opening
         if self._editor_opened:
@@ -435,7 +435,7 @@ class EditorManager:
         tasks = self.get_tasks_for_editing(label, target_date, all_tasks)
 
         if not tasks:
-            return 0, 0, 0, 0
+            return 0, 0, 0, 0, 0
 
         # Create backup before editing
         backup_id = self.backup_manager.create_backup(
@@ -498,7 +498,7 @@ class EditorManager:
             # Clean up temporary file
             os.unlink(temp_file_path)
 
-            return completed_count, reopened_count, new_tasks_count, deleted_count
+            return completed_count, reopened_count, new_tasks_count, content_modified_count, deleted_count
 
         except Exception as e:
             # Reset the flag on error
