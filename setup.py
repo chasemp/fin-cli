@@ -2,10 +2,10 @@ from setuptools import setup, find_packages
 
 setup(
     name="fin",
-    version="0.1.0",
+    version="0.2.0",
     description="A lightweight, macOS-first local task-tracking system",
     author="Chase Pettet (+AI)",
-    author_email="chase@owasp.org",
+    author_email="chase@owenv.org",
     packages=find_packages(),
     install_requires=[
         "click>=8.0.0",

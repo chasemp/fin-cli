@@ -1,29 +1,26 @@
 """
-CLI module for FinCLI
+FinCLI - A lightweight task tracking system
 
-Main entry point for all CLI commands.
+A modular, installable Python package for managing local tasks.
 """
 
-import re
+import os
 import sys
-from datetime import datetime, date
+from datetime import date, datetime, timedelta
+from typing import List, Optional
 
 import click
 
+from fincli import __version__
 from fincli.analytics import AnalyticsManager
 from fincli.backup import DatabaseBackup
 from fincli.config import Config
 from fincli.db import DatabaseManager
 from fincli.editor import EditorManager
-from fincli.intake import get_available_sources, import_from_source
+from fincli.intake import import_from_source
 from fincli.labels import LabelManager
 from fincli.tasks import TaskManager
-from fincli.utils import (
-    filter_tasks_by_date_range,
-    format_task_for_display,
-    is_important_task,
-    is_today_task,
-)
+from fincli.utils import filter_tasks_by_date_range, format_task_for_display, is_important_task, is_today_task
 
 
 def _get_db_manager():
@@ -183,6 +180,7 @@ def handle_direct_task(args):
 
 
 @click.group(context_settings=dict(help_option_names=["-h", "--help"]))
+@click.version_option(version=__version__, prog_name="FinCLI")
 def cli():
     """FinCLI - A lightweight task tracking system
 
