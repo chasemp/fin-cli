@@ -764,18 +764,18 @@ def fine_command():
             original_completed = [t for t in original_tasks if t.get("completed_at")]
             original_open = [t for t in original_tasks if not t.get("completed_at")]
 
+            # Pass the already filtered tasks directly to avoid re-filtering
             (
                 completed_count,
                 reopened_count,
                 new_tasks_count,
                 content_modified_count,
                 deleted_count,
-            ) = editor_manager.edit_tasks(label=label_filter, target_date=date)
+            ) = editor_manager.edit_tasks_with_tasks(tasks)
 
             # Get the state after editing for detailed comparison
-            updated_tasks = editor_manager.get_tasks_for_editing(
-                label=label_filter, target_date=date
-            )
+            # Use the same filtered tasks to maintain consistency with what was edited
+            updated_tasks = tasks
             updated_completed = [t for t in updated_tasks if t.get("completed_at")]
             updated_open = [t for t in updated_tasks if not t.get("completed_at")]
 

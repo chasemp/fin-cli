@@ -420,6 +420,113 @@ class EditorManager:
             deleted_count,
         )
 
+    def edit_tasks_with_tasks(
+        self,
+        tasks: List[Dict[str, Any]],
+    ) -> tuple:
+        """
+        Edit specific tasks in external editor.
+        This method takes a pre-filtered list of tasks and edits them directly.
+
+        Args:
+            tasks: List of tasks to edit (already filtered)
+
+        Returns:
+            Tuple of (completed_count, reopened_count, new_tasks_count, content_modified_count, deleted_count)
+        """
+        # Safety check - prevent accidental editor opening
+        if self._editor_opened:
+            raise RuntimeError("Editor has already been opened in this session")
+
+        if not tasks:
+            return 0, 0, 0, 0, 0
+
+        # Create backup before editing
+        backup_id = self.backup_manager.create_backup(
+            "Auto-backup before editor session"
+        )
+
+        # Track original task IDs for deletion detection
+        original_task_ids = {task["id"] for task in tasks}
+
+        # Create temporary file
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".txt", delete=False
+        ) as temp_file:
+            # Write header and tasks
+            file_content = self.create_edit_file_content(tasks)
+            temp_file.write(file_content)
+            temp_file_path = temp_file.name
+
+        try:
+            # Get editor command
+            editor_cmd = get_editor()
+
+            # Split editor command if it contains spaces
+            editor_parts = editor_cmd.split()
+
+            # Mark that we're about to open the editor
+            self._editor_opened = True
+
+            # Open the editor - this is the only blocking operation
+            result = subprocess.run(editor_parts + [temp_file_path])
+
+            # Reset the flag after editor closes
+            self._editor_opened = False
+
+            # Read the edited content
+            with open(temp_file_path, "r") as f:
+                edited_content = f.read()
+
+            # Parse the edited content
+            (
+                completed_count,
+                reopened_count,
+                new_tasks_count,
+                content_modified_count,
+                deleted_count,
+            ) = self.parse_edited_content(edited_content, original_task_ids, tasks)
+
+            # Create a backup after editing with change details
+            task_changes = {
+                "completed_count": completed_count,
+                "reopened_count": reopened_count,
+                "new_tasks_count": new_tasks_count,
+                "content_modified_count": content_modified_count,
+                "deleted_count": deleted_count,
+            }
+
+            # Only create backup if there were actual changes
+            if any(task_changes.values()):
+                self.backup_manager.create_backup(
+                    "Auto-backup after editor session with changes", task_changes
+                )
+
+            # Clean up temporary file
+            os.unlink(temp_file_path)
+
+            return (
+                completed_count,
+                reopened_count,
+                new_tasks_count,
+                content_modified_count,
+                deleted_count,
+            )
+
+        except Exception as e:
+            # Reset the flag on error
+            self._editor_opened = False
+
+            # Clean up temporary file
+            if os.path.exists(temp_file_path):
+                try:
+                    os.unlink(temp_file_path)
+                except:
+                    pass
+
+            # Re-raise the exception
+            raise e
+
     def edit_tasks(
         self,
         label: Optional[str] = None,
