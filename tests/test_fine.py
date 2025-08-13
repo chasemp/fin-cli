@@ -160,7 +160,7 @@ class TestFineCommand:
         edited_content = "\n".join(edited_lines)
         
         # Parse the edited content to test the logic
-        completed_count, reopened_count, new_tasks_count, deleted_count = (
+        completed_count, reopened_count, new_tasks_count, content_modified_count, deleted_count = (
             editor_manager.parse_edited_content(edited_content)
         )
         
@@ -168,6 +168,7 @@ class TestFineCommand:
         assert completed_count == 1  # 1 task completed
         assert reopened_count == 0  # 0 tasks reopened
         assert new_tasks_count == 0  # 0 new tasks
+        assert content_modified_count == 0  # 0 content modifications
         assert deleted_count == 0  # 0 deleted tasks
 
     def test_fine_command_safety_checks(self, cli_runner):

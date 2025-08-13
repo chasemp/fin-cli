@@ -74,7 +74,7 @@ class TaskManager:
 
     def get_task(self, task_id: int) -> Optional[Dict[str, Any]]:
         """
-        Get a task by ID.
+        Get a specific task by ID.
 
         Args:
             task_id: Task ID to retrieve
@@ -87,26 +87,27 @@ class TaskManager:
 
             cursor.execute(
                 """
-                SELECT id, content, created_at, completed_at, labels, source
-                FROM tasks
-                WHERE id = ?
-            """,
+                SELECT id, content, created_at, modified_at, completed_at, labels, source
+                FROM tasks WHERE id = ?
+                """,
                 (task_id,),
             )
 
             row = cursor.fetchone()
-            if row:
-                return {
-                    "id": row[0],
-                    "content": row[1],
-                    "created_at": row[2],
-                    "completed_at": row[3],
-                    "labels": row[4].split(",") if row[4] else [],
-                    "source": row[5],
-                }
-            return None
+            if not row:
+                return None
 
-    def list_tasks(self, include_completed: bool = True) -> List[Dict[str, Any]]:
+            return {
+                "id": row[0],
+                "content": row[1],
+                "created_at": row[2],
+                "modified_at": row[3],
+                "completed_at": row[4],
+                "labels": row[5].split(",") if row[5] else [],
+                "source": row[6],
+            }
+
+    def list_tasks(self, include_completed: bool = False) -> List[Dict[str, Any]]:
         """
         List all tasks, optionally including completed ones.
 
@@ -120,7 +121,7 @@ class TaskManager:
             cursor = conn.cursor()
 
             query = """
-                SELECT id, content, created_at, completed_at, labels, source
+                SELECT id, content, created_at, modified_at, completed_at, labels, source
                 FROM tasks
             """
 
@@ -138,17 +139,48 @@ class TaskManager:
                         "id": row[0],
                         "content": row[1],
                         "created_at": row[2],
-                        "completed_at": row[3],
-                        "labels": row[4].split(",") if row[4] else [],
-                        "source": row[5],
+                        "modified_at": row[3],
+                        "completed_at": row[4],
+                        "labels": row[5].split(",") if row[5] else [],
+                        "source": row[6],
                     }
                 )
 
             return tasks
 
+    def update_task_content(self, task_id: int, new_content: str) -> bool:
+        """
+        Update task content and set modified_at timestamp.
+
+        Args:
+            task_id: Task ID to update
+            new_content: New content for the task
+
+        Returns:
+            True if updated, False if not found or no change
+        """
+        task = self.get_task(task_id)
+        if not task:
+            return False
+
+        if task["content"] == new_content:
+            return False  # No change needed
+
+        with self.db_manager.get_connection() as conn:
+            cursor = conn.cursor()
+
+            cursor.execute(
+                "UPDATE tasks SET content = ?, modified_at = CURRENT_TIMESTAMP WHERE id = ?",
+                (new_content, task_id),
+            )
+
+            conn.commit()
+
+        return True
+
     def update_task_completion(self, task_id: int, is_completed: bool) -> bool:
         """
-        Update task completion status.
+        Update task completion status and set modified_at timestamp.
 
         Args:
             task_id: Task ID to update
@@ -171,13 +203,13 @@ class TaskManager:
             if is_completed:
                 # Mark as completed
                 cursor.execute(
-                    "UPDATE tasks SET completed_at = CURRENT_TIMESTAMP WHERE id = ?",
+                    "UPDATE tasks SET completed_at = CURRENT_TIMESTAMP, modified_at = CURRENT_TIMESTAMP WHERE id = ?",
                     (task_id,),
                 )
             else:
                 # Mark as reopened
                 cursor.execute(
-                    "UPDATE tasks SET completed_at = NULL WHERE id = ?",
+                    "UPDATE tasks SET completed_at = NULL, modified_at = CURRENT_TIMESTAMP WHERE id = ?",
                     (task_id,),
                 )
 

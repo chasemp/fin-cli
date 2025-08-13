@@ -61,6 +61,7 @@ class TestDatabaseManager:
                 "id",
                 "content",
                 "created_at",
+                "modified_at",
                 "completed_at",
                 "labels",
                 "source",
