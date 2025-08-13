@@ -240,7 +240,7 @@ class TestGetDateRange:
         today, lookback = get_date_range(0)
 
         assert today == date.today()
-        assert lookback == date.today()
+        assert lookback is None  # None indicates no date restriction (all time)
 
 
 class TestFilterTasksByDateRange:
