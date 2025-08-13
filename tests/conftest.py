@@ -4,10 +4,32 @@ Pytest configuration and fixtures for Fin test suite
 
 import os
 import tempfile
-
 import pytest
 
 from fincli.db import DatabaseManager
+
+
+@pytest.fixture(autouse=True)
+def isolate_tests_from_real_database(monkeypatch):
+    """
+    Global fixture that ensures all tests use isolated databases.
+    
+    This fixture runs automatically for every test and prevents tests from
+    accidentally using the real user database.
+    """
+    # Create a temporary database path for this test
+    with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as tmp:
+        temp_db_path = tmp.name
+    
+    # Set the environment variable to use the temp database
+    monkeypatch.setenv("FIN_DB_PATH", temp_db_path)
+    
+    # Clean up after the test
+    yield
+    
+    # Clean up the temporary database
+    if os.path.exists(temp_db_path):
+        os.unlink(temp_db_path)
 
 
 @pytest.fixture
@@ -91,3 +113,17 @@ def weekdays_only_disabled(monkeypatch):
     
     # Apply the mock to the Config class
     monkeypatch.setattr("fincli.config.Config.get_weekdays_only_lookback", mock_get_weekdays_only_lookback)
+
+
+@pytest.fixture
+def allow_real_database(monkeypatch):
+    """
+    Fixture for tests that intentionally need to test real database behavior.
+    
+    This fixture removes the FIN_DB_PATH environment variable and allows
+    the test to use the default database location (useful for testing
+    the actual database creation logic).
+    """
+    # Remove the FIN_DB_PATH environment variable to allow real database behavior
+    monkeypatch.delenv("FIN_DB_PATH", raising=False)
+    yield

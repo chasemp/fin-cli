@@ -230,22 +230,12 @@ class TestIntegration:
 class TestRealDatabase:
     """Tests using the real database location."""
 
-    def test_real_database_creation(self, monkeypatch):
+    def test_real_database_creation(self, monkeypatch, allow_real_database):
         """Test that real database is created in ~/.fin/."""
         # Use a temporary home directory
         with tempfile.TemporaryDirectory() as tmp_home:
             monkeypatch.setenv("HOME", tmp_home)
-            monkeypatch.delenv("FIN_DB_PATH", raising=False)
 
-            # Create database manager (should create ~/.fin/tasks.db)
-            db_manager = DatabaseManager()
-
-            # Verify directory and file exist
-            fin_dir = Path(tmp_home) / "fin"
-            db_path = fin_dir / "tasks.db"
-
-            assert fin_dir.exists()
-            assert db_path.exists()
             # Create database manager (should create ~/.fin/tasks.db)
             db_manager = DatabaseManager()
 
@@ -265,7 +255,7 @@ class TestRealDatabase:
             assert task is not None
             assert task["content"] == "Real database test"
 
-    def test_real_database_persistence(self, monkeypatch):
+    def test_real_database_persistence(self, monkeypatch, allow_real_database):
         """Test that real database persists data."""
         # Use a temporary home directory
         with tempfile.TemporaryDirectory() as tmp_home:

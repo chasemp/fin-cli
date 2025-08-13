@@ -299,50 +299,38 @@ class TestLabelFilteringInCommands:
             lambda self, db_path=None: self._init_mock_db(temp_db_path),
         )
 
-    def test_fine_with_label_filter(self, cli_runner):
-        import os
-        import tempfile
+    def test_fine_with_label_filter(self, cli_runner, temp_db_path, monkeypatch):
+        """Test fine command with label filtering."""
+        # Set environment variable to use temp database
+        monkeypatch.setenv("FIN_DB_PATH", temp_db_path)
+        
+        from fincli.db import DatabaseManager
+        from fincli.tasks import TaskManager
 
-        tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False, dir="/tmp")
-        tmp.close()
-        db_path = tmp.name
-        try:
-            os.environ["FIN_DB_PATH"] = db_path
-            from fincli.db import DatabaseManager
-            from fincli.tasks import TaskManager
+        db_manager = DatabaseManager(temp_db_path)
+        task_manager = TaskManager(db_manager)
+        task_manager.add_task("Work task", labels=["work"])
+        task_manager.add_task("Personal task", labels=["personal"])
+        
+        from fincli.cli import open_editor
 
-            db_manager = DatabaseManager()
-            task_manager = TaskManager(db_manager)
-            task_manager.add_task("Work task", labels=["work"])
-            task_manager.add_task("Personal task", labels=["personal"])
-            pass
-            del db_manager
-            del task_manager
-            from fincli.cli import open_editor
+        def mock_subprocess_run(cmd, **kwargs):
+            import os
 
-            def mock_subprocess_run(cmd, **kwargs):
-                import os
+            temp_file_path = cmd[-1] if cmd else None
+            if temp_file_path and os.path.exists(temp_file_path):
+                with open(temp_file_path, "r") as f:
+                    content = f.read()
+                content = content.replace("[ ]", "[x]", 1)
+                with open(temp_file_path, "w") as f:
+                    f.write(content)
 
-                temp_file_path = cmd[-1] if cmd else None
-                if temp_file_path and os.path.exists(temp_file_path):
-                    with open(temp_file_path, "r") as f:
-                        content = f.read()
-                    content = content.replace("[ ]", "[x]", 1)
-                    with open(temp_file_path, "w") as f:
-                        f.write(content)
+            class MockResult:
+                returncode = 0
 
-                class MockResult:
-                    returncode = 0
+            return MockResult()
 
-                return MockResult()
-
-            import pytest
-
-            monkeypatch = pytest.MonkeyPatch()
-            monkeypatch.setattr("subprocess.run", mock_subprocess_run)
-            result = cli_runner.invoke(open_editor, ["--label", "work"])
-            monkeypatch.undo()
-            assert result.exit_code == 0
-            assert "📝 Opening 1 tasks in editor..." in result.output
-        finally:
-            os.unlink(db_path)
+        monkeypatch.setattr("subprocess.run", mock_subprocess_run)
+        result = cli_runner.invoke(open_editor, ["--label", "work"])
+        assert result.exit_code == 0
+        assert "📝 Opening 1 tasks in editor..." in result.output
