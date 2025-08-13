@@ -39,7 +39,7 @@ class TestFineCommand:
         """Test parsing a valid task line."""
         # Set environment variable to use temp database
         monkeypatch.setenv("FIN_DB_PATH", temp_db_path)
-        
+
         from fincli.editor import EditorManager
 
         # Use the fixture-provided database manager
@@ -59,7 +59,7 @@ class TestFineCommand:
         """Test parsing a completed task line."""
         # Set environment variable to use temp database
         monkeypatch.setenv("FIN_DB_PATH", temp_db_path)
-        
+
         from fincli.editor import EditorManager
 
         # Use the fixture-provided database manager
@@ -79,7 +79,7 @@ class TestFineCommand:
         """Test parsing a task line without labels."""
         # Set environment variable to use temp database
         monkeypatch.setenv("FIN_DB_PATH", temp_db_path)
-        
+
         from fincli.editor import EditorManager
 
         # Use the fixture-provided database manager
@@ -99,7 +99,7 @@ class TestFineCommand:
         """Test parsing an invalid task line."""
         # Set environment variable to use temp database
         monkeypatch.setenv("FIN_DB_PATH", temp_db_path)
-        
+
         from fincli.editor import EditorManager
 
         # Use the fixture-provided database manager
@@ -132,7 +132,7 @@ class TestFineCommand:
         """Test fine command with existing tasks."""
         # Set environment variable to use temp database
         monkeypatch.setenv("FIN_DB_PATH", temp_db_path)
-        
+
         from fincli.tasks import TaskManager
         from fincli.editor import EditorManager
 

@@ -303,7 +303,7 @@ class TestLabelFilteringInCommands:
         """Test fine command with label filtering."""
         # Set environment variable to use temp database
         monkeypatch.setenv("FIN_DB_PATH", temp_db_path)
-        
+
         from fincli.db import DatabaseManager
         from fincli.tasks import TaskManager
 
@@ -311,7 +311,7 @@ class TestLabelFilteringInCommands:
         task_manager = TaskManager(db_manager)
         task_manager.add_task("Work task", labels=["work"])
         task_manager.add_task("Personal task", labels=["personal"])
-        
+
         from fincli.cli import open_editor
 
         def mock_subprocess_run(cmd, **kwargs):

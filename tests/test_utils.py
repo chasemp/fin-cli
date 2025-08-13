@@ -249,10 +249,10 @@ class TestFilterTasksByDateRange:
     def test_filter_open_tasks_always_included(self, weekdays_only_disabled):
         """Test that open tasks are always included regardless of date."""
         from datetime import date, timedelta
-        
+
         today = date.today()
         yesterday = today - timedelta(days=1)
-        
+
         tasks = [
             {
                 "id": 1,
@@ -282,10 +282,10 @@ class TestFilterTasksByDateRange:
     def test_filter_completed_tasks_by_date(self, weekdays_only_disabled):
         """Test that completed tasks are filtered by completion date."""
         from datetime import date, timedelta
-        
+
         today = date.today()
         yesterday = today - timedelta(days=1)
-        
+
         tasks = [
             {
                 "id": 1,
@@ -314,10 +314,10 @@ class TestFilterTasksByDateRange:
     def test_priority_sorting(self, weekdays_only_disabled):
         """Test that important and today tasks appear in correct order."""
         from datetime import date, timedelta
-        
+
         today = date.today()
         yesterday = today - timedelta(days=1)
-        
+
         tasks = [
             {
                 "id": 1,
@@ -366,10 +366,10 @@ class TestFilterTasksByDateRange:
     def test_mixed_priority_and_completed(self, weekdays_only_disabled):
         """Test priority sorting with completed tasks."""
         from datetime import date, timedelta
-        
+
         today = date.today()
         yesterday = today - timedelta(days=1)
-        
+
         tasks = [
             {
                 "id": 1,

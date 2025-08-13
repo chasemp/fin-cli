@@ -80,9 +80,13 @@ class TestEditorSafe:
         original_content = editor_manager.create_edit_file_content(tasks)
 
         # Parse the same content (no changes)
-        completed_count, reopened_count, new_tasks_count, content_modified_count, deleted_count = (
-            editor_manager.parse_edited_content(original_content)
-        )
+        (
+            completed_count,
+            reopened_count,
+            new_tasks_count,
+            content_modified_count,
+            deleted_count,
+        ) = editor_manager.parse_edited_content(original_content)
 
         assert completed_count == 0
         assert reopened_count == 0
@@ -112,9 +116,13 @@ class TestEditorSafe:
         modified_content = "\n".join(modified_lines)
 
         # Parse the modified content
-        completed_count, reopened_count, new_tasks_count, content_modified_count, deleted_count = (
-            editor_manager.parse_edited_content(modified_content)
-        )
+        (
+            completed_count,
+            reopened_count,
+            new_tasks_count,
+            content_modified_count,
+            deleted_count,
+        ) = editor_manager.parse_edited_content(modified_content)
 
         assert completed_count == 1
         assert reopened_count == 0
@@ -149,9 +157,13 @@ class TestEditorSafe:
         modified_content = "\n".join(modified_lines)
 
         # Parse the modified content
-        completed_count, reopened_count, new_tasks_count, content_modified_count, deleted_count = (
-            editor_manager.parse_edited_content(modified_content)
-        )
+        (
+            completed_count,
+            reopened_count,
+            new_tasks_count,
+            content_modified_count,
+            deleted_count,
+        ) = editor_manager.parse_edited_content(modified_content)
 
         assert completed_count == 0
         assert reopened_count == 1
@@ -179,9 +191,13 @@ class TestEditorSafe:
         modified_content = original_content + "\n" + new_task_line
 
         # Parse the modified content
-        completed_count, reopened_count, new_tasks_count, content_modified_count, deleted_count = (
-            editor_manager.parse_edited_content(modified_content)
-        )
+        (
+            completed_count,
+            reopened_count,
+            new_tasks_count,
+            content_modified_count,
+            deleted_count,
+        ) = editor_manager.parse_edited_content(modified_content)
 
         assert completed_count == 0
         assert reopened_count == 0
@@ -210,9 +226,13 @@ class TestEditorSafe:
         modified_content = original_content + "\n" + new_task_line
 
         # Parse the modified content
-        completed_count, reopened_count, new_tasks_count, content_modified_count, deleted_count = (
-            editor_manager.parse_edited_content(modified_content)
-        )
+        (
+            completed_count,
+            reopened_count,
+            new_tasks_count,
+            content_modified_count,
+            deleted_count,
+        ) = editor_manager.parse_edited_content(modified_content)
 
         assert completed_count == 0
         assert reopened_count == 0
@@ -248,9 +268,13 @@ class TestEditorSafe:
         modified_content = original_content + "\n" + new_task_line
 
         # Parse the modified content
-        completed_count, reopened_count, new_tasks_count, content_modified_count, deleted_count = (
-            editor_manager.parse_edited_content(modified_content)
-        )
+        (
+            completed_count,
+            reopened_count,
+            new_tasks_count,
+            content_modified_count,
+            deleted_count,
+        ) = editor_manager.parse_edited_content(modified_content)
 
         assert completed_count == 0
         assert reopened_count == 0
@@ -286,9 +310,13 @@ class TestEditorSafe:
         modified_content = original_content + "\n" + new_task_line
 
         # Parse the modified content
-        completed_count, reopened_count, new_tasks_count, content_modified_count, deleted_count = (
-            editor_manager.parse_edited_content(modified_content)
-        )
+        (
+            completed_count,
+            reopened_count,
+            new_tasks_count,
+            content_modified_count,
+            deleted_count,
+        ) = editor_manager.parse_edited_content(modified_content)
 
         assert completed_count == 0
         assert reopened_count == 0
@@ -377,9 +405,13 @@ class TestEditorSafe:
         modified_content = "\n".join(modified_lines)
 
         # Parse the modified content
-        completed_count, reopened_count, new_tasks_count, content_modified_count, deleted_count = (
-            editor_manager.parse_edited_content(modified_content)
-        )
+        (
+            completed_count,
+            reopened_count,
+            new_tasks_count,
+            content_modified_count,
+            deleted_count,
+        ) = editor_manager.parse_edited_content(modified_content)
 
         # Should not create any changes since we only track completion status
         assert completed_count == 0
@@ -426,9 +458,13 @@ class TestEditorSafe:
         modified_content = "\n".join(modified_lines) + "\n" + new_task_line
 
         # Parse the modified content
-        completed_count, reopened_count, new_tasks_count, content_modified_count, deleted_count = (
-            editor_manager.parse_edited_content(modified_content)
-        )
+        (
+            completed_count,
+            reopened_count,
+            new_tasks_count,
+            content_modified_count,
+            deleted_count,
+        ) = editor_manager.parse_edited_content(modified_content)
 
         assert completed_count == 1  # Task 1 completed
         assert reopened_count == 1  # Task 2 reopened
@@ -480,9 +516,13 @@ Invalid line without proper format
 """
 
         # Parse the content
-        completed_count, reopened_count, new_tasks_count, content_modified_count, deleted_count = (
-            editor_manager.parse_edited_content(invalid_content)
-        )
+        (
+            completed_count,
+            reopened_count,
+            new_tasks_count,
+            content_modified_count,
+            deleted_count,
+        ) = editor_manager.parse_edited_content(invalid_content)
 
         # Should only count the valid task line changes
         assert completed_count == 1
@@ -522,10 +562,14 @@ Invalid line without proper format
         modified_content = original_content.replace("[ ]", "[x]")
 
         # Simulate the edit
-        completed_count, reopened_count, new_tasks_count, content_modified_count, deleted_count = (
-            editor_manager.simulate_edit_with_content(
-                original_content, modified_content
-            )
+        (
+            completed_count,
+            reopened_count,
+            new_tasks_count,
+            content_modified_count,
+            deleted_count,
+        ) = editor_manager.simulate_edit_with_content(
+            original_content, modified_content
         )
 
         assert completed_count == 1
@@ -606,9 +650,13 @@ Invalid line without proper format
         modified_content = original_content + "[ ] 2024-01-01 10:00  My new task  #work"
 
         # Parse the modified content
-        completed_count, reopened_count, new_tasks_count, content_modified_count, deleted_count = (
-            editor_manager.parse_edited_content(modified_content)
-        )
+        (
+            completed_count,
+            reopened_count,
+            new_tasks_count,
+            content_modified_count,
+            deleted_count,
+        ) = editor_manager.parse_edited_content(modified_content)
 
         assert completed_count == 0
         assert reopened_count == 0
@@ -637,9 +685,13 @@ Invalid line without proper format
         modified_content = original_content.replace("[ ]", "[x]")
 
         # Parse the modified content
-        completed_count, reopened_count, new_tasks_count, content_modified_count, deleted_count = (
-            editor_manager.parse_edited_content(modified_content)
-        )
+        (
+            completed_count,
+            reopened_count,
+            new_tasks_count,
+            content_modified_count,
+            deleted_count,
+        ) = editor_manager.parse_edited_content(modified_content)
 
         assert completed_count == 1
         assert reopened_count == 0
@@ -667,9 +719,13 @@ Invalid line without proper format
         modified_content = original_content.replace("[x]", "[ ]")
 
         # Parse the modified content
-        completed_count, reopened_count, new_tasks_count, content_modified_count, deleted_count = (
-            editor_manager.parse_edited_content(modified_content)
-        )
+        (
+            completed_count,
+            reopened_count,
+            new_tasks_count,
+            content_modified_count,
+            deleted_count,
+        ) = editor_manager.parse_edited_content(modified_content)
 
         assert completed_count == 0
         assert reopened_count == 1
@@ -698,9 +754,13 @@ Invalid line without proper format
         )
 
         # Parse the modified content
-        completed_count, reopened_count, new_tasks_count, content_modified_count, deleted_count = (
-            editor_manager.parse_edited_content(modified_content)
-        )
+        (
+            completed_count,
+            reopened_count,
+            new_tasks_count,
+            content_modified_count,
+            deleted_count,
+        ) = editor_manager.parse_edited_content(modified_content)
 
         # Should not create any changes since we only track completion status
         assert completed_count == 0
@@ -753,9 +813,13 @@ Invalid line without proper format
         )
 
         # Parse the modified content
-        completed_count, reopened_count, new_tasks_count, content_modified_count, deleted_count = (
-            editor_manager.parse_edited_content(modified_content)
-        )
+        (
+            completed_count,
+            reopened_count,
+            new_tasks_count,
+            content_modified_count,
+            deleted_count,
+        ) = editor_manager.parse_edited_content(modified_content)
 
         assert completed_count == 1  # Task 1 completed
         assert reopened_count == 1  # Task 2 reopened
@@ -814,9 +878,13 @@ Invalid line without proper format
 
         for i, edge_case in enumerate(edge_cases):
             # Parse edge case content
-            completed_count, reopened_count, new_tasks_count, content_modified_count, deleted_count = (
-                editor_manager.parse_edited_content(edge_case)
-            )
+            (
+                completed_count,
+                reopened_count,
+                new_tasks_count,
+                content_modified_count,
+                deleted_count,
+            ) = editor_manager.parse_edited_content(edge_case)
 
             expected_completed, expected_reopened, expected_new = expected_results[i]
 
@@ -854,9 +922,13 @@ Invalid line without proper format
         assert "#ref:task_" in modified_content
 
         # Parse the modified content
-        completed_count, reopened_count, new_tasks_count, content_modified_count, deleted_count = (
-            editor_manager.parse_edited_content(modified_content)
-        )
+        (
+            completed_count,
+            reopened_count,
+            new_tasks_count,
+            content_modified_count,
+            deleted_count,
+        ) = editor_manager.parse_edited_content(modified_content)
 
         assert completed_count == 1
         assert reopened_count == 0
@@ -913,9 +985,13 @@ Invalid line without proper format
         )
 
         # Parse the modified content
-        completed_count, reopened_count, new_tasks_count, content_modified_count, deleted_count = (
-            editor_manager.parse_edited_content(modified_content)
-        )
+        (
+            completed_count,
+            reopened_count,
+            new_tasks_count,
+            content_modified_count,
+            deleted_count,
+        ) = editor_manager.parse_edited_content(modified_content)
 
         # Verify the changes were applied
         assert completed_count == 1  # Task to complete
@@ -992,10 +1068,14 @@ Invalid line without proper format
         modified_content = "\n".join(modified_lines)
 
         # Parse the modified content
-        completed_count, reopened_count, new_tasks_count, content_modified_count, deleted_count = (
-            editor_manager.parse_edited_content(
-                modified_content, {task1_id, task2_id, task3_id}
-            )
+        (
+            completed_count,
+            reopened_count,
+            new_tasks_count,
+            content_modified_count,
+            deleted_count,
+        ) = editor_manager.parse_edited_content(
+            modified_content, {task1_id, task2_id, task3_id}
         )
 
         # Verify the changes

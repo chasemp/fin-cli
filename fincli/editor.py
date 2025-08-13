@@ -119,9 +119,7 @@ class EditorManager:
                     reference_part = match.group(5) or ""
                 else:
                     # Try to match old format without reference
-                    pattern_old_format_no_ref = (
-                        r"^(\[ \]|\[x\]) (\d{4}-\d{2}-\d{2} \d{2}:\d{2})  (.+?)(  #.+)?$"
-                    )
+                    pattern_old_format_no_ref = r"^(\[ \]|\[x\]) (\d{4}-\d{2}-\d{2} \d{2}:\d{2})  (.+?)(  #.+)?$"
                     match = re.match(pattern_old_format_no_ref, line.strip())
 
                     if match:
@@ -157,7 +155,7 @@ class EditorManager:
         is_completed = status == "[x]"
         if status == "[]":
             status = "[ ]"  # Normalize to standard format
-        
+
         # For existing tasks, use the task_id from the line; for new tasks, extract from reference
         if task_id is not None:
             final_task_id = task_id
@@ -310,7 +308,10 @@ class EditorManager:
         return f"{base_line}  #ref:{reference}"
 
     def parse_edited_content(
-        self, content: str, original_task_ids: Optional[Set[int]] = None, original_tasks: Optional[List[Dict[str, Any]]] = None
+        self,
+        content: str,
+        original_task_ids: Optional[Set[int]] = None,
+        original_tasks: Optional[List[Dict[str, Any]]] = None,
     ) -> tuple:
         """
         Parse edited content and return completion statistics.
@@ -333,7 +334,9 @@ class EditorManager:
         # Create a mapping of task_id to original content for comparison
         original_content_map = {}
         if original_tasks:
-            original_content_map = {task["id"]: task["content"] for task in original_tasks}
+            original_content_map = {
+                task["id"]: task["content"] for task in original_tasks
+            }
 
         for line in content.splitlines():
             # Skip header lines and empty lines
@@ -383,7 +386,9 @@ class EditorManager:
                 original_content = original_content_map[task_id]
                 if task_info["content"] != original_content:
                     # Content was modified
-                    if self.task_manager.update_task_content(task_id, task_info["content"]):
+                    if self.task_manager.update_task_content(
+                        task_id, task_info["content"]
+                    ):
                         content_modified_count += 1
 
             # Update completion status if changed
@@ -407,7 +412,13 @@ class EditorManager:
                     # Task might already be deleted or not exist
                     pass
 
-        return completed_count, reopened_count, new_tasks_count, content_modified_count, deleted_count
+        return (
+            completed_count,
+            reopened_count,
+            new_tasks_count,
+            content_modified_count,
+            deleted_count,
+        )
 
     def edit_tasks(
         self,
@@ -475,9 +486,13 @@ class EditorManager:
                 edited_content = f.read()
 
             # Parse the edited content
-            completed_count, reopened_count, new_tasks_count, content_modified_count, deleted_count = (
-                self.parse_edited_content(edited_content, original_task_ids, tasks)
-            )
+            (
+                completed_count,
+                reopened_count,
+                new_tasks_count,
+                content_modified_count,
+                deleted_count,
+            ) = self.parse_edited_content(edited_content, original_task_ids, tasks)
 
             # Create a backup after editing with change details
             task_changes = {
@@ -487,27 +502,32 @@ class EditorManager:
                 "content_modified_count": content_modified_count,
                 "deleted_count": deleted_count,
             }
-            
+
             # Only create backup if there were actual changes
             if any(task_changes.values()):
                 self.backup_manager.create_backup(
-                    "Auto-backup after editor session with changes",
-                    task_changes
+                    "Auto-backup after editor session with changes", task_changes
                 )
 
             # Clean up temporary file
             os.unlink(temp_file_path)
 
-            return completed_count, reopened_count, new_tasks_count, content_modified_count, deleted_count
+            return (
+                completed_count,
+                reopened_count,
+                new_tasks_count,
+                content_modified_count,
+                deleted_count,
+            )
 
         except Exception as e:
             # Reset the flag on error
             self._editor_opened = False
-            
+
             # Clean up temporary file
             if os.path.exists(temp_file_path):
                 os.unlink(temp_file_path)
-            
+
             raise e
 
     def simulate_edit_with_content(

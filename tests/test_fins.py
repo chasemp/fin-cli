@@ -436,7 +436,7 @@ class TestFinsStandaloneCommand:
         from fincli.utils import filter_tasks_by_date_range
 
         all_tasks = task_manager.list_tasks(include_completed=True)
-        
+
         # Simulate the --today flag logic: only tasks from today
         today_date = date.today()
         filtered_tasks = []

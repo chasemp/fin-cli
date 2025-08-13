@@ -40,7 +40,9 @@ class DatabaseBackup:
         """Get path for backup metadata."""
         return self.backup_dir / f"backup_{backup_id:03d}.meta"
 
-    def create_backup(self, description: str = "", task_changes: Optional[dict] = None) -> int:
+    def create_backup(
+        self, description: str = "", task_changes: Optional[dict] = None
+    ) -> int:
         """
         Create a new backup of the current database.
 
@@ -69,7 +71,7 @@ class DatabaseBackup:
             "original_path": str(self.db_path),
             "task_count": self._get_task_count(self.db_path),
         }
-        
+
         # Add task change details if provided
         if task_changes:
             metadata["task_changes"] = task_changes
