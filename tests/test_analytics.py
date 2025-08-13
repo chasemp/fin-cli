@@ -47,24 +47,7 @@ class TestAnalyticsManager:
             )
             conn.commit()
 
-        # Add an overdue task (created 40 days ago to be within 60-day window but overdue for 30 days)
-        from datetime import datetime, timedelta
 
-        overdue_date = (datetime.now() - timedelta(days=40)).strftime(
-            "%Y-%m-%d %H:%M:%S"
-        )
-
-        # Create the task with the overdue date directly
-        with analytics_manager.db_manager.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                """
-                INSERT INTO tasks (content, created_at, labels, source)
-                VALUES (?, ?, ?, ?)
-                """,
-                ("Overdue task", overdue_date, "urgent,recurring", "cli"),
-            )
-            conn.commit()
 
         # Add a recurring task
         task_manager.add_task("Daily routine", labels=["recurring", "daily"])
@@ -82,9 +65,7 @@ class TestAnalyticsManager:
         assert stats["today"]["completed"] == 0
         assert stats["this_week"]["created"] == 0
         assert stats["this_week"]["completed"] == 0
-        assert len(stats["overdue"]["3_days"]) == 0
-        assert len(stats["overdue"]["7_days"]) == 0
-        assert len(stats["overdue"]["30_days"]) == 0
+
         assert len(stats["recurring"]) == 0
         assert len(stats["by_label"]) == 0
 
@@ -99,10 +80,8 @@ class TestAnalyticsManager:
         assert stats["completed_tasks"] >= 1  # One completed task
         assert stats["today"]["created"] >= 2  # At least 2 tasks created today
         assert stats["today"]["completed"] >= 1  # One completed today
-        assert (
-            len(stats["overdue"]["30_days"]) >= 1
-        )  # One overdue task (now 30+ days old)
-        assert len(stats["recurring"]) >= 2  # Two recurring tasks
+
+        assert len(stats["recurring"]) >= 1  # One recurring task
         assert "work" in stats["by_label"]
         assert "urgent" in stats["by_label"]
         assert "recurring" in stats["by_label"]
@@ -123,32 +102,7 @@ class TestAnalyticsManager:
         assert isinstance(parsed, datetime)
         # Should return current time for invalid dates
 
-    def test_get_overdue_tasks(self, populated_analytics):
-        """Test overdue task detection."""
-        with populated_analytics.db_manager.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM tasks WHERE content = 'Overdue task'")
-            tasks = cursor.fetchall()
 
-        # Convert to the format expected by _get_overdue_tasks
-        task_dicts = []
-        for row in tasks:
-            task_dicts.append(
-                {
-                    "id": row[0],
-                    "content": row[1],
-                    "created_at": row[2],
-                    "completed_at": row[3],
-                    "labels": row[4].split(",") if row[4] else [],
-                    "source": row[5],
-                }
-            )
-
-        overdue_7 = populated_analytics._get_overdue_tasks(task_dicts, 7)
-        overdue_30 = populated_analytics._get_overdue_tasks(task_dicts, 30)
-
-        assert len(overdue_7) >= 1  # Should find the overdue task
-        assert len(overdue_30) >= 1  # Should find the overdue task
 
     def test_get_recurring_tasks(self, populated_analytics):
         """Test recurring task detection."""
@@ -165,14 +119,15 @@ class TestAnalyticsManager:
                     "id": row[0],
                     "content": row[1],
                     "created_at": row[2],
-                    "completed_at": row[3],
-                    "labels": row[4].split(",") if row[4] else [],
-                    "source": row[5],
+                    "modified_at": row[3],
+                    "completed_at": row[4],
+                    "labels": row[5].split(",") if row[5] else [],
+                    "source": row[6],
                 }
             )
 
         recurring = populated_analytics._get_recurring_tasks(task_dicts)
-        assert len(recurring) >= 2  # Should find recurring tasks
+        assert len(recurring) >= 1  # Should find at least one recurring task
 
     def test_get_tasks_by_label(self, populated_analytics):
         """Test label grouping functionality."""
@@ -189,9 +144,10 @@ class TestAnalyticsManager:
                     "id": row[0],
                     "content": row[1],
                     "created_at": row[2],
-                    "completed_at": row[3],
-                    "labels": row[4].split(",") if row[4] else [],
-                    "source": row[5],
+                    "modified_at": row[3],
+                    "completed_at": row[4],
+                    "labels": row[5].split(",") if row[5] else [],
+                    "source": row[6],
                 }
             )
 

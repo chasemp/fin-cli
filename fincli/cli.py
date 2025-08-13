@@ -6,7 +6,7 @@ Main entry point for all CLI commands.
 
 import re
 import sys
-from datetime import datetime
+from datetime import datetime, date
 
 import click
 
@@ -948,9 +948,25 @@ def fins_command():
         # Apply date filtering first
         if today:
             # Override to show only today's tasks
-            config = Config()
-            weekdays_only = config.get_weekdays_only_lookback()
-            tasks = filter_tasks_by_date_range(tasks, days=0, weekdays_only=weekdays_only)
+            # Filter to only tasks completed today (not from last 1 day)
+            today_date = date.today()
+            filtered_tasks = []
+            for task in tasks:
+                if task["completed_at"]:
+                    # For completed tasks, check if completed today
+                    completed_dt = datetime.fromisoformat(
+                        task["completed_at"].replace("Z", "+00:00")
+                    )
+                    if completed_dt.date() == today_date:
+                        filtered_tasks.append(task)
+                else:
+                    # For open tasks, check if created today
+                    created_dt = datetime.fromisoformat(
+                        task["created_at"].replace("Z", "+00:00")
+                    )
+                    if created_dt.date() == today_date:
+                        filtered_tasks.append(task)
+            tasks = filtered_tasks
         elif days is not None:
             # User specified days
             days_int = int(days)
