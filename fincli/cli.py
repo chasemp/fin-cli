@@ -915,7 +915,12 @@ def fins_command():
             # Mark it as completed immediately
             task_manager.update_task_completion(task_id, True)
 
-            click.echo(f"✅ Task added and marked as completed: {task_content}")
+            # Show success message with labels
+            if label:
+                labels_str = ", ".join(label)
+                click.echo(f"✅ Task added and marked as completed: {task_content} [{labels_str}]")
+            else:
+                click.echo(f"✅ Task added and marked as completed: {task_content}")
             return
 
         # Otherwise, show tasks (existing behavior)
