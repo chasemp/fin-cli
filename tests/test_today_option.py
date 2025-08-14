@@ -29,6 +29,18 @@ class TestTodayOptionAvailability:
         # This test documents the current behavior
         assert "--today" not in result.output
     
+    def test_list_has_today_shorthand(self, cli_runner):
+        """Test that fin list command has -t shorthand for --today."""
+        result = cli_runner.invoke(cli, ["list", "--help"])
+        assert result.exit_code == 0
+        assert "-t, --today" in result.output
+    
+    def test_list_tasks_has_today_shorthand(self, cli_runner):
+        """Test that fin list-tasks command has -t shorthand for --today."""
+        result = cli_runner.invoke(cli, ["list-tasks", "--help"])
+        assert result.exit_code == 0
+        assert "-t, --today" in result.output
+    
     def test_list_has_today_option(self, cli_runner):
         """Test that fin list command has --today option."""
         result = cli_runner.invoke(cli, ["list", "--help"])
@@ -89,6 +101,18 @@ class TestTodayWithOtherFilters:
         # This test documents that the functionality exists in the fine command
         # but we can't test it directly through the main cli
         pass
+    
+    def test_list_today_shorthand_works(self, cli_runner):
+        """Test that fin list -t works the same as fin list --today."""
+        result = cli_runner.invoke(cli, ["list", "-t", "--verbose"])
+        assert result.exit_code == 0
+        assert "Today only (overrides days)" in result.output
+    
+    def test_list_tasks_today_shorthand_works(self, cli_runner):
+        """Test that fin list-tasks -t works the same as fin list-tasks --today."""
+        result = cli_runner.invoke(cli, ["list-tasks", "-t", "--verbose"])
+        assert result.exit_code == 0
+        assert "Today only (overrides days)" in result.output
     
     def test_fine_today_with_label_filter(self, cli_runner):
         """Test that fine --today works with --label filter."""

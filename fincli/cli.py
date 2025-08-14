@@ -411,7 +411,7 @@ def _list_tasks_impl(days, label, status, today=False, verbose=False):
 @click.option(
     "--days", "-d", default=1, help="Show tasks from the past N days (default: 1)"
 )
-@click.option("--today", is_flag=True, help="Show only today's tasks (overrides days)")
+@click.option("--today", "-t", is_flag=True, help="Show only today's tasks (overrides days)")
 @click.option("--label", "-l", multiple=True, help="Filter by labels")
 @click.option(
     "--status",
@@ -446,7 +446,7 @@ def list_tasks(days, label, today, status, verbose):
 @click.option(
     "--days", "-d", default=1, help="Show tasks from the past N days (default: 1)"
 )
-@click.option("--today", is_flag=True, help="Show only today's tasks (overrides days)")
+@click.option("--today", "-t", is_flag=True, help="Show only today's tasks (overrides days)")
 @click.option("--label", "-l", multiple=True, help="Filter by labels")
 @click.option(
     "--status",
@@ -646,7 +646,7 @@ def fine_command():
         help="Show tasks from the past N days (including today). Use -d 0 for all time (limited by max_limit)",
     )
     @click.option(
-        "--today",
+        "--today", "-t",
         is_flag=True,
         help="Show only today's tasks (overrides days)",
     )
@@ -970,7 +970,7 @@ def fins_command():
     )
     @click.option("--label", "-l", multiple=True, help="Filter by labels")
     @click.option(
-        "--today",
+        "--today", "-t",
         is_flag=True,
         help="Show only today's tasks (overrides default days behavior)",
     )
