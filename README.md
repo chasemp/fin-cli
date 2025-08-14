@@ -464,6 +464,9 @@ fine -t --dry-run
 fin list -t --verbose
 
 # View today's completed tasks (using shorthand)
+fins -t
+
+# View today's all tasks (both open and completed)
 fins -t --status all
 
 # View all time completed tasks
