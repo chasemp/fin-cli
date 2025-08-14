@@ -310,11 +310,11 @@ def _list_tasks_impl(days, label, status, today=False, verbose=False):
         tasks = filter_tasks_by_date_range(tasks, days=days, weekdays_only=weekdays_only)
 
     # Apply status filtering
-    if status == "open":
+    if status in ["open", "o"]:
         tasks = [task for task in tasks if task["completed_at"] is None]
-    elif status in ["completed", "done"]:
+    elif status in ["completed", "done", "d"]:
         tasks = [task for task in tasks if task["completed_at"] is not None]
-    # For "all", we keep all tasks (both open and completed)
+    # For "all" or "a", we keep all tasks (both open and completed)
 
     # Apply label filtering if requested
     if label:
@@ -416,8 +416,8 @@ def _list_tasks_impl(days, label, status, today=False, verbose=False):
 @click.option(
     "--status",
     "-s",
-    type=click.Choice(["open", "completed", "done", "all"]),
-    help="Filter by status",
+    type=click.Choice(["open", "o", "completed", "done", "d", "all", "a"]),
+    help="Filter by status (open/o, completed, done/d, all/a)",
 )
 @click.option(
     "--verbose",
@@ -451,9 +451,9 @@ def list_tasks(days, label, today, status, verbose):
 @click.option(
     "--status",
     "-s",
-    type=click.Choice(["open", "completed", "done", "all"]),
+    type=click.Choice(["open", "o", "completed", "done", "d", "all", "a"]),
     default="open",
-    help="Filter by status",
+    help="Filter by status (open/o, completed, done/d, all/a)",
 )
 @click.option(
     "--verbose",
@@ -663,7 +663,7 @@ def fine_command():
     @click.option(
         "--status",
         "-s",
-        help="Filter by status(es): open, completed, done, or comma-separated list like 'done,open' (default: open)",
+        help="Filter by status(es): open/o, completed, done/d, all/a, or comma-separated list like 'done,open' (default: open)",
     )
     @click.option(
         "--verbose",
@@ -739,13 +739,27 @@ def fine_command():
         # Apply status filtering first
         filtered_tasks = []
         for task in all_tasks:
-            if "open" in status_list and task["completed_at"] is None:
+            # Normalize status values to handle shorthand letters
+            normalized_status_list = []
+            for status in status_list:
+                if status in ["o", "open"]:
+                    normalized_status_list.append("open")
+                elif status in ["d", "done"]:
+                    normalized_status_list.append("done")
+                elif status in ["a", "all"]:
+                    normalized_status_list.append("all")
+                elif status == "completed":
+                    normalized_status_list.append("completed")
+                else:
+                    normalized_status_list.append(status)
+            
+            if "open" in normalized_status_list and task["completed_at"] is None:
                 filtered_tasks.append(task)
-            elif "completed" in status_list and task["completed_at"] is not None:
+            elif "completed" in normalized_status_list and task["completed_at"] is not None:
                 filtered_tasks.append(task)
-            elif "done" in status_list and task["completed_at"] is not None:
+            elif "done" in normalized_status_list and task["completed_at"] is not None:
                 filtered_tasks.append(task)
-            elif "all" in status_list:
+            elif "all" in normalized_status_list:
                 filtered_tasks.append(task)
         
         # Now apply additional filters
@@ -977,7 +991,7 @@ def fins_command():
     @click.option(
         "--status",
         "-s",
-        help="Filter by status(es): open, completed, done, or comma-separated list like 'done,open' (default: completed)",
+        help="Filter by status(es): open/o, completed, done/d, all/a, or comma-separated list like 'done,open' (default: completed)",
     )
     @click.option(
         "--verbose",
@@ -1107,13 +1121,27 @@ def fins_command():
         # Apply status filtering
         filtered_tasks = []
         for task in tasks:
-            if "open" in status_list and task["completed_at"] is None:
+            # Normalize status values to handle shorthand letters
+            normalized_status_list = []
+            for status in status_list:
+                if status in ["o", "open"]:
+                    normalized_status_list.append("open")
+                elif status in ["d", "done"]:
+                    normalized_status_list.append("done")
+                elif status in ["a", "all"]:
+                    normalized_status_list.append("all")
+                elif status == "completed":
+                    normalized_status_list.append("completed")
+                else:
+                    normalized_status_list.append(status)
+            
+            if "open" in normalized_status_list and task["completed_at"] is None:
                 filtered_tasks.append(task)
-            elif "completed" in status_list and task["completed_at"] is not None:
+            elif "completed" in normalized_status_list and task["completed_at"] is not None:
                 filtered_tasks.append(task)
-            elif "done" in status_list and task["completed_at"] is not None:
+            elif "done" in normalized_status_list and task["completed_at"] is not None:
                 filtered_tasks.append(task)
-            elif "all" in status_list:
+            elif "all" in normalized_status_list:
                 filtered_tasks.append(task)
 
         # Apply max limit
