@@ -254,7 +254,7 @@ def init(db_path: str):
     click.echo("✅ Database initialized successfully!")
 
 
-def _list_tasks_impl(days, label, status, verbose=False):
+def _list_tasks_impl(days, label, status, today=False, verbose=False):
     """Implementation for listing tasks."""
     db_manager = DatabaseManager()
     task_manager = TaskManager(db_manager)
@@ -263,9 +263,12 @@ def _list_tasks_impl(days, label, status, verbose=False):
     # Show verbose information about filtering criteria
     if verbose:
         click.echo(f"🔍 Filtering criteria:")
-        click.echo(
-            f"   • Days: {days} (looking back {days} day{'s' if days != 1 else ''})"
-        )
+        if today:
+            click.echo(f"   • Today only (overrides days)")
+        else:
+            click.echo(
+                f"   • Days: {days} (looking back {days} day{'s' if days != 1 else ''})"
+            )
         click.echo(f"   • Status: {status}")
         if label:
             click.echo(f"   • Labels: {', '.join(label)}")
@@ -280,8 +283,31 @@ def _list_tasks_impl(days, label, status, verbose=False):
     tasks = task_manager.list_tasks(include_completed=True)
 
     # Apply date filtering first
-    weekdays_only = config.get_weekdays_only_lookback()
-    tasks = filter_tasks_by_date_range(tasks, days=days, weekdays_only=weekdays_only)
+    if today:
+        # Override to show only today's tasks
+        from datetime import date
+        today_date = date.today()
+        filtered_tasks = []
+        for task in tasks:
+            if task["completed_at"]:
+                # For completed tasks, check if completed today
+                completed_dt = datetime.fromisoformat(
+                    task["completed_at"].replace("Z", "+00:00")
+                )
+                if completed_dt.date() == today_date:
+                    filtered_tasks.append(task)
+            else:
+                # For open tasks, check if created today
+                created_dt = datetime.fromisoformat(
+                    task["created_at"].replace("Z", "+00:00")
+                )
+                if created_dt.date() == today_date:
+                    filtered_tasks.append(task)
+        tasks = filtered_tasks
+    else:
+        # Apply normal days filtering
+        weekdays_only = config.get_weekdays_only_lookback()
+        tasks = filter_tasks_by_date_range(tasks, days=days, weekdays_only=weekdays_only)
 
     # Apply status filtering
     if status == "open":
@@ -385,12 +411,12 @@ def _list_tasks_impl(days, label, status, verbose=False):
 @click.option(
     "--days", "-d", default=1, help="Show tasks from the past N days (default: 1)"
 )
+@click.option("--today", is_flag=True, help="Show only today's tasks (overrides days)")
 @click.option("--label", "-l", multiple=True, help="Filter by labels")
 @click.option(
     "--status",
     "-s",
     type=click.Choice(["open", "completed", "done", "all"]),
-    default="open",
     help="Filter by status",
 )
 @click.option(
@@ -399,20 +425,21 @@ def _list_tasks_impl(days, label, status, verbose=False):
     is_flag=True,
     help="Show verbose output including database path and filtering details",
 )
-def list_tasks(days, label, status, verbose):
+def list_tasks(days, label, today, status, verbose):
     """List tasks with optional filtering."""
     # Set verbose environment variable for DatabaseManager
     if verbose:
         import os
 
         os.environ["FIN_VERBOSE"] = "1"
-    _list_tasks_impl(days, label, status, verbose)
+    _list_tasks_impl(days, label, status, today, verbose)
 
 
 @cli.command(name="list")
 @click.option(
     "--days", "-d", default=1, help="Show tasks from the past N days (default: 1)"
 )
+@click.option("--today", is_flag=True, help="Show only today's tasks (overrides days)")
 @click.option("--label", "-l", multiple=True, help="Filter by labels")
 @click.option(
     "--status",
@@ -427,14 +454,14 @@ def list_tasks(days, label, status, verbose):
     is_flag=True,
     help="Show verbose output including database path and filtering details",
 )
-def list_tasks_alias(days, label, status, verbose):
+def list_tasks_alias(days, label, today, status, verbose):
     """List tasks with optional filtering (alias for list-tasks)."""
     # Set verbose environment variable for DatabaseManager
     if verbose:
         import os
 
         os.environ["FIN_VERBOSE"] = "1"
-    _list_tasks_impl(days, label, status, verbose)
+    _list_tasks_impl(days, label, status, today, verbose)
 
 
 @cli.command(name="open-editor")
@@ -605,6 +632,11 @@ def fine_command():
         help="Show tasks from the past N days (including today). Use -d 0 for all time (limited by max_limit)",
     )
     @click.option(
+        "--today",
+        is_flag=True,
+        help="Show only today's tasks (overrides days)",
+    )
+    @click.option(
         "--max-limit",
         default=100,
         help="Maximum number of tasks to show (default: 100)",
@@ -625,7 +657,7 @@ def fine_command():
         is_flag=True,
         help="Show verbose output including database path and filtering details",
     )
-    def fine_cli(label, date, days, max_limit, dry_run, status, verbose):
+    def fine_cli(label, date, days, max_limit, today, dry_run, status, verbose):
         """
         Edit tasks in your editor (alias for fin open-editor).
 
@@ -657,7 +689,9 @@ def fine_command():
         # Show verbose information about filtering criteria
         if verbose:
             click.echo(f"🔍 Filtering criteria:")
-            if days is not None:
+            if today:
+                click.echo(f"   • Today only (overrides days)")
+            elif days is not None:
                 days_int = int(days)
                 if days_int == 0:
                     click.echo(f"   • Days: all time (no date restriction)")
@@ -694,7 +728,28 @@ def fine_command():
                 filtered_tasks.append(task)
         
         # Now apply additional filters
-        if date:
+        if today:
+            # Override to show only today's tasks
+            from datetime import date
+            today_date = date.today()
+            today_filtered_tasks = []
+            for task in filtered_tasks:
+                if task["completed_at"]:
+                    # For completed tasks, check if completed today
+                    completed_dt = datetime.fromisoformat(
+                        task["completed_at"].replace("Z", "+00:00")
+                    )
+                    if completed_dt.date() == today_date:
+                        today_filtered_tasks.append(task)
+                else:
+                    # For open tasks, check if created today
+                    created_dt = datetime.fromisoformat(
+                        task["created_at"].replace("Z", "+00:00")
+                    )
+                    if created_dt.date() == today_date:
+                        today_filtered_tasks.append(task)
+            filtered_tasks = today_filtered_tasks
+        elif date:
             # For date-based filtering, filter by date after status filtering
             from fincli.utils import filter_tasks_by_date_range
             filtered_tasks = filter_tasks_by_date_range(filtered_tasks, target_date=date)
@@ -1083,8 +1138,6 @@ def fins_command():
                 date_display = ""
                 if task.get("completed_at"):
                     try:
-                        from datetime import datetime
-
                         completed_dt = datetime.fromisoformat(
                             task["completed_at"].replace("Z", "+00:00")
                         )
