@@ -427,6 +427,13 @@ def _list_tasks_impl(days, label, status, today=False, verbose=False):
 )
 def list_tasks(days, label, today, status, verbose):
     """List tasks with optional filtering."""
+    # Validate conflicting time filters
+    if today and days != 1:  # days defaults to 1, so only conflict if explicitly set
+        click.echo("❌ Error: Cannot use both --today and --days together")
+        click.echo("   --today overrides --days, so they are mutually exclusive")
+        click.echo("   Use either --today or --days N, but not both")
+        return
+    
     # Set verbose environment variable for DatabaseManager
     if verbose:
         import os
@@ -456,6 +463,13 @@ def list_tasks(days, label, today, status, verbose):
 )
 def list_tasks_alias(days, label, today, status, verbose):
     """List tasks with optional filtering (alias for list-tasks)."""
+    # Validate conflicting time filters
+    if today and days != 1:  # days defaults to 1, so only conflict if explicitly set
+        click.echo("❌ Error: Cannot use both --today and --days together")
+        click.echo("   --today overrides --days, so they are mutually exclusive")
+        click.echo("   Use either --today or --days N, but not both")
+        return
+    
     # Set verbose environment variable for DatabaseManager
     if verbose:
         import os
@@ -676,6 +690,13 @@ def fine_command():
         # Call the original open_editor function directly
         db_manager = _get_db_manager()
         editor_manager = EditorManager(db_manager)
+
+        # Validate conflicting time filters
+        if today and days is not None:
+            click.echo("❌ Error: Cannot use both --today and --days together")
+            click.echo("   --today overrides --days, so they are mutually exclusive")
+            click.echo("   Use either --today or --days N, but not both")
+            return
 
         # Parse status parameter (allow comma-separated values with flexible spacing)
         status_list = []
