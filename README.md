@@ -419,7 +419,7 @@ fin restore-latest --yes
 ## Options
 
 - `-d, --days N` - Show tasks from last N days (use 0 for all time)
-- `-s, --status STATUS` - Filter by status: open, completed, done, or comma-separated list
+- `-s, --status STATUS` - Filter by status: open/o, completed, done/d, all/a, or comma-separated list
 - `-l, --label LABEL` - Filter by label
 - `--max-limit N` - Maximum number of tasks to show (default: 100)
 - `-t, --today` - Show only today's tasks (overrides days)
@@ -445,6 +445,12 @@ fin
 fin -s "done,open"
 fin -s "done, open"
 
+# Filter by status using shorthand letters
+fin -s "d,o"      # Same as "done,open"
+fin -s a          # Same as "all" (open + completed)
+fin -s o          # Same as "open" only
+fin -s d          # Same as "done" only
+
 # Filter by date and status
 fin -d 7 -s "done,open"
 
@@ -457,6 +463,12 @@ fine -d 7
 # Edit completed tasks from last 3 days
 fine -d 3 -s done
 
+# Edit tasks using status shorthand
+fine -s a --dry-run      # All tasks (open + completed)
+fine -s o --dry-run      # Open tasks only
+fine -s d --dry-run      # Done tasks only
+fine -s "o,d" --dry-run  # Both open and done
+
 # Edit today's tasks (using shorthand)
 fine -t --dry-run
 
@@ -468,6 +480,12 @@ fins -t
 
 # View today's all tasks (both open and completed)
 fins -t --status all
+
+# View tasks using status shorthand
+fins -s a          # All tasks (open + completed)
+fins -s o          # Open tasks only
+fins -s d          # Done tasks only
+fins -s "o,d"      # Both open and done
 
 # View all time completed tasks
 fins -d 0 -v
