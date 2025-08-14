@@ -47,7 +47,7 @@ This document tracks the status of all FinCLI documentation and ensures consiste
 ## 🔧 **CLI Help Text Status**
 
 ### **All CLI Options Updated** ✅
-- **`-s, --status`**: Help text updated to show comma-separated values
+- **`-s, --status`**: Help text updated to show comma-separated values and shorthand letters (a/o/d)
 - **`-d, --days`**: Help text updated to show `-d 0` for "all time"
 - **`--max-limit`**: Help text added for max limit functionality
 - **`-t, --today`**: Help text updated to show override behavior and shorthand
