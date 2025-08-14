@@ -422,7 +422,7 @@ fin restore-latest --yes
 - `-s, --status STATUS` - Filter by status: open, completed, done, or comma-separated list
 - `-l, --label LABEL` - Filter by label
 - `--max-limit N` - Maximum number of tasks to show (default: 100)
-- `--today` - Show only today's tasks (overrides days)
+- `-t, --today` - Show only today's tasks (overrides days)
 - `--verbose, -v` - Show verbose output including filtering details
 - `--force, --yes` - Skip confirmation prompts
 
@@ -456,6 +456,15 @@ fine -d 7
 
 # Edit completed tasks from last 3 days
 fine -d 3 -s done
+
+# Edit today's tasks (using shorthand)
+fine -t --dry-run
+
+# List today's tasks (using shorthand)
+fin list -t --verbose
+
+# View today's completed tasks (using shorthand)
+fins -t --status all
 
 # View all time completed tasks
 fins -d 0 -v

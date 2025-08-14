@@ -50,7 +50,7 @@ This document tracks the status of all FinCLI documentation and ensures consiste
 - **`-s, --status`**: Help text updated to show comma-separated values
 - **`-d, --days`**: Help text updated to show `-d 0` for "all time"
 - **`--max-limit`**: Help text added for max limit functionality
-- **`--today`**: Help text updated to show override behavior
+- **`-t, --today`**: Help text updated to show override behavior and shorthand
 - **`--verbose, -v`**: Help text updated to show filtering details
 
 ### **Command Help Updated** ✅
