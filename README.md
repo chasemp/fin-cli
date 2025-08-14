@@ -8,32 +8,71 @@ A simple command-line tool for managing your local task database with enhanced f
 # Add a task
 fin "my new task"
 
-# Add an important task (shows in Important section)
+# Add important task (shows in Important section)
 fin "urgent meeting #i"
 
-# Add a today task (shows in Today section)
-fin "daily standup #t"
-
-# List all open tasks (default behavior)
+# List all open tasks
 fin
-
-# List tasks with custom filtering
-fin -d 7 -s "done,open" -v
-
-# List completed tasks from last week
-fins
 
 # Edit tasks in your editor
 fine
 
-# View all time completed tasks (limited by max_limit)
-fins -d 0 -v
+# View completed tasks
+fins
+
+# Quick filtering
+fin -s a          # All tasks
+fin -s o          # Open only
+fin -s d          # Done only
+fin -t            # Today only
 ```
 
 ## Installation
 
 ```bash
 pip install -e .
+```
+
+## Common Patterns
+
+### **Daily Workflow**
+```bash
+# Start your day - see what's open
+fin
+
+# Add today's priorities
+fin "morning standup #t"
+fin "review PRs #t #work"
+
+# Check what's completed recently
+fins
+
+# End of day - mark things complete
+fine -s o
+```
+
+### **Weekly Review**
+```bash
+# See what was accomplished this week
+fins -d 7
+
+# Review all open tasks
+fine -s o --dry-run
+
+# Plan next week
+fine -s o -d 0 --dry-run
+```
+
+### **Project Management**
+```bash
+# Focus on specific project
+fin list -l "project-name"
+
+# See project progress
+fin list -l "project-name" -s "o,d"
+
+# Export project tasks
+fin export project.csv -l "project-name"
 ```
 
 ## Usage
