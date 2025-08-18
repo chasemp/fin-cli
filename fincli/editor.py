@@ -79,9 +79,7 @@ class EditorManager:
         # content, labels, due date, and optional reference
         # Format: 1 [ ] 2024-01-01 10:00  Task content  #labels  due:YYYY-MM-DD  #ref:task_123
         # First, try to match with reference and task_id
-        pattern_with_ref_and_id = (
-            r"^(\d+) (\[ \]|\[x\]) (\d{4}-\d{2}-\d{2} \d{2}:\d{2})  (.+?)" r"(  #.+)?(  due:[^ ]+)?  #ref:([^ ]+)$"
-        )
+        pattern_with_ref_and_id = r"^(\d+) (\[ \]|\[x\]) (\d{4}-\d{2}-\d{2} \d{2}:\d{2})  (.+?)" r"(  #.+)?(  due:[^ ]+)?  #ref:([^ ]+)$"
         match = re.match(pattern_with_ref_and_id, line.strip())
 
         if match:
@@ -95,9 +93,7 @@ class EditorManager:
             reference_part = match.group(7) or ""
         else:
             # Try to match with task_id but without reference
-            pattern_with_id_no_ref = (
-                r"^(\d+) (\[ \]|\[x\]) (\d{4}-\d{2}-\d{2} \d{2}:\d{2})  (.+?)" r"(  #.+)?(  due:[^ ]+)?$"
-            )
+            pattern_with_id_no_ref = r"^(\d+) (\[ \]|\[x\]) (\d{4}-\d{2}-\d{2} \d{2}:\d{2})  (.+?)" r"(  #.+)?(  due:[^ ]+)?$"
             match = re.match(pattern_with_id_no_ref, line.strip())
 
             if match:
@@ -111,9 +107,7 @@ class EditorManager:
                 reference_part = ""
             else:
                 # Try to match old format without task_id (for backward compatibility)
-                pattern_old_format_with_ref = (
-                    r"^(\[ \]|\[x\]) (\d{4}-\d{2}-\d{2} \d{2}:\d{2})  (.+?)" r"(  #.+)?(  due:[^ ]+)?  #ref:([^ ]+)$"
-                )
+                pattern_old_format_with_ref = r"^(\[ \]|\[x\]) (\d{4}-\d{2}-\d{2} \d{2}:\d{2})  (.+?)" r"(  #.+)?(  due:[^ ]+)?  #ref:([^ ]+)$"
                 match = re.match(pattern_old_format_with_ref, line.strip())
 
                 if match:
@@ -127,9 +121,7 @@ class EditorManager:
                     reference_part = match.group(6) or ""
                 else:
                     # Try to match old format without reference
-                    pattern_old_format_no_ref = (
-                        r"^(\[ \]|\[x\]) (\d{4}-\d{2}-\d{2} \d{2}:\d{2})  (.+?)" r"(  #.+)?(  due:[^ ]+)?$"
-                    )
+                    pattern_old_format_no_ref = r"^(\[ \]|\[x\]) (\d{4}-\d{2}-\d{2} \d{2}:\d{2})  (.+?)" r"(  #.+)?(  due:[^ ]+)?$"
                     match = re.match(pattern_old_format_no_ref, line.strip())
 
                     if match:

@@ -222,7 +222,11 @@ class TestFinsCommand:
 
         db_manager = DatabaseManager(temp_db_path)
         task_manager = TaskManager(db_manager)
-        task_manager.add_task("Test task", labels=["work"])
+        # Add task with explicit default context to ensure it's found
+        task_manager.add_task("Test task", labels=["work"], context="default")
+
+        # Set default context in environment for the test
+        monkeypatch.setenv("FIN_CONTEXT", "default")
 
         result = isolated_cli_runner.invoke(list_tasks)
         assert result.exit_code == 0
@@ -582,9 +586,7 @@ class TestFinsStandaloneCommand:
 
             # Test days=1 (today and yesterday)
             filtered_tasks = filter_tasks_by_date_range(all_tasks, days=1)
-            recent_tasks = [
-                t for t in filtered_tasks if "Today's task" in t["content"] or "Yesterday's task" in t["content"]
-            ]
+            recent_tasks = [t for t in filtered_tasks if "Today's task" in t["content"] or "Yesterday's task" in t["content"]]
             # The "Today's task" might not be included if it was created outside the 1-day window
             # This depends on when the test runs vs when the task was created
             # The important thing is that the filtering logic works correctly
