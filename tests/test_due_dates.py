@@ -293,3 +293,155 @@ class TestCLIIntegration:
         assert len(tasks) == 1
         assert tasks[0]["due_date"] == "2025-06-17"
         assert tasks[0]["content"] == "Test CLI task"
+
+
+class TestEditorIntegration:
+    """Test editor integration with due dates."""
+
+    def test_editor_creates_edit_file_with_due_dates(self, temp_db_path):
+        """Test that editor creates edit file content with due dates."""
+        from fincli.editor import EditorManager
+        
+        db_manager = DatabaseManager(temp_db_path)
+        task_manager = TaskManager(db_manager)
+        editor_manager = EditorManager(db_manager)
+        
+        # Add a task with due date
+        task_id = task_manager.add_task(
+            "Test task with due date",
+            labels=["test"],
+            due_date="2025-06-17"
+        )
+        
+        # Get tasks for editing
+        tasks = editor_manager.get_tasks_for_editing()
+        
+        # Create edit file content
+        content = editor_manager.create_edit_file_content(tasks)
+        
+        # Check that due date appears in the content
+        assert "due:2025-06-17" in content
+        assert "Test task with due date" in content
+
+    def test_editor_parses_due_date_changes(self, temp_db_path):
+        """Test that editor can parse due date changes."""
+        from fincli.editor import EditorManager
+        
+        db_manager = DatabaseManager(temp_db_path)
+        task_manager = TaskManager(db_manager)
+        editor_manager = EditorManager(db_manager)
+        
+        # Add a task with due date
+        task_id = task_manager.add_task(
+            "Test task",
+            due_date="2025-06-17"
+        )
+        
+        # Get original task
+        original_task = task_manager.get_task(task_id)
+        
+        # Create edit file content
+        tasks = editor_manager.get_tasks_for_editing()
+        original_content = editor_manager.create_edit_file_content(tasks)
+        
+        # Modify the due date in the content
+        modified_lines = []
+        for line in original_content.splitlines():
+            if "Test task" in line:
+                # Change the due date
+                line = line.replace("due:2025-06-17", "due:2025-07-15")
+            modified_lines.append(line)
+        
+        modified_content = "\n".join(modified_lines)
+        
+        # Parse the modified content
+        (
+            completed_count,
+            reopened_count,
+            new_tasks_count,
+            content_modified_count,
+            deleted_count,
+        ) = editor_manager.parse_edited_content(modified_content, original_tasks=[original_task])
+        
+        # Should detect due date change
+        assert content_modified_count == 1
+        
+        # Verify due date was updated
+        updated_task = task_manager.get_task(task_id)
+        assert updated_task["due_date"] == "2025-07-15"
+
+    def test_editor_parses_due_date_removal(self, temp_db_path):
+        """Test that editor can parse due date removal."""
+        from fincli.editor import EditorManager
+        
+        db_manager = DatabaseManager(temp_db_path)
+        task_manager = TaskManager(db_manager)
+        editor_manager = EditorManager(db_manager)
+        
+        # Add a task with due date
+        task_id = task_manager.add_task(
+            "Test task",
+            due_date="2025-06-17"
+        )
+        
+        # Get original task
+        original_task = task_manager.get_task(task_id)
+        
+        # Create edit file content
+        tasks = editor_manager.get_tasks_for_editing()
+        original_content = editor_manager.create_edit_file_content(tasks)
+        
+        # Remove the due date from the content
+        modified_lines = []
+        for line in original_content.splitlines():
+            if "Test task" in line:
+                # Remove the due date
+                line = line.replace("  due:2025-06-17", "")
+            modified_lines.append(line)
+        
+        modified_content = "\n".join(modified_lines)
+        
+        # Parse the modified content
+        (
+            completed_count,
+            reopened_count,
+            new_tasks_count,
+            content_modified_count,
+            deleted_count,
+        ) = editor_manager.parse_edited_content(modified_content, original_tasks=[original_task])
+        
+        # Should detect due date change
+        assert content_modified_count == 1
+        
+        # Verify due date was removed
+        updated_task = task_manager.get_task(task_id)
+        assert updated_task["due_date"] is None
+
+    def test_editor_parses_new_task_with_due_date(self, temp_db_path):
+        """Test that editor can parse new tasks with due dates."""
+        from fincli.editor import EditorManager
+        
+        db_manager = DatabaseManager(temp_db_path)
+        editor_manager = EditorManager(db_manager)
+        
+        # Create edit file content with a new task line (no task ID, no timestamp)
+        new_task_line = "[ ] New task with due date  #test  due:2025-09-15"
+        
+        # Parse the content
+        (
+            completed_count,
+            reopened_count,
+            new_tasks_count,
+            content_modified_count,
+            deleted_count,
+        ) = editor_manager.parse_edited_content(new_task_line)
+        
+        # Should create new task
+        assert new_tasks_count == 1
+        
+        # Verify task was created with due date
+        task_manager = TaskManager(db_manager)
+        tasks = task_manager.list_tasks()
+        assert len(tasks) == 1
+        assert tasks[0]["content"] == "New task with due date"
+        assert tasks[0]["due_date"] == "2025-09-15"

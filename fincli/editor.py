@@ -75,10 +75,10 @@ class EditorManager:
         Returns:
             Dictionary with task info or None if not a valid task line
         """
-        # Match task line pattern: task_id [ ] or [x] followed by timestamp, content, and optional reference
-        # Format: 1 [ ] 2024-01-01 10:00  Task content  #labels  #ref:task_123
+        # Match task line pattern: task_id [ ] or [x] followed by timestamp, content, labels, due date, and optional reference
+        # Format: 1 [ ] 2024-01-01 10:00  Task content  #labels  due:YYYY-MM-DD  #ref:task_123
         # First, try to match with reference and task_id
-        pattern_with_ref_and_id = r"^(\d+) (\[ \]|\[x\]) (\d{4}-\d{2}-\d{2} \d{2}:\d{2})  (.+?)(  #.+)?  #ref:([^ ]+)$"
+        pattern_with_ref_and_id = r"^(\d+) (\[ \]|\[x\]) (\d{4}-\d{2}-\d{2} \d{2}:\d{2})  (.+?)(  #.+)?(  due:[^ ]+)?  #ref:([^ ]+)$"
         match = re.match(pattern_with_ref_and_id, line.strip())
 
         if match:
@@ -88,11 +88,12 @@ class EditorManager:
             timestamp = match.group(3)
             content = match.group(4)
             labels_part = match.group(5) or ""
-            reference_part = match.group(6) or ""
+            due_date_part = match.group(6) or ""
+            reference_part = match.group(7) or ""
         else:
             # Try to match with task_id but without reference
             pattern_with_id_no_ref = (
-                r"^(\d+) (\[ \]|\[x\]) (\d{4}-\d{2}-\d{2} \d{2}:\d{2})  (.+?)(  #.+)?$"
+                r"^(\d+) (\[ \]|\[x\]) (\d{4}-\d{2}-\d{2} \d{2}:\d{2})  (.+?)(  #.+)?(  due:[^ ]+)?$"
             )
             match = re.match(pattern_with_id_no_ref, line.strip())
 
@@ -103,10 +104,11 @@ class EditorManager:
                 timestamp = match.group(3)
                 content = match.group(4)
                 labels_part = match.group(5) or ""
+                due_date_part = match.group(6) or ""
                 reference_part = ""
             else:
                 # Try to match old format without task_id (for backward compatibility)
-                pattern_old_format_with_ref = r"^(\[ \]|\[x\]) (\d{4}-\d{2}-\d{2} \d{2}:\d{2})  (.+?)(  #.+)?  #ref:([^ ]+)$"
+                pattern_old_format_with_ref = r"^(\[ \]|\[x\]) (\d{4}-\d{2}-\d{2} \d{2}:\d{2})  (.+?)(  #.+)?(  due:[^ ]+)?  #ref:([^ ]+)$"
                 match = re.match(pattern_old_format_with_ref, line.strip())
 
                 if match:
@@ -116,10 +118,11 @@ class EditorManager:
                     timestamp = match.group(2)
                     content = match.group(3)
                     labels_part = match.group(4) or ""
-                    reference_part = match.group(5) or ""
+                    due_date_part = match.group(5) or ""
+                    reference_part = match.group(6) or ""
                 else:
                     # Try to match old format without reference
-                    pattern_old_format_no_ref = r"^(\[ \]|\[x\]) (\d{4}-\d{2}-\d{2} \d{2}:\d{2})  (.+?)(  #.+)?$"
+                    pattern_old_format_no_ref = r"^(\[ \]|\[x\]) (\d{4}-\d{2}-\d{2} \d{2}:\d{2})  (.+?)(  #.+)?(  due:[^ ]+)?$"
                     match = re.match(pattern_old_format_no_ref, line.strip())
 
                     if match:
@@ -129,10 +132,11 @@ class EditorManager:
                         timestamp = match.group(2)
                         content = match.group(3)
                         labels_part = match.group(4) or ""
+                        due_date_part = match.group(5) or ""
                         reference_part = ""
                     else:
                         # Try to match new tasks without timestamp (just checkbox and content)
-                        pattern_new_task = r"^(\[ \]|\[\]|\[x\]) (.+?)(  #.+)?$"
+                        pattern_new_task = r"^(\[ \]|\[\]|\[x\]) (.+?)( +#[^ ]+)*?( +due:[^ ]+)?$"
                         match = re.match(pattern_new_task, line.strip())
 
                         if not match:
@@ -143,6 +147,7 @@ class EditorManager:
                         timestamp = ""  # No timestamp for new tasks
                         content = match.group(2)
                         labels_part = match.group(3) or ""
+                        due_date_part = match.group(4) or ""
                         reference_part = ""
 
         # Extract labels from hashtags (excluding the reference)
@@ -150,6 +155,16 @@ class EditorManager:
         if labels_part:
             hashtags = re.findall(r"#([^,#]+)", labels_part)
             labels = [tag.strip() for tag in hashtags]
+
+        # Extract due date
+        due_date = None
+        if due_date_part:
+            due_match = re.search(r"due:([^ ]+)", due_date_part)
+            if due_match:
+                due_date_raw = due_match.group(1)
+                # Parse the due date using DateParser
+                from fincli.utils import DateParser
+                due_date = DateParser.parse_due_date(due_date_raw)
 
         # Normalize status - handle both [] and [ ] as incomplete
         is_completed = status == "[x]"
@@ -167,6 +182,7 @@ class EditorManager:
             "timestamp": timestamp,
             "content": content,
             "labels": labels,
+            "due_date": due_date,
             "is_completed": is_completed,
             "task_id": final_task_id,  # None for new tasks
         }
@@ -275,10 +291,16 @@ class EditorManager:
             "# Changes tracked:",
             "#   • Checkbox changes ([ ] ↔ [x]) - mark complete/incomplete",
             "#   • Content changes - reword tasks (keeps same task ID)",
+            "#   • Due date changes - edit due:YYYY-MM-DD at end of line",
             "#   • New tasks - add lines without #ref:task_XXX",
             "#   • Task deletion - remove lines to delete tasks",
             "# Lines starting with # are ignored",
             "# DO NOT modify the #ref:task_XXX part - it's used to track changes",
+            "#",
+            "# Due date examples:",
+            "#   • due:2025-06-17 (specific date)",
+            "#   • due:06/17 (current/next year)",
+            "#   • Remove due: to remove due date",
             "",
         ]
 
@@ -359,6 +381,7 @@ class EditorManager:
                     task_id = self.task_manager.add_task(
                         task_info["content"],
                         labels=task_info["labels"] if task_info["labels"] else None,
+                        due_date=task_info.get("due_date"),
                     )
                     new_tasks_count += 1
 
@@ -388,6 +411,16 @@ class EditorManager:
                     # Content was modified
                     if self.task_manager.update_task_content(
                         task_id, task_info["content"]
+                    ):
+                        content_modified_count += 1
+
+            # Check for due date changes
+            if original_tasks:
+                original_task = next((t for t in original_tasks if t["id"] == task_id), None)
+                if original_task and task_info.get("due_date") != original_task.get("due_date"):
+                    # Due date was modified
+                    if self.task_manager.update_task_due_date(
+                        task_id, task_info.get("due_date")
                     ):
                         content_modified_count += 1
 
