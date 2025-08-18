@@ -56,10 +56,7 @@ class TestFineCommandSimple:
         assert "📝 Found 2 tasks for editing:" in result.output
         assert "Work task" in result.output
         assert "Personal task" in result.output
-        assert (
-            "Use 'fin open-editor' (without --dry-run) to actually open the editor."
-            in result.output
-        )
+        assert "Use 'fin open-editor' (without --dry-run) to actually open the editor." in result.output
 
     def test_fine_command_task_filtering(self, temp_db_path, monkeypatch, test_dates):
         """Test fine command task filtering logic."""
@@ -77,9 +74,7 @@ class TestFineCommandSimple:
         task_manager.add_task("Today's task", labels=["work"])
 
         # Add a task for yesterday (mark as completed)
-        yesterday_task_id = task_manager.add_task(
-            "Yesterday's task", labels=["personal"]
-        )
+        yesterday_task_id = task_manager.add_task("Yesterday's task", labels=["personal"])
         import sqlite3
 
         with sqlite3.connect(db_manager.db_path) as conn:
@@ -104,13 +99,9 @@ class TestFineCommandSimple:
         # Test date filtering - use the actual creation date of the task
         # Get the actual task to see its creation timestamp
         actual_task = task_manager.get_task(1)  # First task
-        actual_created_date = actual_task["created_at"].split(" ")[
-            0
-        ]  # Extract date part
+        actual_created_date = actual_task["created_at"].split(" ")[0]  # Extract date part
 
-        today_tasks = editor_manager.get_tasks_for_editing(
-            target_date=actual_created_date
-        )
+        today_tasks = editor_manager.get_tasks_for_editing(target_date=actual_created_date)
         assert len(today_tasks) == 1
         assert today_tasks[0]["content"] == "Today's task"
 
@@ -124,9 +115,7 @@ class TestFineCommandSimple:
         result = runner.invoke(open_editor, ["--help"])
 
         assert result.exit_code == 0
-        assert (
-            "Open tasks in your editor for editing completion status" in result.output
-        )
+        assert "Open tasks in your editor for editing completion status" in result.output
         assert "--label" in result.output
         assert "--date" in result.output
         assert "--dry-run" in result.output

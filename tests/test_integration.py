@@ -5,10 +5,10 @@ Tests the full integration between CLI commands and database operations.
 """
 
 import os
+from pathlib import Path
 import subprocess
 import sys
 import tempfile
-from pathlib import Path
 
 import pytest
 
@@ -43,10 +43,7 @@ class TestIntegration:
         )
 
         assert result.returncode == 0
-        assert (
-            '✅ Task added: "Integration test task" [integration, test]'
-            in result.stdout
-        )
+        assert '✅ Task added: "Integration test task" [integration, test]' in result.stdout
 
         # Verify in database
         db_manager = DatabaseManager(temp_db_path)
@@ -224,10 +221,7 @@ class TestIntegration:
         )
 
         assert result.returncode == 0
-        assert (
-            '✅ Task added: "Task with mixed case labels" [test, urgent, work]'
-            in result.stdout
-        )
+        assert '✅ Task added: "Task with mixed case labels" [test, urgent, work]' in result.stdout
 
         # Verify in database
         db_manager = DatabaseManager(temp_db_path)

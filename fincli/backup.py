@@ -3,11 +3,11 @@ Backup and recovery system for fin-cli database.
 Maintains the last 10 database states with rollback capability.
 """
 
+from datetime import datetime
 import os
+from pathlib import Path
 import shutil
 import sqlite3
-from datetime import datetime
-from pathlib import Path
 from typing import List, Optional
 
 
@@ -40,9 +40,7 @@ class DatabaseBackup:
         """Get path for backup metadata."""
         return self.backup_dir / f"backup_{backup_id:03d}.meta"
 
-    def create_backup(
-        self, description: str = "", task_changes: Optional[dict] = None
-    ) -> int:
+    def create_backup(self, description: str = "", task_changes: Optional[dict] = None) -> int:
         """
         Create a new backup of the current database.
 

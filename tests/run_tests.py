@@ -4,9 +4,9 @@ Comprehensive test runner for Fin task tracking system
 """
 import argparse
 import os
+from pathlib import Path
 import subprocess
 import sys
-from pathlib import Path
 
 
 def run_python_tests(test_type=None, verbose=False):
@@ -36,9 +36,7 @@ def run_shell_tests():
         print("❌ Shell test file not found")
         return False
 
-    result = subprocess.run(
-        ["bash", str(shell_test_path)], capture_output=True, text=True
-    )
+    result = subprocess.run(["bash", str(shell_test_path)], capture_output=True, text=True)
 
     print(result.stdout)
     if result.stderr:
@@ -150,9 +148,7 @@ def main():
         help="Type of tests to run",
     )
     parser.add_argument("--shell", action="store_true", help="Run shell tests")
-    parser.add_argument(
-        "--performance", action="store_true", help="Run performance tests"
-    )
+    parser.add_argument("--performance", action="store_true", help="Run performance tests")
     parser.add_argument("--coverage", action="store_true", help="Run coverage tests")
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
 

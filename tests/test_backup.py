@@ -3,8 +3,8 @@ Tests for the backup system.
 """
 
 import os
-import tempfile
 from pathlib import Path
+import tempfile
 
 import pytest
 

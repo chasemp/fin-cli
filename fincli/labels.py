@@ -41,16 +41,12 @@ class LabelManager:
             for row in cursor.fetchall():
                 if row[0]:
                     labels = row[0].split(",")
-                    all_labels.extend(
-                        [label.strip() for label in labels if label.strip()]
-                    )
+                    all_labels.extend([label.strip() for label in labels if label.strip()])
 
             # Remove duplicates and sort
             return sorted(list(set(all_labels)))
 
-    def filter_tasks_by_label(
-        self, label: str, include_completed: bool = True
-    ) -> List[Dict[str, Any]]:
+    def filter_tasks_by_label(self, label: str, include_completed: bool = True) -> List[Dict[str, Any]]:
         """
         Filter tasks by label (case-insensitive, partial match).
 
@@ -83,10 +79,7 @@ class LabelManager:
             for row in cursor.fetchall():
                 task_labels = row[4].split(",") if row[4] else []
                 # Additional check for exact label match (case-insensitive)
-                if any(
-                    str(label).lower() in task_label.lower()
-                    for task_label in task_labels
-                ):
+                if any(str(label).lower() in task_label.lower() for task_label in task_labels):
                     tasks.append(
                         {
                             "id": row[0],

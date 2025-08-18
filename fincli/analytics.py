@@ -62,54 +62,21 @@ class AnalyticsManager:
             "open_tasks": len([t for t in tasks if not t["completed_at"]]),
             "completed_tasks": len([t for t in tasks if t["completed_at"]]),
             "today": {
-                "created": len(
-                    [
-                        t
-                        for t in tasks
-                        if self._parse_date(t["created_at"]).date() == today
-                    ]
-                ),
+                "created": len([t for t in tasks if self._parse_date(t["created_at"]).date() == today]),
                 "completed": len(
-                    [
-                        t
-                        for t in tasks
-                        if t["completed_at"]
-                        and self._parse_date(t["completed_at"]).date() == today
-                    ]
+                    [t for t in tasks if t["completed_at"] and self._parse_date(t["completed_at"]).date() == today]
                 ),
             },
             "this_week": {
-                "created": len(
-                    [
-                        t
-                        for t in tasks
-                        if self._parse_date(t["created_at"]).date() >= week_ago
-                    ]
-                ),
+                "created": len([t for t in tasks if self._parse_date(t["created_at"]).date() >= week_ago]),
                 "completed": len(
-                    [
-                        t
-                        for t in tasks
-                        if t["completed_at"]
-                        and self._parse_date(t["completed_at"]).date() >= week_ago
-                    ]
+                    [t for t in tasks if t["completed_at"] and self._parse_date(t["completed_at"]).date() >= week_ago]
                 ),
             },
             "this_month": {
-                "created": len(
-                    [
-                        t
-                        for t in tasks
-                        if self._parse_date(t["created_at"]).date() >= month_ago
-                    ]
-                ),
+                "created": len([t for t in tasks if self._parse_date(t["created_at"]).date() >= month_ago]),
                 "completed": len(
-                    [
-                        t
-                        for t in tasks
-                        if t["completed_at"]
-                        and self._parse_date(t["completed_at"]).date() >= month_ago
-                    ]
+                    [t for t in tasks if t["completed_at"] and self._parse_date(t["completed_at"]).date() >= month_ago]
                 ),
             },
             "overdue": {
@@ -155,9 +122,7 @@ class AnalyticsManager:
 
         overdue = []
         for task in tasks:
-            if not task["completed_at"] and task.get(
-                "due_date"
-            ):  # Only open tasks with due dates
+            if not task["completed_at"] and task.get("due_date"):  # Only open tasks with due dates
                 if DateParser.is_overdue(task["due_date"]):
                     overdue.append(task)
 
@@ -169,9 +134,7 @@ class AnalyticsManager:
 
         due_soon = []
         for task in tasks:
-            if not task["completed_at"] and task.get(
-                "due_date"
-            ):  # Only open tasks with due dates
+            if not task["completed_at"] and task.get("due_date"):  # Only open tasks with due dates
                 if DateParser.is_due_soon(task["due_date"], days):
                     due_soon.append(task)
 
@@ -185,9 +148,7 @@ class AnalyticsManager:
         today = date.today().strftime("%Y-%m-%d")
 
         for task in tasks:
-            if not task["completed_at"] and task.get(
-                "due_date"
-            ):  # Only open tasks with due dates
+            if not task["completed_at"] and task.get("due_date"):  # Only open tasks with due dates
                 if task["due_date"] == today:
                     due_today.append(task)
 

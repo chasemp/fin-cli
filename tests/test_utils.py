@@ -2,15 +2,20 @@
 Tests for the utils module.
 """
 
-import os
 from datetime import date, datetime, timedelta
+import os
 from unittest.mock import patch
 
 import pytest
 
-from fincli.utils import (filter_tasks_by_date_range, format_task_for_display,
-                          get_date_range, get_editor, is_important_task,
-                          is_today_task)
+from fincli.utils import (
+    filter_tasks_by_date_range,
+    format_task_for_display,
+    get_date_range,
+    get_editor,
+    is_important_task,
+    is_today_task,
+)
 
 
 class TestFormatTaskForDisplay:
@@ -253,9 +258,7 @@ class TestGetDateRange:
 class TestFilterTasksByDateRange:
     """Test the filter_tasks_by_date_range function."""
 
-    def test_filter_open_tasks_always_included(
-        self, weekdays_only_disabled, test_dates
-    ):
+    def test_filter_open_tasks_always_included(self, weekdays_only_disabled, test_dates):
         """Test that open tasks are always included regardless of date."""
         from datetime import date
         from unittest.mock import patch
@@ -287,9 +290,7 @@ class TestFilterTasksByDateRange:
 
             # Both open tasks should be included
             assert len(filtered) == 2
-            assert (
-                filtered[0]["id"] == 2
-            )  # Recent task first (by creation date, most recent first)
+            assert filtered[0]["id"] == 2  # Recent task first (by creation date, most recent first)
             assert filtered[1]["id"] == 1  # Old task second
 
     def test_filter_completed_tasks_by_date(self, weekdays_only_disabled, test_dates):
