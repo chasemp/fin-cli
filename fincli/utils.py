@@ -94,10 +94,7 @@ def format_task_for_display(task: Dict[str, Any]) -> str:
     if task.get("due_date"):
         due_date_display = f"  due:{task['due_date']}"
 
-    return (
-        f"{task_id} {status} {primary_time_str}{modification_indicator}  "
-        f"{task['content']}{labels_display}{due_date_display}"
-    )
+    return f"{task_id} {status} {primary_time_str}{modification_indicator}  " f"{task['content']}{labels_display}{due_date_display}"
 
 
 def get_date_range(days: int = 1, weekdays_only: bool = True) -> tuple:
@@ -136,9 +133,7 @@ def get_date_range(days: int = 1, weekdays_only: bool = True) -> tuple:
     return today, lookback_date
 
 
-def filter_tasks_by_date_range(
-    tasks: List[Dict[str, Any]], days: int = 1, weekdays_only: bool = True
-) -> List[Dict[str, Any]]:
+def filter_tasks_by_date_range(tasks: List[Dict[str, Any]], days: int = 1, weekdays_only: bool = True) -> List[Dict[str, Any]]:
     """
     Filter tasks based on time and status criteria.
 
@@ -183,9 +178,7 @@ def filter_tasks_by_date_range(
         key=lambda x: (
             not is_important_task(x),  # Important tasks first
             not is_today_task(x),  # Then today tasks
-            -datetime.fromisoformat(
-                x["created_at"].replace("Z", "+00:00")
-            ).timestamp(),  # Then by creation date descending
+            -datetime.fromisoformat(x["created_at"].replace("Z", "+00:00")).timestamp(),  # Then by creation date descending
         )
     )
 

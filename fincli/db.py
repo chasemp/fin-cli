@@ -84,6 +84,17 @@ class DatabaseManager:
                     # Index might already exist
                     pass
 
+            # Check if context column exists, add it if it doesn't
+            if "context" not in columns:
+                cursor.execute("ALTER TABLE tasks ADD COLUMN context TEXT DEFAULT 'default'")
+
+                # Create index on context for efficient filtering
+                try:
+                    cursor.execute("CREATE INDEX idx_tasks_context ON tasks(context)")
+                except sqlite3.OperationalError:
+                    # Index might already exist
+                    pass
+
             conn.commit()
 
     def get_connection(self):

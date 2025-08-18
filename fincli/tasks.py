@@ -28,6 +28,7 @@ class TaskManager:
         labels: Optional[List[str]] = None,
         source: str = "cli",
         due_date: Optional[str] = None,
+        context: Optional[str] = None,
     ) -> int:
         """
         Add a new task to the database.
@@ -37,6 +38,7 @@ class TaskManager:
             labels: Optional list of labels (will be normalized and stored as comma-separated)
             source: Source of the task (default: "cli")
             due_date: Optional due date in YYYY-MM-DD format
+            context: Optional context for the task (defaults to current context or 'default')
 
         Returns:
             The ID of the newly created task
@@ -58,15 +60,19 @@ class TaskManager:
             unique_labels = sorted(list(set(all_labels)))
             labels_str = ",".join(unique_labels) if unique_labels else None
 
+        # Set default context if none provided
+        if context is None:
+            context = "default"
+
         with self.db_manager.get_connection() as conn:
             cursor = conn.cursor()
 
             cursor.execute(
                 """
-                INSERT INTO tasks (content, labels, source, due_date)
-                VALUES (?, ?, ?, ?)
+                INSERT INTO tasks (content, labels, source, due_date, context)
+                VALUES (?, ?, ?, ?, ?)
             """,
-                (content, labels_str, source, due_date),
+                (content, labels_str, source, due_date, context),
             )
 
             task_id = cursor.lastrowid
@@ -89,7 +95,7 @@ class TaskManager:
 
             cursor.execute(
                 """
-                SELECT id, content, created_at, modified_at, completed_at, labels, source, due_date
+                SELECT id, content, created_at, modified_at, completed_at, labels, source, due_date, context
                 FROM tasks WHERE id = ?
                 """,
                 (task_id,),
@@ -108,14 +114,16 @@ class TaskManager:
                 "labels": row[5].split(",") if row[5] else [],
                 "source": row[6],
                 "due_date": row[7],
+                "context": row[8] or "default",
             }
 
-    def list_tasks(self, include_completed: bool = False) -> List[Dict[str, Any]]:
+    def list_tasks(self, include_completed: bool = False, context: Optional[str] = None) -> List[Dict[str, Any]]:
         """
         List all tasks, optionally including completed ones.
 
         Args:
             include_completed: Whether to include completed tasks
+            context: Optional context to filter by
 
         Returns:
             List of task dictionaries
@@ -124,16 +132,26 @@ class TaskManager:
             cursor = conn.cursor()
 
             query = """
-                SELECT id, content, created_at, modified_at, completed_at, labels, source, due_date
+                SELECT id, content, created_at, modified_at, completed_at, labels, source, due_date, context
                 FROM tasks
             """
 
+            where_conditions = []
             if not include_completed:
-                query += " WHERE completed_at IS NULL"
+                where_conditions.append("completed_at IS NULL")
+
+            if context:
+                where_conditions.append("context = ?")
+
+            if where_conditions:
+                query += " WHERE " + " AND ".join(where_conditions)
 
             query += " ORDER BY created_at DESC"
 
-            cursor.execute(query)
+            if context:
+                cursor.execute(query, (context,))
+            else:
+                cursor.execute(query)
 
             tasks = []
             for row in cursor.fetchall():
@@ -147,6 +165,7 @@ class TaskManager:
                         "labels": row[5].split(",") if row[5] else [],
                         "source": row[6],
                         "due_date": row[7],
+                        "context": row[8] or "default",
                     }
                 )
 

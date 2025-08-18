@@ -75,6 +75,33 @@ fin list -l "project-name" -s "o,d"
 fin export project.csv -l "project-name"
 ```
 
+### **Context Management**
+```bash
+# Switch to work context
+fin -c work
+
+# Add tasks in work context
+fin "review code #urgent"
+
+# Switch to personal context
+fin -c personal
+
+# Add personal tasks
+fin "grocery shopping"
+
+# List available contexts
+fin context list
+
+# Show tasks in specific context
+fin context show work
+
+# Create new context
+fin context create project-a
+
+# Delete context (with safety checks)
+fin context delete old-project --force
+```
+
 ## Usage
 
 ### Adding Tasks
@@ -214,6 +241,36 @@ fin list
 ```
 
 ### Advanced Features
+
+#### Contexts
+Contexts allow you to organize tasks by project, work area, or any other grouping. Once set, all commands filter tasks by the current context.
+
+```bash
+# Set context for current session
+fin -c work
+
+# All subsequent commands use work context
+fin list                    # Shows only work tasks
+fin add-task "meeting"     # Creates task in work context
+
+# Switch to different context
+fin -c personal
+
+# Now all commands use personal context
+fin list                    # Shows only personal tasks
+
+# Manage contexts
+fin context list            # List all available contexts
+fin context create project-a # Create new context
+fin context show work       # Show tasks in work context
+fin context delete old      # Delete context (with safety checks)
+```
+
+**Context Rules:**
+- Context is session-based (persists in current shell)
+- Default context is 'default' when none is set
+- Tasks automatically get current context upon creation
+- Context filtering works with all other filters (labels, dates, status)
 
 #### Due Dates
 ```bash

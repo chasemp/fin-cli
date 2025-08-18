@@ -71,6 +71,7 @@ This document tracks the status of all FinCLI documentation and ensures consiste
 - [x] Environment variables
 - [x] CLI command examples
 - [x] Testing guidelines
+- [x] Contexts system
 
 ### **Example Consistency** ✅
 - [x] All examples use current command syntax
@@ -94,6 +95,7 @@ This document tracks the status of all FinCLI documentation and ensures consiste
 - Configuration guide
 - Task modification tracking explanation
 - Verbose output examples
+- Contexts system documentation
 
 ### **Developer Documentation (TESTING.md)**
 - Testing best practices

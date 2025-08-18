@@ -63,21 +63,15 @@ class AnalyticsManager:
             "completed_tasks": len([t for t in tasks if t["completed_at"]]),
             "today": {
                 "created": len([t for t in tasks if self._parse_date(t["created_at"]).date() == today]),
-                "completed": len(
-                    [t for t in tasks if t["completed_at"] and self._parse_date(t["completed_at"]).date() == today]
-                ),
+                "completed": len([t for t in tasks if t["completed_at"] and self._parse_date(t["completed_at"]).date() == today]),
             },
             "this_week": {
                 "created": len([t for t in tasks if self._parse_date(t["created_at"]).date() >= week_ago]),
-                "completed": len(
-                    [t for t in tasks if t["completed_at"] and self._parse_date(t["completed_at"]).date() >= week_ago]
-                ),
+                "completed": len([t for t in tasks if t["completed_at"] and self._parse_date(t["completed_at"]).date() >= week_ago]),
             },
             "this_month": {
                 "created": len([t for t in tasks if self._parse_date(t["created_at"]).date() >= month_ago]),
-                "completed": len(
-                    [t for t in tasks if t["completed_at"] and self._parse_date(t["completed_at"]).date() >= month_ago]
-                ),
+                "completed": len([t for t in tasks if t["completed_at"] and self._parse_date(t["completed_at"]).date() >= month_ago]),
             },
             "overdue": {
                 "3_days": self._get_overdue_tasks(tasks, 3),

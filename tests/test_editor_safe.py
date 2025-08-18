@@ -877,15 +877,9 @@ Invalid line without proper format
             expected_completed, expected_reopened, expected_new = expected_results[i]
 
             # Check expected results
-            assert (
-                completed_count == expected_completed
-            ), f"Edge case {i} failed: expected {expected_completed} completed, got {completed_count}"
-            assert (
-                reopened_count == expected_reopened
-            ), f"Edge case {i} failed: expected {expected_reopened} reopened, got {reopened_count}"
-            assert (
-                new_tasks_count == expected_new
-            ), f"Edge case {i} failed: expected {expected_new} new tasks, got {new_tasks_count}"
+            assert completed_count == expected_completed, f"Edge case {i} failed: expected {expected_completed} completed, got {completed_count}"
+            assert reopened_count == expected_reopened, f"Edge case {i} failed: expected {expected_reopened} reopened, got {reopened_count}"
+            assert new_tasks_count == expected_new, f"Edge case {i} failed: expected {expected_new} new tasks, got {new_tasks_count}"
 
     def test_text_transform_preserves_reference_ids(self, temp_db_path):
         """Test that reference IDs are preserved during text transforms."""

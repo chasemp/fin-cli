@@ -31,9 +31,7 @@ def import_sheets_tasks(sheet_id: str = None, **kwargs) -> Dict[str, Any]:
     if not sheet_id:
         return {
             "success": False,
-            "error": (
-                "Google Sheet ID not provided. Set GOOGLE_SHEET_ID environment variable " "or pass sheet_id parameter."
-            ),
+            "error": ("Google Sheet ID not provided. Set GOOGLE_SHEET_ID environment variable " "or pass sheet_id parameter."),
             "imported": 0,
             "skipped": 0,
         }

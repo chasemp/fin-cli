@@ -67,8 +67,13 @@ def add_task(content: str, labels: tuple, source: str = "cli", due_date: str = N
     #     if "t" not in labels_list:
     #         labels_list.append("t")
 
-    # Add the task with due date and labels (TaskManager handles normalization)
-    task_manager.add_task(content, labels_list, source, due_date)
+    # Get current context
+    from fincli.contexts import ContextManager
+
+    current_context = ContextManager.get_current_context()
+
+    # Add the task with due date, labels, and context (TaskManager handles normalization)
+    task_manager.add_task(content, labels_list, source, due_date, current_context)
 
     # Get normalized labels for display (sorted alphabetically)
     normalized_labels = []
@@ -210,7 +215,8 @@ def handle_direct_task(args):
 
 @click.group(context_settings=dict(help_option_names=["-h", "--help"]))
 @click.version_option(version=__version__, prog_name="FinCLI")
-def cli():
+@click.option("--context", "-c", help="Set context for this session (e.g., work, personal)")
+def cli(context):
     """FinCLI - A lightweight task tracking system
 
     Manage your local task database with simple commands.
@@ -219,7 +225,18 @@ def cli():
         fin "my new task"                    # Add a task directly
         fin add-task "my new task"           # Add a task explicitly
         fin list-tasks                       # List all tasks
+        fin -c work list                     # Show tasks in work context
     """
+    # Set context if provided
+    if context:
+        from fincli.contexts import ContextManager
+
+        try:
+            ContextManager.set_context(context)
+            click.echo(f"🔧 Context set to: {context}")
+        except ValueError as e:
+            click.echo(f"❌ Error: {e}")
+            sys.exit(1)
     pass
 
 
@@ -290,10 +307,21 @@ def _list_tasks_impl(days, label, status, today=False, due=None, verbose=False):
             click.echo("   • Weekdays only: True (Mon-Fri)")
         else:
             click.echo("   • Weekdays only: False (all days)")
+
+        # Show current context
+        from fincli.contexts import ContextManager
+
+        current_context = ContextManager.get_current_context()
+        click.echo(f"   • Context: {current_context}")
         click.echo()
 
-    # Get tasks (include completed tasks for status filtering)
-    tasks = task_manager.list_tasks(include_completed=True)
+    # Get current context
+    from fincli.contexts import ContextManager
+
+    current_context = ContextManager.get_current_context()
+
+    # Get tasks (include completed tasks for status filtering, filtered by context)
+    tasks = task_manager.list_tasks(include_completed=True, context=current_context)
 
     # Apply date filtering first
     if today:
@@ -1975,6 +2003,84 @@ def report(output_format, period, output, overdue):
         click.echo(report_content)
 
 
+@cli.command(name="context")
+@click.argument("action", type=click.Choice(["list", "create", "delete", "set-default", "show"]))
+@click.argument("name", required=False)
+@click.option("--description", help="Description for new context")
+@click.option("--force", is_flag=True, help="Force deletion of context with tasks")
+def context_command(action, name, description, force):
+    """Manage task contexts."""
+    from fincli.contexts import ContextManager
+
+    db_manager = DatabaseManager()
+
+    if action == "list":
+        contexts = ContextManager.list_contexts(db_manager)
+        click.echo("📁 Available contexts:")
+        for context in contexts:
+            if context == ContextManager.DEFAULT_CONTEXT:
+                click.echo(f"  • {context} (default)")
+            else:
+                click.echo(f"  • {context}")
+
+    elif action == "create":
+        if not name:
+            click.echo("❌ Context name is required for creation")
+            sys.exit(1)
+        try:
+            # Create context by adding a task with that context
+            task_manager = TaskManager(db_manager)
+            task_id = task_manager.add_task(f"Context initialization task for {name}", [], "system", None, name)
+            # Delete the initialization task
+            task_manager.delete_task(task_id)
+            click.echo(f"✅ Context '{name}' created successfully")
+        except ValueError as e:
+            click.echo(f"❌ Error: {e}")
+            sys.exit(1)
+
+    elif action == "delete":
+        if not name:
+            click.echo("❌ Context name is required for deletion")
+            sys.exit(1)
+        if name == ContextManager.DEFAULT_CONTEXT:
+            click.echo("❌ Cannot delete default context")
+            sys.exit(1)
+
+        # Check if context has tasks
+        task_manager = TaskManager(db_manager)
+        tasks = task_manager.list_tasks(include_completed=True, context=name)
+        if tasks and not force:
+            click.echo(f"❌ Context '{name}' has {len(tasks)} tasks")
+            click.echo("Use --force to delete anyway, or reassign tasks first")
+            sys.exit(1)
+
+        # Delete tasks in context
+        for task in tasks:
+            task_manager.delete_task(task["id"])
+
+        click.echo(f"✅ Context '{name}' deleted successfully")
+
+    elif action == "set-default":
+        if not name:
+            click.echo("❌ Context name is required for set-default")
+            sys.exit(1)
+        # This would update config, but for now just show message
+        click.echo(f"ℹ️  Default context would be set to '{name}' (not yet implemented)")
+
+    elif action == "show":
+        if not name:
+            click.echo("❌ Context name is required for show")
+            sys.exit(1)
+        task_manager = TaskManager(db_manager)
+        tasks = task_manager.list_tasks(include_completed=True, context=name)
+        click.echo(f"📁 Context: {name}")
+        click.echo(f"📊 Total tasks: {len(tasks)}")
+        open_tasks = [t for t in tasks if not t["completed_at"]]
+        click.echo(f"📝 Open tasks: {len(open_tasks)}")
+        completed_tasks = [t for t in tasks if t["completed_at"]]
+        click.echo(f"✅ Completed tasks: {len(completed_tasks)}")
+
+
 @cli.command(name="config")
 @click.option("--auto-today", type=bool, help="Auto-add today label to important tasks")
 @click.option("--show-sections", type=bool, help="Show organized sections in task lists")
@@ -2054,6 +2160,13 @@ def main():
     # Check for Click-specific flags that should always be handled by Click
     if args and any(arg in ["--help", "-h", "--version"] for arg in args):
         # Normal Click processing for help and version flags
+        cli()
+        return
+
+    # Check for Click commands that should always be handled by Click
+    click_commands = ["context", "config", "backup", "restore", "import", "export", "digest", "report"]
+    if args and args[0] in click_commands:
+        # Normal Click processing for these commands
         cli()
         return
 
