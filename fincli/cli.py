@@ -163,7 +163,8 @@ def handle_direct_task(args):
 
     # Extract hashtags from content and add them as labels
     # Exclude task reference patterns like #task23, #ref:task23, etc.
-    hashtags = re.findall(r"#(?!task\d+|ref:task\d+)(\w+)", content)
+    # Also exclude special patterns like #due:, #recur:, #depends:
+    hashtags = re.findall(r"#(?!task\d+|ref:task\d+|due:|recur:|depends:)(\w+)", content)
 
     # Validate hashtags for reserved words
     reserved_words = {"and", "or", "ref", "due", "recur", "depends", "not"}
@@ -265,7 +266,7 @@ def init(db_path: str):
     click.echo("✅ Database initialized successfully!")
 
 
-def _list_tasks_impl(days, label, status, today=False, verbose=False):
+def _list_tasks_impl(days, label, status, today=False, due=None, verbose=False):
     """Implementation for listing tasks."""
     db_manager = DatabaseManager()
     task_manager = TaskManager(db_manager)
@@ -283,6 +284,8 @@ def _list_tasks_impl(days, label, status, today=False, verbose=False):
         click.echo(f"   • Status: {status}")
         if label:
             click.echo(f"   • Labels: {', '.join(label)}")
+        if due:
+            click.echo(f"   • Due date: {due}")
         weekdays_only = config.get_weekdays_only_lookback()
         if weekdays_only:
             click.echo(f"   • Weekdays only: True (Monday-Friday)")
@@ -375,6 +378,42 @@ def _list_tasks_impl(days, label, status, today=False, verbose=False):
                     filtered_tasks.append(task)
         tasks = filtered_tasks
 
+    # Apply due date filtering if requested
+    if due:
+        from fincli.utils import DateParser
+        from datetime import date, timedelta
+        
+        filtered_tasks = []
+        for task in tasks:
+            if not task.get("due_date"):
+                continue  # Skip tasks without due dates
+                
+            task_matches = False
+            
+            if due == "overdue":
+                task_matches = DateParser.is_overdue(task["due_date"])
+            elif due == "today":
+                task_matches = task["due_date"] == date.today().strftime("%Y-%m-%d")
+            elif due == "week":
+                # Due within next 7 days
+                task_matches = DateParser.is_due_soon(task["due_date"], days=7)
+            elif due == "month":
+                # Due within next 30 days
+                task_matches = DateParser.is_due_soon(task["due_date"], days=30)
+            else:
+                # Specific date format (YYYY-MM-DD)
+                try:
+                    due_date = datetime.strptime(due, "%Y-%m-%d").date()
+                    task_matches = task["due_date"] == due
+                except ValueError:
+                    # Invalid date format, skip this filter
+                    continue
+            
+            if task_matches:
+                filtered_tasks.append(task)
+        
+        tasks = filtered_tasks
+
     # Display tasks
     if not tasks:
         click.echo("📝 No tasks found matching your criteria.")
@@ -431,12 +470,16 @@ def _list_tasks_impl(days, label, status, today=False, verbose=False):
     help="Filter by status (open/o, completed, done/d, all/a)",
 )
 @click.option(
+    "--due",
+    help="Filter by due date: specific date (YYYY-MM-DD), 'overdue', 'today', 'week', or 'month'"
+)
+@click.option(
     "--verbose",
     "-v",
     is_flag=True,
     help="Show verbose output including database path and filtering details",
 )
-def list_tasks(days, label, today, status, verbose):
+def list_tasks(days, label, today, status, due, verbose):
     """List tasks with optional filtering."""
     # Validate conflicting time filters
     if today and days != 1:  # days defaults to 1, so only conflict if explicitly set
@@ -450,7 +493,7 @@ def list_tasks(days, label, today, status, verbose):
         import os
 
         os.environ["FIN_VERBOSE"] = "1"
-    _list_tasks_impl(days, label, status, today, verbose)
+    _list_tasks_impl(days, label, status, today, due, verbose)
 
 
 @cli.command(name="list")
@@ -467,12 +510,16 @@ def list_tasks(days, label, today, status, verbose):
     help="Filter by status (open/o, completed, done/d, all/a)",
 )
 @click.option(
+    "--due",
+    help="Filter by due date: specific date (YYYY-MM-DD), 'overdue', 'today', 'week', or 'month'"
+)
+@click.option(
     "--verbose",
     "-v",
     is_flag=True,
     help="Show verbose output including database path and filtering details",
 )
-def list_tasks_alias(days, label, today, status, verbose):
+def list_tasks_alias(days, label, today, status, due, verbose):
     """List tasks with optional filtering (alias for list-tasks)."""
     # Validate conflicting time filters
     if today and days != 1:  # days defaults to 1, so only conflict if explicitly set
@@ -486,7 +533,7 @@ def list_tasks_alias(days, label, today, status, verbose):
         import os
 
         os.environ["FIN_VERBOSE"] = "1"
-    _list_tasks_impl(days, label, status, today, verbose)
+    _list_tasks_impl(days, label, status, today, due, verbose)
 
 
 @cli.command(name="open-editor")
@@ -1005,12 +1052,16 @@ def fins_command():
         help="Filter by status(es): open/o, completed, done/d, all/a, or comma-separated list like 'done,open' (default: completed)",
     )
     @click.option(
+        "--due",
+        help="Filter by due date: specific date (YYYY-MM-DD), 'overdue', 'today', 'week', or 'month'"
+    )
+    @click.option(
         "--verbose",
         "-v",
         is_flag=True,
         help="Show verbose output including database path and filtering details",
     )
-    def fins_cli(content, days, max_limit, label, today, status, verbose):
+    def fins_cli(content, days, max_limit, label, today, status, due, verbose):
         """Query and display completed tasks, or add completed tasks."""
         # Set verbose environment variable for DatabaseManager
         if verbose:
@@ -1072,6 +1123,8 @@ def fins_command():
             click.echo(f"   • Max limit: {max_limit}")
             if label:
                 click.echo(f"   • Labels: {', '.join(label)}")
+            if due:
+                click.echo(f"   • Due date: {due}")
 
             # Show weekday configuration information
             config = Config()
@@ -1176,6 +1229,42 @@ def fins_command():
                             label_filtered_tasks.append(task)
                             break
             filtered_tasks = label_filtered_tasks
+
+        # Apply due date filtering if requested
+        if due:
+            from fincli.utils import DateParser
+            from datetime import date, timedelta
+            
+            due_filtered_tasks = []
+            for task in filtered_tasks:
+                if not task.get("due_date"):
+                    continue  # Skip tasks without due dates
+                    
+                task_matches = False
+                
+                if due == "overdue":
+                    task_matches = DateParser.is_overdue(task["due_date"])
+                elif due == "today":
+                    task_matches = task["due_date"] == date.today().strftime("%Y-%m-%d")
+                elif due == "week":
+                    # Due within next 7 days
+                    task_matches = DateParser.is_due_soon(task["due_date"], days=7)
+                elif due == "month":
+                    # Due within next 30 days
+                    task_matches = DateParser.is_due_soon(task["due_date"], days=30)
+                else:
+                    # Specific date format (YYYY-MM-DD)
+                    try:
+                        due_date = datetime.strptime(due, "%Y-%m-%d").date()
+                        task_matches = task["due_date"] == due
+                    except ValueError:
+                        # Invalid date format, skip this filter
+                        continue
+                
+                if task_matches:
+                    due_filtered_tasks.append(task)
+            
+            filtered_tasks = due_filtered_tasks
 
         # Display tasks
         if not filtered_tasks:
