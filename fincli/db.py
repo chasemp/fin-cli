@@ -78,7 +78,7 @@ class DatabaseManager:
             # Check if due_date column exists, add it if it doesn't
             if "due_date" not in columns:
                 cursor.execute("ALTER TABLE tasks ADD COLUMN due_date TEXT")
-                
+
                 # Create index on due_date for efficient filtering
                 try:
                     cursor.execute("CREATE INDEX idx_tasks_due_date ON tasks(due_date)")

@@ -21,13 +21,9 @@ from fincli.editor import EditorManager
 from fincli.intake import import_from_source
 from fincli.labels import LabelManager
 from fincli.tasks import TaskManager
-from fincli.utils import (
-    DateParser,
-    filter_tasks_by_date_range,
-    format_task_for_display,
-    is_important_task,
-    is_today_task,
-)
+from fincli.utils import (DateParser, filter_tasks_by_date_range,
+                          format_task_for_display, is_important_task,
+                          is_today_task)
 
 
 def _get_db_manager():
@@ -38,7 +34,13 @@ def _get_db_manager():
 def add_task(content: str, labels: tuple, source: str = "cli", due_date: str = None):
     """Add a task to the database."""
     # Only create database connection when function is called, not at import time
-    db_manager = _get_db_manager()
+    # Check for environment variable first to ensure proper test isolation
+    env_db_path = os.environ.get("FIN_DB_PATH")
+    if env_db_path:
+        db_manager = DatabaseManager(env_db_path)
+    else:
+        db_manager = _get_db_manager()
+
     task_manager = TaskManager(db_manager)
     # config = Config()  # Temporarily disabled to debug hanging issue
 
@@ -53,9 +55,9 @@ def add_task(content: str, labels: tuple, source: str = "cli", due_date: str = N
             f"❌ Error: Cannot use reserved words as labels: {', '.join(invalid_labels)}"
         )
         click.echo(f"   Reserved words: {', '.join(sorted(reserved_words))}")
-        click.echo(f"   Use complex filtering instead: fin list -l 'work and urgent'")
+        click.echo("   Use complex filtering instead: fin list -l 'work and urgent'")
         click.echo(
-            f"   Use special patterns: #due:06/17, #due:2025-08-10, #recur:daily, #depends:task123"
+            "   Use special patterns: #due:06/17, #due:2025-08-10, #recur:daily, #depends:task123"
         )
         sys.exit(1)
 
@@ -82,9 +84,11 @@ def add_task(content: str, labels: tuple, source: str = "cli", due_date: str = N
     due_date_display = ""
     if due_date:
         due_date_display = f" (due: {due_date})"
-    
+
     if normalized_labels:
-        click.echo(f'✅ Task added: "{content}" [{", ".join(normalized_labels)}]{due_date_display}')
+        click.echo(
+            f'✅ Task added: "{content}" [{", ".join(normalized_labels)}]{due_date_display}'
+        )
     else:
         click.echo(f'✅ Task added: "{content}"{due_date_display}')
 
@@ -146,7 +150,10 @@ def handle_direct_task(args):
             content = re.sub(r"#due:[^ ]+", "", content)
         else:
             click.echo(f"❌ Error: Invalid due date format: {due_date_raw}")
-            click.echo("   Supported formats: MM/DD, YYYY-MM-DD, MM/DD/YYYY")
+            click.echo("   Supported formats:")
+            click.echo("   - MM/DD")
+            click.echo("   - YYYY-MM-DD")
+            click.echo("   - MM/DD/YYYY")
             sys.exit(1)
 
     # Extract recurring: #recur:daily, #recur:weekly, etc.
@@ -164,7 +171,9 @@ def handle_direct_task(args):
     # Extract hashtags from content and add them as labels
     # Exclude task reference patterns like #task23, #ref:task23, etc.
     # Also exclude special patterns like #due:, #recur:, #depends:
-    hashtags = re.findall(r"#(?!task\d+|ref:task\d+|due:|recur:|depends:)(\w+)", content)
+    hashtags = re.findall(
+        r"#(?!task\d+|ref:task\d+|due:|recur:|depends:)(\w+)", content
+    )
 
     # Validate hashtags for reserved words
     reserved_words = {"and", "or", "ref", "due", "recur", "depends", "not"}
@@ -174,9 +183,9 @@ def handle_direct_task(args):
             f"❌ Error: Cannot use reserved words as labels: {', '.join(invalid_hashtags)}"
         )
         click.echo(f"   Reserved words: {', '.join(sorted(reserved_words))}")
-        click.echo(f"   Use complex filtering instead: fin list -l 'work and urgent'")
+        click.echo("   Use complex filtering instead: fin list -l 'work and urgent'")
         click.echo(
-            f"   Use special patterns: #due:2025-08-10, #recur:daily, #depends:task123"
+            "   Use special patterns: #due:2025-08-10, #recur:daily, #depends:task123"
         )
         sys.exit(1)
 
@@ -261,7 +270,7 @@ def init(db_path: str):
         fin init
         fin init --db-path ~/my-tasks.db
     """
-    db_manager = DatabaseManager(db_path=db_path)
+    DatabaseManager(db_path=db_path)
     # Database is automatically initialized in __init__
     click.echo("✅ Database initialized successfully!")
 
@@ -274,9 +283,9 @@ def _list_tasks_impl(days, label, status, today=False, due=None, verbose=False):
 
     # Show verbose information about filtering criteria
     if verbose:
-        click.echo(f"🔍 Filtering criteria:")
+        click.echo("🔍 Filtering criteria:")
         if today:
-            click.echo(f"   • Today only (overrides days)")
+            click.echo("   • Today only (overrides days)")
         else:
             click.echo(
                 f"   • Days: {days} (looking back {days} day{'s' if days != 1 else ''})"
@@ -288,9 +297,9 @@ def _list_tasks_impl(days, label, status, today=False, due=None, verbose=False):
             click.echo(f"   • Due date: {due}")
         weekdays_only = config.get_weekdays_only_lookback()
         if weekdays_only:
-            click.echo(f"   • Weekdays only: True (Monday-Friday)")
+            click.echo("   • Weekdays only: True (Mon-Fri)")
         else:
-            click.echo(f"   • Weekdays only: False (all days)")
+            click.echo("   • Weekdays only: False (all days)")
         click.echo()
 
     # Get tasks (include completed tasks for status filtering)
@@ -299,7 +308,6 @@ def _list_tasks_impl(days, label, status, today=False, due=None, verbose=False):
     # Apply date filtering first
     if today:
         # Override to show only today's tasks
-        from datetime import date
         today_date = date.today()
         filtered_tasks = []
         for task in tasks:
@@ -321,7 +329,9 @@ def _list_tasks_impl(days, label, status, today=False, due=None, verbose=False):
     else:
         # Apply normal days filtering
         weekdays_only = config.get_weekdays_only_lookback()
-        tasks = filter_tasks_by_date_range(tasks, days=days, weekdays_only=weekdays_only)
+        tasks = filter_tasks_by_date_range(
+            tasks, days=days, weekdays_only=weekdays_only
+        )
 
     # Apply status filtering
     if status in ["open", "o"]:
@@ -380,16 +390,15 @@ def _list_tasks_impl(days, label, status, today=False, due=None, verbose=False):
 
     # Apply due date filtering if requested
     if due:
-        from fincli.utils import DateParser
-        from datetime import date, timedelta
-        
+        # DateParser and date imported at module level
+
         filtered_tasks = []
         for task in tasks:
             if not task.get("due_date"):
                 continue  # Skip tasks without due dates
-                
+
             task_matches = False
-            
+
             if due == "overdue":
                 task_matches = DateParser.is_overdue(task["due_date"])
             elif due == "today":
@@ -403,15 +412,16 @@ def _list_tasks_impl(days, label, status, today=False, due=None, verbose=False):
             else:
                 # Specific date format (YYYY-MM-DD)
                 try:
-                    due_date = datetime.strptime(due, "%Y-%m-%d").date()
+                    # Keep parsing to validate format, but compare string equality to stored due_date
+                    _ = datetime.strptime(due, "%Y-%m-%d").date()
                     task_matches = task["due_date"] == due
                 except ValueError:
                     # Invalid date format, skip this filter
                     continue
-            
+
             if task_matches:
                 filtered_tasks.append(task)
-        
+
         tasks = filtered_tasks
 
     # Display tasks
@@ -426,23 +436,24 @@ def _list_tasks_impl(days, label, status, today=False, due=None, verbose=False):
     today_tasks = [
         task for task in tasks if is_today_task(task) and not is_important_task(task)
     ]
-    
+
     # Due date sections (only for open tasks)
-    from fincli.utils import DateParser
-    from datetime import date
+
     overdue_tasks = []
     due_soon_tasks = []
     due_today_tasks = []
-    
+
     for task in tasks:
-        if not task["completed_at"] and task.get("due_date"):  # Only open tasks with due dates
+        if not task["completed_at"] and task.get(
+            "due_date"
+        ):  # Only open tasks with due dates
             if DateParser.is_overdue(task["due_date"]):
                 overdue_tasks.append(task)
             elif task["due_date"] == date.today().strftime("%Y-%m-%d"):
                 due_today_tasks.append(task)
             elif DateParser.is_due_soon(task["due_date"], days=3):
                 due_soon_tasks.append(task)
-    
+
     # Regular tasks (no #i or #t) go in Open section
     open_tasks = [
         task
@@ -450,9 +461,11 @@ def _list_tasks_impl(days, label, status, today=False, due=None, verbose=False):
         if not task["completed_at"]
         and not is_important_task(task)
         and not is_today_task(task)
-        and not task.get("due_date")  # Exclude tasks with due dates (they go in due date sections)
+        and not task.get(
+            "due_date"
+        )  # Exclude tasks with due dates (they go in due date sections)
     ]
-    
+
     # Completed tasks go in Completed section
     completed_tasks = [
         task
@@ -509,7 +522,7 @@ def _list_tasks_impl(days, label, status, today=False, due=None, verbose=False):
             formatted_task = format_task_for_display(task)
             click.echo(formatted_task)
         click.echo()
-    
+
     # Display Completed section
     if completed_tasks:
         click.echo("Completed")
@@ -522,7 +535,9 @@ def _list_tasks_impl(days, label, status, today=False, due=None, verbose=False):
 @click.option(
     "--days", "-d", default=1, help="Show tasks from the past N days (default: 1)"
 )
-@click.option("--today", "-t", is_flag=True, help="Show only today's tasks (overrides days)")
+@click.option(
+    "--today", "-t", is_flag=True, help="Show only today's tasks (overrides days)"
+)
 @click.option("--label", "-l", multiple=True, help="Filter by labels")
 @click.option(
     "--status",
@@ -532,7 +547,7 @@ def _list_tasks_impl(days, label, status, today=False, due=None, verbose=False):
 )
 @click.option(
     "--due",
-    help="Filter by due date: specific date (YYYY-MM-DD), 'overdue', 'today', 'week', or 'month'"
+    help="Filter by due date: specific date (YYYY-MM-DD), 'overdue', 'today', 'week', or 'month'",
 )
 @click.option(
     "--verbose",
@@ -548,11 +563,9 @@ def list_tasks(days, label, today, status, due, verbose):
         click.echo("   --today overrides --days, so they are mutually exclusive")
         click.echo("   Use either --today or --days N, but not both")
         return
-    
+
     # Set verbose environment variable for DatabaseManager
     if verbose:
-        import os
-
         os.environ["FIN_VERBOSE"] = "1"
     _list_tasks_impl(days, label, status, today, due, verbose)
 
@@ -561,7 +574,9 @@ def list_tasks(days, label, today, status, due, verbose):
 @click.option(
     "--days", "-d", default=1, help="Show tasks from the past N days (default: 1)"
 )
-@click.option("--today", "-t", is_flag=True, help="Show only today's tasks (overrides days)")
+@click.option(
+    "--today", "-t", is_flag=True, help="Show only today's tasks (overrides days)"
+)
 @click.option("--label", "-l", multiple=True, help="Filter by labels")
 @click.option(
     "--status",
@@ -572,7 +587,7 @@ def list_tasks(days, label, today, status, due, verbose):
 )
 @click.option(
     "--due",
-    help="Filter by due date: specific date (YYYY-MM-DD), 'overdue', 'today', 'week', or 'month'"
+    help="Filter by due date: specific date (YYYY-MM-DD), 'overdue', 'today', 'week', or 'month'",
 )
 @click.option(
     "--verbose",
@@ -588,11 +603,9 @@ def list_tasks_alias(days, label, today, status, due, verbose):
         click.echo("   --today overrides --days, so they are mutually exclusive")
         click.echo("   Use either --today or --days N, but not both")
         return
-    
+
     # Set verbose environment variable for DatabaseManager
     if verbose:
-        import os
-
         os.environ["FIN_VERBOSE"] = "1"
     _list_tasks_impl(days, label, status, today, due, verbose)
 
@@ -648,7 +661,6 @@ def open_editor(label, date, all_tasks, dry_run):
             label=label_filter, target_date=date, all_tasks=all_tasks
         )
         original_completed = [t for t in original_tasks if t.get("completed_at")]
-        original_open = [t for t in original_tasks if not t.get("completed_at")]
 
         (
             completed_count,
@@ -765,7 +777,8 @@ def fine_command():
         help="Show tasks from the past N days (including today). Use -d 0 for all time (limited by max_limit)",
     )
     @click.option(
-        "--today", "-t",
+        "--today",
+        "-t",
         is_flag=True,
         help="Show only today's tasks (overrides days)",
     )
@@ -782,7 +795,10 @@ def fine_command():
     @click.option(
         "--status",
         "-s",
-        help="Filter by status(es): open/o, completed, done/d, all/a, or comma-separated list like 'done,open' (default: open)",
+        help=(
+            "Filter by status(es): open/o, completed, done/d, all/a, or "
+            "comma-separated list like 'done,open' (default: open)"
+        ),
     )
     @click.option(
         "--verbose",
@@ -802,8 +818,6 @@ def fine_command():
         """
         # Set verbose environment variable for DatabaseManager
         if verbose:
-            import os
-
             os.environ["FIN_VERBOSE"] = "1"
 
         # Call the original open_editor function directly
@@ -828,19 +842,19 @@ def fine_command():
 
         # Show verbose information about filtering criteria
         if verbose:
-            click.echo(f"🔍 Filtering criteria:")
+            click.echo("🔍 Filtering criteria:")
             if today:
-                click.echo(f"   • Today only (overrides days)")
+                click.echo("   • Today only (overrides days)")
             elif days is not None:
                 days_int = int(days)
                 if days_int == 0:
-                    click.echo(f"   • Days: all time (no date restriction)")
+                    click.echo("   • Days: all time (no date restriction)")
                 else:
                     click.echo(
                         f"   • Days: {days_int} (looking back {days_int} day{'s' if days_int != 1 else ''})"
                     )
             else:
-                click.echo(f"   • Days: all open tasks (no date restriction)")
+                click.echo("   • Days: all open tasks (no date restriction)")
             click.echo(f"   • Status: {', '.join(status_list)}")
             click.echo(f"   • Max limit: {max_limit}")
             if label:
@@ -854,7 +868,7 @@ def fine_command():
 
         # Get all tasks first, then apply status filtering
         all_tasks = editor_manager.task_manager.list_tasks(include_completed=True)
-        
+
         # Apply status filtering first
         filtered_tasks = []
         for task in all_tasks:
@@ -871,20 +885,22 @@ def fine_command():
                     normalized_status_list.append("completed")
                 else:
                     normalized_status_list.append(status)
-            
+
             if "open" in normalized_status_list and task["completed_at"] is None:
                 filtered_tasks.append(task)
-            elif "completed" in normalized_status_list and task["completed_at"] is not None:
+            elif (
+                "completed" in normalized_status_list
+                and task["completed_at"] is not None
+            ):
                 filtered_tasks.append(task)
             elif "done" in normalized_status_list and task["completed_at"] is not None:
                 filtered_tasks.append(task)
             elif "all" in normalized_status_list:
                 filtered_tasks.append(task)
-        
+
         # Now apply additional filters
         if today:
             # Override to show only today's tasks
-            from datetime import date
             today_date = date.today()
             today_filtered_tasks = []
             for task in filtered_tasks:
@@ -906,12 +922,19 @@ def fine_command():
         elif date:
             # For date-based filtering, filter by date after status filtering
             from fincli.utils import filter_tasks_by_date_range
-            filtered_tasks = filter_tasks_by_date_range(filtered_tasks, target_date=date)
+
+            filtered_tasks = filter_tasks_by_date_range(
+                filtered_tasks, target_date=date
+            )
         elif label:
             # For label-based filtering, filter by label after status filtering
             label_filter = label[0] if label else None
             if label_filter:
-                filtered_tasks = [t for t in filtered_tasks if t.get("labels") and label_filter in t["labels"]]
+                filtered_tasks = [
+                    t
+                    for t in filtered_tasks
+                    if t.get("labels") and label_filter in t["labels"]
+                ]
         elif days is not None:
             # For days-based filtering, apply date filtering after status filtering
             from fincli.utils import filter_tasks_by_date_range
@@ -971,7 +994,6 @@ def fine_command():
             # Get the state before editing for comparison
             original_tasks = tasks.copy()
             original_completed = [t for t in original_tasks if t.get("completed_at")]
-            original_open = [t for t in original_tasks if not t.get("completed_at")]
 
             # Pass the already filtered tasks directly to avoid re-filtering
             (
@@ -1103,18 +1125,22 @@ def fins_command():
     )
     @click.option("--label", "-l", multiple=True, help="Filter by labels")
     @click.option(
-        "--today", "-t",
+        "--today",
+        "-t",
         is_flag=True,
         help="Show only today's tasks (overrides default days behavior)",
     )
     @click.option(
         "--status",
         "-s",
-        help="Filter by status(es): open/o, completed, done/d, all/a, or comma-separated list like 'done,open' (default: completed)",
+        help=(
+            "Filter by status(es): open/o, completed, done/d, all/a, or "
+            "comma-separated list like 'done,open' (default: completed)"
+        ),
     )
     @click.option(
         "--due",
-        help="Filter by due date: specific date (YYYY-MM-DD), 'overdue', 'today', 'week', or 'month'"
+        help="Filter by due date: specific date (YYYY-MM-DD), 'overdue', 'today', 'week', or 'month'",
     )
     @click.option(
         "--verbose",
@@ -1126,8 +1152,6 @@ def fins_command():
         """Query and display completed tasks, or add completed tasks."""
         # Set verbose environment variable for DatabaseManager
         if verbose:
-            import os
-
             os.environ["FIN_VERBOSE"] = "1"
 
         # Parse status parameter (allow comma-separated values with flexible spacing)
@@ -1167,19 +1191,19 @@ def fins_command():
 
         # Only show verbose information about filtering criteria when -v flag is used
         if verbose:
-            click.echo(f"🔍 Filtering criteria:")
+            click.echo("🔍 Filtering criteria:")
             if today:
-                click.echo(f"   • Today only (overrides days)")
+                click.echo("   • Today only (overrides days)")
             elif days is not None:
                 days_int = int(days)
                 if days_int == 0:
-                    click.echo(f"   • Days: all time (no date restriction)")
+                    click.echo("   • Days: all time (no date restriction)")
                 else:
                     click.echo(
                         f"   • Days: {days_int} (looking back {days_int} day{'s' if days_int != 1 else ''})"
                     )
             else:
-                click.echo(f"   • Days: 2 (default: today and yesterday)")
+                click.echo("   • Days: 2 (default: today and yesterday)")
             click.echo(f"   • Status: {', '.join(status_list)}")
             click.echo(f"   • Max limit: {max_limit}")
             if label:
@@ -1191,9 +1215,9 @@ def fins_command():
             config = Config()
             weekdays_only = config.get_weekdays_only_lookback()
             if weekdays_only:
-                click.echo(f"   • Weekdays only: True (Monday-Friday)")
+                click.echo("   • Weekdays only: True (Mon-Fri)")
             else:
-                click.echo(f"   • Weekdays only: False (all days)")
+                click.echo("   • Weekdays only: False (all days)")
             click.echo()
 
         # Get tasks (include completed tasks for status filtering)
@@ -1259,10 +1283,13 @@ def fins_command():
                     normalized_status_list.append("completed")
                 else:
                     normalized_status_list.append(status)
-            
+
             if "open" in normalized_status_list and task["completed_at"] is None:
                 filtered_tasks.append(task)
-            elif "completed" in normalized_status_list and task["completed_at"] is not None:
+            elif (
+                "completed" in normalized_status_list
+                and task["completed_at"] is not None
+            ):
                 filtered_tasks.append(task)
             elif "done" in normalized_status_list and task["completed_at"] is not None:
                 filtered_tasks.append(task)
@@ -1284,7 +1311,7 @@ def fins_command():
             label_filtered_tasks = []
             for task in filtered_tasks:
                 if task.get("labels"):
-                    task_labels = [l.lower() for l in task["labels"]]
+                    task_labels = [label.lower() for label in task["labels"]]
                     for requested_label in label:
                         if requested_label.lower() in task_labels:
                             label_filtered_tasks.append(task)
@@ -1293,16 +1320,14 @@ def fins_command():
 
         # Apply due date filtering if requested
         if due:
-            from fincli.utils import DateParser
-            from datetime import date, timedelta
-            
+
             due_filtered_tasks = []
             for task in filtered_tasks:
                 if not task.get("due_date"):
                     continue  # Skip tasks without due dates
-                    
+
                 task_matches = False
-                
+
                 if due == "overdue":
                     task_matches = DateParser.is_overdue(task["due_date"])
                 elif due == "today":
@@ -1316,15 +1341,15 @@ def fins_command():
                 else:
                     # Specific date format (YYYY-MM-DD)
                     try:
-                        due_date = datetime.strptime(due, "%Y-%m-%d").date()
+                        _ = datetime.strptime(due, "%Y-%m-%d").date()
                         task_matches = task["due_date"] == due
                     except ValueError:
                         # Invalid date format, skip this filter
                         continue
-                
+
                 if task_matches:
                     due_filtered_tasks.append(task)
-            
+
             filtered_tasks = due_filtered_tasks
 
         # Display tasks
@@ -1352,7 +1377,7 @@ def fins_command():
                             task["completed_at"].replace("Z", "+00:00")
                         )
                         date_display = f" {completed_dt.strftime('%Y-%m-%d')}"
-                    except:
+                    except (ValueError, TypeError):
                         # Fallback if date parsing fails
                         date_display = ""
 
@@ -1381,8 +1406,6 @@ def complete_task(task_identifier, verbose):
 
     # Set verbose environment variable for DatabaseManager
     if verbose:
-        import os
-
         os.environ["FIN_VERBOSE"] = "1"
 
     db_manager = DatabaseManager()
@@ -1398,7 +1421,7 @@ def complete_task(task_identifier, verbose):
         try:
             task_id = int(identifier)
             # Find task by ID
-            task = next((t for t in all_tasks if t["id"] == task_id), None)
+            task = next((task for task in all_tasks if task["id"] == task_id), None)
             if task:
                 if task["completed_at"]:
                     click.echo(f"⚠️  Task {task_id} is already completed")
@@ -1413,9 +1436,10 @@ def complete_task(task_identifier, verbose):
         except ValueError:
             # Treat as content pattern
             matching_tasks = [
-                t
-                for t in all_tasks
-                if identifier.lower() in t["content"].lower() and not t["completed_at"]
+                task
+                for task in all_tasks
+                if identifier.lower() in task["content"].lower()
+                and not task["completed_at"]
             ]
             if matching_tasks:
                 # Take the first matching task
@@ -1439,8 +1463,6 @@ def done_task(task_identifier, verbose):
     """Mark task(s) as completed by ID or content pattern (alias for complete)."""
     # Set verbose environment variable for DatabaseManager
     if verbose:
-        import os
-
         os.environ["FIN_VERBOSE"] = "1"
 
     # Reuse the complete logic
@@ -1464,7 +1486,7 @@ def done_task(task_identifier, verbose):
         try:
             task_id = int(identifier)
             # Find task by ID
-            task = next((t for t in all_tasks if t["id"] == task_id), None)
+            task = next((task for task in all_tasks if task["id"] == task_id), None)
             if task:
                 if task["completed_at"]:
                     click.echo(f"⚠️  Task {task_id} is already completed")
@@ -1479,9 +1501,10 @@ def done_task(task_identifier, verbose):
         except ValueError:
             # Treat as content pattern
             matching_tasks = [
-                t
-                for t in all_tasks
-                if identifier.lower() in t["content"].lower() and not t["completed_at"]
+                task
+                for task in all_tasks
+                if identifier.lower() in task["content"].lower()
+                and not task["completed_at"]
             ]
             if matching_tasks:
                 # Take the first matching task
@@ -1512,8 +1535,6 @@ def reopen_task(task_identifier, verbose):
 
     # Set verbose environment variable for DatabaseManager
     if verbose:
-        import os
-
         os.environ["FIN_VERBOSE"] = "1"
 
     db_manager = DatabaseManager()
@@ -1529,28 +1550,31 @@ def reopen_task(task_identifier, verbose):
         try:
             task_id = int(identifier)
             # Find task by ID
-            task = next((t for t in all_tasks if t["id"] == task_id), None)
+            task = next((task for task in all_tasks if task["id"] == task_id), None)
             if task:
                 if not task["completed_at"]:
                     click.echo(f"⚠️  Task {task_id} is already open")
                 else:
                     task_manager.update_task_completion(task_id, False)
-                    click.echo(f"✅ Reopened task {task_id}: {task['content']}")
+                    click.echo(f"✅ Reopened task {task_id}:")
+                    click.echo(f"   {task['content']}")
                     reopened_count += 1
             else:
                 click.echo(f"❌ Task {task_id} not found")
         except ValueError:
             # Treat as content pattern
             matching_tasks = [
-                t
-                for t in all_tasks
-                if identifier.lower() in t["content"].lower() and t["completed_at"]
+                task
+                for task in all_tasks
+                if identifier.lower() in task["content"].lower()
+                and task["completed_at"]
             ]
             if matching_tasks:
                 # Take the first matching task
                 task = matching_tasks[0]
                 task_manager.update_task_completion(task["id"], False)
-                click.echo(f"✅ Reopened task {task['id']}: {task['content']}")
+                click.echo(f"✅ Reopened task {task['id']}:")
+                click.echo(f"   {task['content']}")
                 reopened_count += 1
             else:
                 click.echo(f"❌ No completed tasks found containing '{identifier}'")
@@ -1573,8 +1597,6 @@ def toggle_task(task_identifier, verbose):
 
     # Set verbose environment variable for DatabaseManager
     if verbose:
-        import os
-
         os.environ["FIN_VERBOSE"] = "1"
 
     db_manager = DatabaseManager()
@@ -1590,7 +1612,7 @@ def toggle_task(task_identifier, verbose):
         try:
             task_id = int(identifier)
             # Find task by ID
-            task = next((t for t in all_tasks if t["id"] == task_id), None)
+            task = next((task for task in all_tasks if task["id"] == task_id), None)
             if task:
                 new_status = not task["completed_at"]
                 task_manager.update_task_completion(task_id, new_status)
@@ -1604,7 +1626,9 @@ def toggle_task(task_identifier, verbose):
         except ValueError:
             # Treat as content pattern
             matching_tasks = [
-                t for t in all_tasks if identifier.lower() in t["content"].lower()
+                task
+                for task in all_tasks
+                if identifier.lower() in task["content"].lower()
             ]
             if matching_tasks:
                 # Take the first matching task
@@ -2281,8 +2305,6 @@ def main():
     # If no arguments provided or only verbose/days flags, default to list behavior
     if not args or (args and all(arg in ["--verbose", "-v"] for arg in args)):
         if verbose:
-            import os
-
             os.environ["FIN_VERBOSE"] = "1"
 
         db_manager = DatabaseManager()
@@ -2313,8 +2335,8 @@ def main():
                 tasks = tasks[:max_limit]
 
             if verbose:
-                click.echo(f"🔍 Default filtering criteria:")
-                click.echo(f"   • Status: open (all open tasks)")
+                click.echo("🔍 Default filtering criteria:")
+                click.echo("   • Status: open (all open tasks)")
                 click.echo(f"   • Max limit: {max_limit}")
                 if total_tasks > max_limit:
                     click.echo(f"   • Total available: {total_tasks}")
@@ -2330,7 +2352,7 @@ def main():
             tasks = [task for task in tasks if task["completed_at"] is None]
 
             if verbose:
-                click.echo(f"🔍 Default filtering criteria:")
+                click.echo("🔍 Default filtering criteria:")
                 if days_arg is not None:
                     click.echo(
                         f"   • Days: {days} (looking back {days} day{'s' if days != 1 else ''})"
@@ -2339,11 +2361,11 @@ def main():
                     click.echo(
                         f"   • Days: {days} (looking back {days} day{'s' if days != 1 else ''})"
                     )
-                click.echo(f"   • Status: open")
+                click.echo("   • Status: open")
                 if weekdays_only:
-                    click.echo(f"   • Weekdays only: True (Monday-Friday)")
+                    click.echo("   • Weekdays only: True (Mon-Fri)")
                 else:
-                    click.echo(f"   • Weekdays only: False (all days)")
+                    click.echo("   • Weekdays only: False (all days)")
                 click.echo()
 
         if not tasks:

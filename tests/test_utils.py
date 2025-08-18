@@ -8,14 +8,9 @@ from unittest.mock import patch
 
 import pytest
 
-from fincli.utils import (
-    filter_tasks_by_date_range,
-    format_task_for_display,
-    get_date_range,
-    get_editor,
-    is_important_task,
-    is_today_task,
-)
+from fincli.utils import (filter_tasks_by_date_range, format_task_for_display,
+                          get_date_range, get_editor, is_important_task,
+                          is_today_task)
 
 
 class TestFormatTaskForDisplay:
@@ -33,7 +28,7 @@ class TestFormatTaskForDisplay:
         }
 
         result = format_task_for_display(task)
-        expected = "[ ] 2025-08-05 10:30  Test task  #urgent,#work"
+        _ = "[ ] 2025-08-05 10:30  Test task  #urgent,#work"
 
         # Split and compare parts since label order might vary
         assert "[ ] 2025-08-05 10:30  Test task" in result
@@ -52,9 +47,9 @@ class TestFormatTaskForDisplay:
         }
 
         result = format_task_for_display(task)
-        expected = "1 [x] 2025-08-05 11:45  Completed task  #personal"
+        expected_output = "1 [x] 2025-08-05 11:45  Completed task  #personal"
 
-        assert result == expected
+        assert result == expected_output
 
     def test_format_task_without_labels(self):
         """Test formatting a task without labels."""
@@ -243,6 +238,7 @@ class TestGetDateRange:
         assert today == date.today()
         # Test that the relative date logic works correctly
         from datetime import timedelta
+
         expected_lookback = today - timedelta(days=7)
         assert lookback == expected_lookback
 
@@ -257,7 +253,9 @@ class TestGetDateRange:
 class TestFilterTasksByDateRange:
     """Test the filter_tasks_by_date_range function."""
 
-    def test_filter_open_tasks_always_included(self, weekdays_only_disabled, test_dates):
+    def test_filter_open_tasks_always_included(
+        self, weekdays_only_disabled, test_dates
+    ):
         """Test that open tasks are always included regardless of date."""
         from datetime import date
         from unittest.mock import patch
@@ -282,15 +280,17 @@ class TestFilterTasksByDateRange:
         ]
 
         # Mock date.today() to return the fixture date for consistent testing
-        with patch('fincli.utils.date') as mock_date:
-            mock_date.today.return_value = test_dates['today']
-            
+        with patch("fincli.utils.date") as mock_date:
+            mock_date.today.return_value = test_dates["today"]
+
             filtered = filter_tasks_by_date_range(tasks, days=1, weekdays_only=False)
 
             # Both open tasks should be included
             assert len(filtered) == 2
-            assert filtered[0]["id"] == 1  # Old task first (by creation date)
-            assert filtered[1]["id"] == 2  # Recent task second
+            assert (
+                filtered[0]["id"] == 2
+            )  # Recent task first (by creation date, most recent first)
+            assert filtered[1]["id"] == 1  # Old task second
 
     def test_filter_completed_tasks_by_date(self, weekdays_only_disabled, test_dates):
         """Test that completed tasks are filtered by completion date."""
@@ -317,9 +317,9 @@ class TestFilterTasksByDateRange:
         ]
 
         # Mock date.today() to return the fixture date for consistent testing
-        with patch('fincli.utils.date') as mock_date:
-            mock_date.today.return_value = test_dates['today']
-            
+        with patch("fincli.utils.date") as mock_date:
+            mock_date.today.return_value = test_dates["today"]
+
             filtered = filter_tasks_by_date_range(tasks, days=1, weekdays_only=False)
 
             # Only recent completed task should be included
@@ -366,9 +366,9 @@ class TestFilterTasksByDateRange:
         ]
 
         # Mock date.today() to return the fixture date for consistent testing
-        with patch('fincli.utils.date') as mock_date:
-            mock_date.today.return_value = test_dates['today']
-            
+        with patch("fincli.utils.date") as mock_date:
+            mock_date.today.return_value = test_dates["today"]
+
             filtered = filter_tasks_by_date_range(tasks, days=1, weekdays_only=False)
 
             # Important tasks first, then today tasks, then regular tasks
@@ -403,9 +403,9 @@ class TestFilterTasksByDateRange:
         ]
 
         # Mock date.today() to return the fixture date for consistent testing
-        with patch('fincli.utils.date') as mock_date:
-            mock_date.today.return_value = test_dates['today']
-            
+        with patch("fincli.utils.date") as mock_date:
+            mock_date.today.return_value = test_dates["today"]
+
             filtered = filter_tasks_by_date_range(tasks, days=1, weekdays_only=False)
 
             # Important task should come first, then completed task

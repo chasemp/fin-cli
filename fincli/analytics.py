@@ -152,39 +152,45 @@ class AnalyticsManager:
     def _get_due_date_overdue_tasks(self, tasks: List[Dict]) -> List[Dict]:
         """Get tasks that are overdue based on due dates."""
         from .utils import DateParser
-        
+
         overdue = []
         for task in tasks:
-            if not task["completed_at"] and task.get("due_date"):  # Only open tasks with due dates
+            if not task["completed_at"] and task.get(
+                "due_date"
+            ):  # Only open tasks with due dates
                 if DateParser.is_overdue(task["due_date"]):
                     overdue.append(task)
-        
+
         return overdue
 
     def _get_due_soon_tasks(self, tasks: List[Dict], days: int = 7) -> List[Dict]:
         """Get tasks that are due soon (within specified days)."""
         from .utils import DateParser
-        
+
         due_soon = []
         for task in tasks:
-            if not task["completed_at"] and task.get("due_date"):  # Only open tasks with due dates
+            if not task["completed_at"] and task.get(
+                "due_date"
+            ):  # Only open tasks with due dates
                 if DateParser.is_due_soon(task["due_date"], days):
                     due_soon.append(task)
-        
+
         return due_soon
 
     def _get_due_today_tasks(self, tasks: List[Dict]) -> List[Dict]:
         """Get tasks that are due today."""
         from .utils import DateParser
-        
+
         due_today = []
         today = date.today().strftime("%Y-%m-%d")
-        
+
         for task in tasks:
-            if not task["completed_at"] and task.get("due_date"):  # Only open tasks with due dates
+            if not task["completed_at"] and task.get(
+                "due_date"
+            ):  # Only open tasks with due dates
                 if task["due_date"] == today:
                     due_today.append(task)
-        
+
         return due_today
 
     def _get_recurring_tasks(self, tasks: List[Dict]) -> List[Dict]:
@@ -260,8 +266,37 @@ Top labels today:
 {self._format_label_summary_md(stats['by_label'])}"""
 
         elif format == "csv":
-            return f"""Date,Period,Total Tasks,Open Tasks,Completed Tasks,Today Created,Today Completed,Overdue 3 Days,Due Today,Overdue Due Dates,Recurring Tasks
-{date.today().strftime("%Y-%m-%d")},Daily,{stats["total_tasks"]},{stats["open_tasks"]},{stats["completed_tasks"]},{stats["today"]["created"]},{stats["today"]["completed"]},{len(stats["overdue"]["3_days"])},{len(stats["due_dates"]["due_today"])},{len(stats["due_dates"]["overdue"])},{len(stats["recurring"])}"""
+            header = ",".join(
+                [
+                    "Date",
+                    "Period",
+                    "Total Tasks",
+                    "Open Tasks",
+                    "Completed Tasks",
+                    "Today Created",
+                    "Today Completed",
+                    "Overdue 3 Days",
+                    "Due Today",
+                    "Overdue Due Dates",
+                    "Recurring Tasks",
+                ]
+            )
+            row = ",".join(
+                [
+                    date.today().strftime("%Y-%m-%d"),
+                    "Daily",
+                    str(stats["total_tasks"]),
+                    str(stats["open_tasks"]),
+                    str(stats["completed_tasks"]),
+                    str(stats["today"]["created"]),
+                    str(stats["today"]["completed"]),
+                    str(len(stats["overdue"]["3_days"])),
+                    str(len(stats["due_dates"]["due_today"])),
+                    str(len(stats["due_dates"]["overdue"])),
+                    str(len(stats["recurring"])),
+                ]
+            )
+            return f"{header}\n{row}"
 
         return ""
 
@@ -294,8 +329,37 @@ Top labels this week:
 ## Top Labels
 {self._format_label_summary_md(stats['by_label'])}"""
         elif format == "csv":
-            return f"""Date,Period,Total Tasks,Open Tasks,Completed Tasks,Today Created,Today Completed,Overdue 3 Days,Overdue 7 Days,Overdue 30 Days,Recurring Tasks
-{date.today().strftime("%Y-%m-%d")},Weekly,{stats["total_tasks"]},{stats["open_tasks"]},{stats["completed_tasks"]},{stats["this_week"]["created"]},{stats["this_week"]["completed"]},{len(stats["overdue"]["3_days"])},{len(stats["overdue"]["7_days"])},{len(stats["overdue"]["30_days"])},{len(stats["recurring"])}"""
+            header = ",".join(
+                [
+                    "Date",
+                    "Period",
+                    "Total Tasks",
+                    "Open Tasks",
+                    "Completed Tasks",
+                    "Today Created",
+                    "Today Completed",
+                    "Overdue 3 Days",
+                    "Overdue 7 Days",
+                    "Overdue 30 Days",
+                    "Recurring Tasks",
+                ]
+            )
+            row = ",".join(
+                [
+                    date.today().strftime("%Y-%m-%d"),
+                    "Weekly",
+                    str(stats["total_tasks"]),
+                    str(stats["open_tasks"]),
+                    str(stats["completed_tasks"]),
+                    str(stats["this_week"]["created"]),
+                    str(stats["this_week"]["completed"]),
+                    str(len(stats["overdue"]["3_days"])),
+                    str(len(stats["overdue"]["7_days"])),
+                    str(len(stats["overdue"]["30_days"])),
+                    str(len(stats["recurring"])),
+                ]
+            )
+            return f"{header}\n{row}"
 
         return ""
 
@@ -396,9 +460,38 @@ Top labels this month:
 
         stats = self.get_task_counts(30)
 
-        csv_content = f"""Date,Period,Total Tasks,Open Tasks,Completed Tasks,Today Created,Today Completed,Overdue 3 Days,Overdue 7 Days,Overdue 30 Days,Recurring Tasks
-{date.today().strftime('%Y-%m-%d')},Daily,{stats['total_tasks']},{stats['open_tasks']},{stats['completed_tasks']},{stats['today']['created']},{stats['today']['completed']},{len(stats['overdue']['3_days'])},{len(stats['overdue']['7_days'])},{len(stats['overdue']['30_days'])},{len(stats['recurring'])}
-"""
+        header = ",".join(
+            [
+                "Date",
+                "Period",
+                "Total Tasks",
+                "Open Tasks",
+                "Completed Tasks",
+                "Today Created",
+                "Today Completed",
+                "Overdue 3 Days",
+                "Overdue 7 Days",
+                "Overdue 30 Days",
+                "Recurring Tasks",
+            ]
+        )
+        row = ",".join(
+            [
+                date.today().strftime("%Y-%m-%d"),
+                "Daily",
+                str(stats["total_tasks"]),
+                str(stats["open_tasks"]),
+                str(stats["completed_tasks"]),
+                str(stats["today"]["created"]),
+                str(stats["today"]["completed"]),
+                str(len(stats["overdue"]["3_days"])),
+                str(len(stats["overdue"]["7_days"])),
+                str(len(stats["overdue"]["30_days"])),
+                str(len(stats["recurring"])),
+            ]
+        )
+
+        csv_content = f"{header}\n{row}\n"
 
         # Write to file
         with open(filename, "w") as f:

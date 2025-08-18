@@ -23,7 +23,10 @@ class TestIntakeModule:
     def test_import_from_source_valid_source(self):
         """Test importing from a valid source."""
         with patch("fincli.intake.SOURCES") as mock_sources:
-            mock_importer = lambda **kwargs: {"imported": 5, "errors": []}
+
+            def mock_importer(**kwargs):
+                return {"imported": 5, "errors": []}
+
             mock_sources.__contains__.return_value = True
             mock_sources.__getitem__.return_value = mock_importer
 
@@ -40,7 +43,10 @@ class TestIntakeModule:
     def test_import_from_source_passes_kwargs(self):
         """Test that kwargs are passed to the importer function."""
         with patch("fincli.intake.SOURCES") as mock_sources:
-            mock_importer = lambda **kwargs: kwargs
+
+            def mock_importer(**kwargs):
+                return kwargs
+
             mock_sources.__contains__.return_value = True
             mock_sources.__getitem__.return_value = mock_importer
 
@@ -151,10 +157,10 @@ class TestImportErrorHandling:
     def test_import_from_source_with_errors(self):
         """Test import with errors."""
         with patch("fincli.intake.SOURCES") as mock_sources:
-            mock_importer = lambda **kwargs: {
-                "imported": 0,
-                "errors": ["File not found"],
-            }
+
+            def mock_importer(**kwargs):
+                return {"imported": 0, "errors": ["File not found"]}
+
             mock_sources.__contains__.return_value = True
             mock_sources.__getitem__.return_value = mock_importer
 

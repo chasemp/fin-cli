@@ -194,9 +194,10 @@ class TestCLI:
         sys.argv = ["fin", "Test task #and"]
 
         try:
-            from fincli.cli import main
             import io
             from contextlib import redirect_stdout
+
+            from fincli.cli import main
 
             # Capture stdout and catch SystemExit
             f = io.StringIO()
@@ -235,9 +236,10 @@ class TestCLI:
         sys.argv = ["fin", "Test task #or"]
 
         try:
-            from fincli.cli import main
             import io
             from contextlib import redirect_stdout
+
+            from fincli.cli import main
 
             # Capture stdout and catch SystemExit
             f = io.StringIO()
@@ -278,9 +280,10 @@ class TestCLI:
         sys.argv = ["fin", "Test task #AND"]
 
         try:
-            from fincli.cli import main
             import io
             from contextlib import redirect_stdout
+
+            from fincli.cli import main
 
             # Capture stdout and catch SystemExit
             f = io.StringIO()
@@ -311,9 +314,10 @@ class TestCLI:
         sys.argv = ["fin", "Test task #work"]
 
         try:
-            from fincli.cli import main
             import io
             from contextlib import redirect_stdout
+
+            from fincli.cli import main
 
             # Capture stdout
             f = io.StringIO()
@@ -341,9 +345,10 @@ class TestCLI:
         sys.argv = ["fin", "Test task #ref"]
 
         try:
-            from fincli.cli import main
             import io
             from contextlib import redirect_stdout
+
+            from fincli.cli import main
 
             # Capture stdout and catch SystemExit
             f = io.StringIO()
@@ -375,9 +380,10 @@ class TestCLI:
         sys.argv = ["fin", "Test task #due"]
 
         try:
-            from fincli.cli import main
             import io
             from contextlib import redirect_stdout
+
+            from fincli.cli import main
 
             # Capture stdout and catch SystemExit
             f = io.StringIO()
@@ -409,9 +415,10 @@ class TestCLI:
         sys.argv = ["fin", "Test task #not"]
 
         try:
-            from fincli.cli import main
             import io
             from contextlib import redirect_stdout
+
+            from fincli.cli import main
 
             # Capture stdout and catch SystemExit
             f = io.StringIO()
@@ -443,9 +450,10 @@ class TestCLI:
         sys.argv = ["fin", "Project deadline #due:2025-08-10"]
 
         try:
-            from fincli.cli import main
             import io
             from contextlib import redirect_stdout
+
+            from fincli.cli import main
 
             # Capture stdout
             f = io.StringIO()
@@ -473,9 +481,10 @@ class TestCLI:
         sys.argv = ["fin", "Daily standup #recur:daily"]
 
         try:
-            from fincli.cli import main
             import io
             from contextlib import redirect_stdout
+
+            from fincli.cli import main
 
             # Capture stdout
             f = io.StringIO()
@@ -503,9 +512,10 @@ class TestCLI:
         sys.argv = ["fin", "Implement feature #depends:task123"]
 
         try:
-            from fincli.cli import main
             import io
             from contextlib import redirect_stdout
+
+            from fincli.cli import main
 
             # Capture stdout
             f = io.StringIO()
@@ -539,10 +549,12 @@ class TestCLI:
         ]
 
         try:
-            from fincli.cli import main
             import io
             from contextlib import redirect_stdout
+
             from click.exceptions import Exit
+
+            from fincli.cli import main
 
             # Add test tasks
             for task_args in test_tasks:
@@ -594,10 +606,12 @@ class TestCLI:
         ]
 
         try:
-            from fincli.cli import main
             import io
             from contextlib import redirect_stdout
+
             from click.exceptions import Exit
+
+            from fincli.cli import main
 
             # Add test tasks
             for task_args in test_tasks:
@@ -647,10 +661,12 @@ class TestCLI:
         ]
 
         try:
-            from fincli.cli import main
             import io
             from contextlib import redirect_stdout
+
             from click.exceptions import Exit
+
+            from fincli.cli import main
 
             # Add test tasks
             for task_args in test_tasks:
@@ -684,14 +700,12 @@ class TestCLIExecution:
 
     def test_cli_execution_basic(self, temp_db_path, monkeypatch):
         """Test basic CLI execution via subprocess."""
-        # Set up environment
-        monkeypatch.setenv("FIN_DB_PATH", temp_db_path)
-
         # Test CLI help
         result = subprocess.run(
             [sys.executable, "-m", "fincli.cli", "--help"],
             capture_output=True,
             text=True,
+            env={"FIN_DB_PATH": temp_db_path},
         )
 
         assert result.returncode == 0
@@ -702,6 +716,7 @@ class TestCLIExecution:
             [sys.executable, "-m", "fincli.cli", "add-task", "Integration test task"],
             capture_output=True,
             text=True,
+            env={"FIN_DB_PATH": temp_db_path},
         )
 
         assert result.returncode == 0
@@ -709,9 +724,6 @@ class TestCLIExecution:
 
     def test_cli_execution_with_labels(self, temp_db_path, monkeypatch):
         """Test CLI execution with labels."""
-        # Set up environment
-        monkeypatch.setenv("FIN_DB_PATH", temp_db_path)
-
         # Test adding a task with labels
         result = subprocess.run(
             [
@@ -727,6 +739,7 @@ class TestCLIExecution:
             ],
             capture_output=True,
             text=True,
+            env={"FIN_DB_PATH": temp_db_path},
         )
 
         assert result.returncode == 0
@@ -736,14 +749,12 @@ class TestCLIExecution:
 
     def test_cli_execution_error_handling(self, temp_db_path, monkeypatch):
         """Test CLI error handling."""
-        # Set up environment
-        monkeypatch.setenv("FIN_DB_PATH", temp_db_path)
-
         # Test missing argument
         result = subprocess.run(
             [sys.executable, "-m", "fincli.cli", "add-task"],
             capture_output=True,
             text=True,
+            env={"FIN_DB_PATH": temp_db_path},
         )
 
         assert result.returncode != 0
@@ -751,14 +762,12 @@ class TestCLIExecution:
 
     def test_cli_execution_help(self, temp_db_path, monkeypatch):
         """Test CLI help execution."""
-        # Set up environment
-        monkeypatch.setenv("FIN_DB_PATH", temp_db_path)
-
         # Test help command
         result = subprocess.run(
             [sys.executable, "-m", "fincli.cli", "--help"],
             capture_output=True,
             text=True,
+            env={"FIN_DB_PATH": temp_db_path},
         )
 
         assert result.returncode == 0

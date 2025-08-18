@@ -626,8 +626,10 @@ Invalid line without proper format
         # Test filtering by today's date - use the actual creation date of the task
         # Get the actual task to see its creation timestamp
         actual_task = task_manager.get_task(1)  # First task
-        actual_created_date = actual_task["created_at"].split(" ")[0]  # Extract date part
-        
+        actual_created_date = actual_task["created_at"].split(" ")[
+            0
+        ]  # Extract date part
+
         today_tasks = editor_manager.get_tasks_for_editing(
             target_date=actual_created_date
         )
@@ -858,11 +860,11 @@ Invalid line without proper format
         editor_manager = EditorManager(db_manager)
 
         # Add a task
-        task_id = task_manager.add_task("Test task", labels=["work"])
+        task_manager.add_task("Test task", labels=["work"])
 
         # Create content
         tasks = editor_manager.get_tasks_for_editing(label="work")
-        original_content = editor_manager.create_edit_file_content(tasks)
+        _ = editor_manager.create_edit_file_content(tasks)
 
         # Test various edge cases
         edge_cases = [
@@ -969,7 +971,7 @@ Invalid line without proper format
             tasks = editor_manager.get_tasks_for_editing(label=label)
             original_tasks.extend(tasks)
         original_completed = [t for t in original_tasks if t.get("completed_at")]
-        original_open = [t for t in original_tasks if not t.get("completed_at")]
+        _ = [t for t in original_tasks if not t.get("completed_at")]
 
         # Create content for editing
         all_tasks = []

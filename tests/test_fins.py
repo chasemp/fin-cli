@@ -2,10 +2,10 @@
 Tests for fins command functionality.
 """
 
+import re
 import subprocess
 import sys
-from datetime import date, timedelta, datetime
-import re
+from datetime import date
 
 from fincli.cli import list_tasks
 from fincli.db import DatabaseManager
@@ -63,12 +63,12 @@ class TestFinsCommand:
 
     def test_get_date_range(self, test_dates):
         """Test get_date_range function."""
-        from fincli.utils import get_date_range
 
         today, lookback_date = get_date_range(days=1, weekdays_only=False)
         assert today == date.today()
         # Test that the relative date logic works correctly
         from datetime import timedelta
+
         expected_lookback = today - timedelta(days=1)
         assert lookback_date == expected_lookback
 
@@ -103,7 +103,9 @@ class TestFinsCommand:
         assert "Today's task" in formatted_tasks[0]
         assert formatted_tasks[0].startswith(f"{task_id} [ ]")
 
-    def test_query_tasks_yesterday_completed(self, temp_db_path, monkeypatch, test_dates):
+    def test_query_tasks_yesterday_completed(
+        self, temp_db_path, monkeypatch, test_dates
+    ):
         """Test querying tasks from yesterday that are completed."""
         # Mock the database path
         monkeypatch.setattr(
@@ -132,15 +134,16 @@ class TestFinsCommand:
             conn.commit()
 
         # Test that filtering works correctly
-        from fincli.utils import filter_tasks_by_date_range
         from unittest.mock import patch
 
+        from fincli.utils import filter_tasks_by_date_range
+
         all_tasks = task_manager.list_tasks(include_completed=True)
-        
+
         # Mock date.today() in the utils module for consistent testing
-        with patch('fincli.utils.date') as mock_date:
-            mock_date.today.return_value = test_dates['today']
-            
+        with patch("fincli.utils.date") as mock_date:
+            mock_date.today.return_value = test_dates["today"]
+
             filtered_tasks = filter_tasks_by_date_range(all_tasks, days=1)
 
             # Should include yesterday's completed task
@@ -183,52 +186,49 @@ class TestFinsCommand:
             conn.commit()
 
         # Test that filtering works correctly
-        from fincli.utils import filter_tasks_by_date_range
         from unittest.mock import patch
 
+        from fincli.utils import filter_tasks_by_date_range
+
         all_tasks = task_manager.list_tasks(include_completed=True)
-        
+
         # Mock date.today() in the utils module for consistent testing
-        with patch('fincli.utils.date') as mock_date:
-            mock_date.today.return_value = test_dates['today']
-            
+        with patch("fincli.utils.date") as mock_date:
+            mock_date.today.return_value = test_dates["today"]
+
             filtered_tasks = filter_tasks_by_date_range(all_tasks, days=7)
 
-                    # Should include both tasks when using 7 days
+            # Should include both tasks when using 7 days
         assert len(filtered_tasks) >= 1
         formatted_tasks = [format_task_for_display(task) for task in filtered_tasks]
-        
+
         # Check that the completed task from yesterday is included
         assert any("Yesterday's task" in task for task in formatted_tasks)
-        
+
         # The "Today's task" might not be included if it was created outside the 7-day window
         # This depends on when the test runs vs when the task was created
         # The important thing is that the filtering logic works correctly
 
-    def test_fins_command_help(self, cli_runner):
+    def test_fins_command_help(self, isolated_cli_runner):
         """Test fins command help."""
-        result = cli_runner.invoke(list_tasks, ["--help"])
+        result = isolated_cli_runner.invoke(list_tasks, ["--help"])
         assert result.exit_code == 0
         assert "List tasks with optional filtering" in result.output
 
-    def test_fins_command_no_tasks(self, cli_runner, temp_db_path, monkeypatch):
+    def test_fins_command_no_tasks(
+        self, isolated_cli_runner, temp_db_path, monkeypatch
+    ):
         """Test fins command with no tasks."""
         # Set up empty database
-        import os
-
-        os.environ["FIN_DB_PATH"] = temp_db_path
-
-        result = cli_runner.invoke(list_tasks)
+        result = isolated_cli_runner.invoke(list_tasks)
         assert result.exit_code == 0
         assert "📝 No tasks found matching your criteria." in result.output
 
-    def test_fins_command_with_tasks(self, cli_runner, temp_db_path, monkeypatch):
+    def test_fins_command_with_tasks(
+        self, isolated_cli_runner, temp_db_path, monkeypatch
+    ):
         """Test fins command with tasks."""
         # Set up database with tasks
-        import os
-
-        os.environ["FIN_DB_PATH"] = temp_db_path
-
         from fincli.db import DatabaseManager
         from fincli.tasks import TaskManager
 
@@ -236,7 +236,7 @@ class TestFinsCommand:
         task_manager = TaskManager(db_manager)
         task_manager.add_task("Test task", labels=["work"])
 
-        result = cli_runner.invoke(list_tasks)
+        result = isolated_cli_runner.invoke(list_tasks)
         assert result.exit_code == 0
         assert "Test task" in result.output
 
@@ -247,10 +247,6 @@ class TestFinsIntegration:
     def test_fins_cli_execution(self, temp_db_path, monkeypatch):
         """Test fins command execution via subprocess."""
         # Set up database with tasks
-        import os
-
-        os.environ["FIN_DB_PATH"] = temp_db_path
-
         from fincli.db import DatabaseManager
         from fincli.tasks import TaskManager
 
@@ -272,10 +268,6 @@ class TestFinsIntegration:
     def test_fins_days_flag(self, temp_db_path, monkeypatch, test_dates):
         """Test fins command with days flag."""
         # Set up database with tasks
-        import os
-
-        os.environ["FIN_DB_PATH"] = temp_db_path
-
         from fincli.db import DatabaseManager
         from fincli.tasks import TaskManager
 
@@ -310,11 +302,11 @@ class TestFinsIntegration:
         # Test that the command works with days flag
         import subprocess
         from unittest.mock import patch
-        
+
         # Mock date.today() in the utils module before running the CLI command
-        with patch('fincli.utils.date') as mock_date:
-            mock_date.today.return_value = test_dates['today']
-            
+        with patch("fincli.utils.date") as mock_date:
+            mock_date.today.return_value = test_dates["today"]
+
             result = subprocess.run(
                 [
                     sys.executable,
@@ -340,10 +332,6 @@ class TestFinsIntegration:
     def test_fins_output_format(self, temp_db_path, monkeypatch):
         """Test fins output format."""
         # Set up database with tasks
-        import os
-
-        os.environ["FIN_DB_PATH"] = temp_db_path
-
         from fincli.db import DatabaseManager
         from fincli.tasks import TaskManager
 
@@ -395,13 +383,11 @@ class TestFinsStandaloneCommand:
         assert result.exit_code == 0
         assert "Query and display completed tasks" in result.output
 
-    def test_fins_command_default_behavior(self, cli_runner, temp_db_path, monkeypatch, test_dates):
+    def test_fins_command_default_behavior(
+        self, isolated_cli_runner, temp_db_path, monkeypatch, test_dates
+    ):
         """Test fins command default behavior (completed tasks from past 7 days)."""
         # Set up database with completed tasks
-        import os
-
-        os.environ["FIN_DB_PATH"] = temp_db_path
-
         import sqlite3
         from datetime import datetime, timedelta
 
@@ -426,28 +412,27 @@ class TestFinsStandaloneCommand:
             conn.commit()
 
         # Test by calling the underlying functionality directly
-        from fincli.utils import filter_tasks_by_date_range
         from unittest.mock import patch
 
+        from fincli.utils import filter_tasks_by_date_range
+
         all_tasks = task_manager.list_tasks(include_completed=True)
-        
+
         # Mock date.today() in the utils module for consistent testing
-        with patch('fincli.utils.date') as mock_date:
-            mock_date.today.return_value = test_dates['today']
-            
+        with patch("fincli.utils.date") as mock_date:
+            mock_date.today.return_value = test_dates["today"]
+
             filtered_tasks = filter_tasks_by_date_range(all_tasks, days=7)
 
             assert len(filtered_tasks) == 1
             assert filtered_tasks[0]["content"] == "Completed task"
             assert filtered_tasks[0]["completed_at"] is not None
 
-    def test_fins_command_today_flag(self, cli_runner, temp_db_path, monkeypatch, test_dates):
+    def test_fins_command_today_flag(
+        self, isolated_cli_runner, temp_db_path, monkeypatch, test_dates
+    ):
         """Test fins command with --today flag."""
         # Set up database with completed tasks
-        import os
-
-        os.environ["FIN_DB_PATH"] = temp_db_path
-
         import sqlite3
         from datetime import datetime, timedelta
 
@@ -499,13 +484,11 @@ class TestFinsStandaloneCommand:
         # Should not include yesterday's task when using --today logic
         assert len(filtered_tasks) == 0
 
-    def test_fins_command_label_filter(self, cli_runner, temp_db_path, monkeypatch, test_dates):
+    def test_fins_command_label_filter(
+        self, isolated_cli_runner, temp_db_path, monkeypatch, test_dates
+    ):
         """Test fins command with label filtering."""
         # Set up database with completed tasks
-        import os
-
-        os.environ["FIN_DB_PATH"] = temp_db_path
-
         import sqlite3
         from datetime import datetime, timedelta
 
@@ -532,15 +515,16 @@ class TestFinsStandaloneCommand:
             conn.commit()
 
         # Test by calling the underlying functionality directly
-        from fincli.utils import filter_tasks_by_date_range
         from unittest.mock import patch
 
+        from fincli.utils import filter_tasks_by_date_range
+
         all_tasks = task_manager.list_tasks(include_completed=True)
-        
+
         # Mock date.today() in the utils module for consistent testing
-        with patch('fincli.utils.date') as mock_date:
-            mock_date.today.return_value = test_dates['today']
-            
+        with patch("fincli.utils.date") as mock_date:
+            mock_date.today.return_value = test_dates["today"]
+
             filtered_tasks = filter_tasks_by_date_range(all_tasks, days=7)
 
             # Apply label filtering manually
@@ -560,14 +544,14 @@ class TestFinsStandaloneCommand:
             assert len(personal_tasks) == 1
             assert personal_tasks[0]["content"] == "Personal task"
 
-    def test_fins_command_no_tasks(self, cli_runner, temp_db_path, monkeypatch):
+    def test_fins_command_no_tasks(
+        self, isolated_cli_runner, temp_db_path, monkeypatch
+    ):
         """Test fins command with no tasks."""
         # Set up empty database
-        import os
+        import sqlite3
+        from datetime import datetime, timedelta
 
-        os.environ["FIN_DB_PATH"] = temp_db_path
-
-        # Test by calling the underlying functionality directly
         from fincli.db import DatabaseManager
         from fincli.tasks import TaskManager
         from fincli.utils import filter_tasks_by_date_range
@@ -582,9 +566,8 @@ class TestFinsStandaloneCommand:
     def test_days_parameter_edge_cases(self, temp_db_path, monkeypatch, test_dates):
         """Test --days parameter with edge cases."""
         # Set up database with tasks
-        import os
-
-        os.environ["FIN_DB_PATH"] = temp_db_path
+        import sqlite3
+        from datetime import datetime, timedelta
 
         from fincli.db import DatabaseManager
         from fincli.tasks import TaskManager
@@ -594,14 +577,11 @@ class TestFinsStandaloneCommand:
         task_manager = TaskManager(db_manager)
 
         # Add tasks from different days
-        task1_id = task_manager.add_task("Today's task", labels=["work"])
+        _ = task_manager.add_task("Today's task", labels=["work"])
         task2_id = task_manager.add_task("Yesterday's task", labels=["personal"])
         task3_id = task_manager.add_task("Week ago task", labels=["urgent"])
 
         # Mark some as completed
-        import sqlite3
-        from datetime import datetime, timedelta
-
         # Use test_dates fixture for consistent dates
         yesterday = test_dates["yesterday"]
         week_ago = test_dates["last_week"]
@@ -620,18 +600,21 @@ class TestFinsStandaloneCommand:
 
         # Test days=0 (only today)
         all_tasks = task_manager.list_tasks(include_completed=True)
-        
+
         # Mock date.today() in the utils module for consistent testing
         from unittest.mock import patch
-        with patch('fincli.utils.date') as mock_date:
-            mock_date.today.return_value = test_dates['today']
-            
+
+        with patch("fincli.utils.date") as mock_date:
+            mock_date.today.return_value = test_dates["today"]
+
             filtered_tasks = filter_tasks_by_date_range(all_tasks, days=0)
             today_tasks = [t for t in filtered_tasks if "Today's task" in t["content"]]
             # The "Today's task" might not be included if it was created outside the 0-day window
             # This depends on when the test runs vs when the task was created
             # The important thing is that the filtering logic works correctly
-            assert len(today_tasks) >= 0  # The task might not be included depending on timing
+            assert (
+                len(today_tasks) >= 0
+            )  # The task might not be included depending on timing
 
             # Test days=1 (today and yesterday)
             filtered_tasks = filter_tasks_by_date_range(all_tasks, days=1)
@@ -643,7 +626,9 @@ class TestFinsStandaloneCommand:
             # The "Today's task" might not be included if it was created outside the 1-day window
             # This depends on when the test runs vs when the task was created
             # The important thing is that the filtering logic works correctly
-            assert len(recent_tasks) >= 1  # At least the completed task should be included
+            assert (
+                len(recent_tasks) >= 1
+            )  # At least the completed task should be included
 
             # Test days=7 (past week)
             filtered_tasks = filter_tasks_by_date_range(all_tasks, days=7)
@@ -655,15 +640,13 @@ class TestFinsStandaloneCommand:
             # The "Today's task" might not be included if it was created outside the 30-day window
             # This depends on when the test runs vs when the task was created
             # The important thing is that the filtering logic works correctly
-            assert len(filtered_tasks) >= 2  # At least the completed tasks should be included
+            assert (
+                len(filtered_tasks) >= 2
+            )  # At least the completed tasks should be included
 
     def test_days_parameter_with_cli(self, temp_db_path, monkeypatch, test_dates):
         """Test --days parameter through CLI commands."""
         # Set up database with tasks
-        import os
-
-        os.environ["FIN_DB_PATH"] = temp_db_path
-
         from fincli.db import DatabaseManager
         from fincli.tasks import TaskManager
 
@@ -671,7 +654,7 @@ class TestFinsStandaloneCommand:
         task_manager = TaskManager(db_manager)
 
         # Add tasks from different days
-        task1_id = task_manager.add_task("Today's task", labels=["work"])
+        _ = task_manager.add_task("Today's task", labels=["work"])
         task2_id = task_manager.add_task("Yesterday's task", labels=["personal"])
 
         # Mark one as completed
