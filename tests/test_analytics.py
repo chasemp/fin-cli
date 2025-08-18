@@ -296,11 +296,11 @@ class TestCSVExport:
     def test_export_csv_default_filename(self, analytics_for_export, test_dates):
         """Test CSV export with default filename."""
         from unittest.mock import patch
-        
+
         # Mock date.today() to return a deterministic date for testing
-        with patch('fincli.analytics.date') as mock_date:
+        with patch("fincli.analytics.date") as mock_date:
             mock_date.today.return_value = test_dates["base"]
-            
+
             filename = analytics_for_export.export_csv()
 
         assert filename.endswith(".csv")

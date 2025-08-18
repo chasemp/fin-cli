@@ -17,7 +17,8 @@ from .backup import DatabaseBackup
 from .db import DatabaseManager
 from .labels import LabelManager
 from .tasks import TaskManager
-from .utils import filter_tasks_by_date_range, format_task_for_display, get_editor
+from .utils import (filter_tasks_by_date_range, format_task_for_display,
+                    get_editor)
 
 
 class EditorManager:
@@ -75,10 +76,14 @@ class EditorManager:
         Returns:
             Dictionary with task info or None if not a valid task line
         """
-        # Match task line pattern: task_id [ ] or [x] followed by timestamp, content, labels, due date, and optional reference
+        # Match task line pattern: task_id [ ] or [x] followed by timestamp,
+        # content, labels, due date, and optional reference
         # Format: 1 [ ] 2024-01-01 10:00  Task content  #labels  due:YYYY-MM-DD  #ref:task_123
         # First, try to match with reference and task_id
-        pattern_with_ref_and_id = r"^(\d+) (\[ \]|\[x\]) (\d{4}-\d{2}-\d{2} \d{2}:\d{2})  (.+?)(  #.+)?(  due:[^ ]+)?  #ref:([^ ]+)$"
+        pattern_with_ref_and_id = (
+            r"^(\d+) (\[ \]|\[x\]) (\d{4}-\d{2}-\d{2} \d{2}:\d{2})  (.+?)"
+            r"(  #.+)?(  due:[^ ]+)?  #ref:([^ ]+)$"
+        )
         match = re.match(pattern_with_ref_and_id, line.strip())
 
         if match:
@@ -93,7 +98,8 @@ class EditorManager:
         else:
             # Try to match with task_id but without reference
             pattern_with_id_no_ref = (
-                r"^(\d+) (\[ \]|\[x\]) (\d{4}-\d{2}-\d{2} \d{2}:\d{2})  (.+?)(  #.+)?(  due:[^ ]+)?$"
+                r"^(\d+) (\[ \]|\[x\]) (\d{4}-\d{2}-\d{2} \d{2}:\d{2})  (.+?)"
+                r"(  #.+)?(  due:[^ ]+)?$"
             )
             match = re.match(pattern_with_id_no_ref, line.strip())
 
@@ -108,7 +114,10 @@ class EditorManager:
                 reference_part = ""
             else:
                 # Try to match old format without task_id (for backward compatibility)
-                pattern_old_format_with_ref = r"^(\[ \]|\[x\]) (\d{4}-\d{2}-\d{2} \d{2}:\d{2})  (.+?)(  #.+)?(  due:[^ ]+)?  #ref:([^ ]+)$"
+                pattern_old_format_with_ref = (
+                    r"^(\[ \]|\[x\]) (\d{4}-\d{2}-\d{2} \d{2}:\d{2})  (.+?)"
+                    r"(  #.+)?(  due:[^ ]+)?  #ref:([^ ]+)$"
+                )
                 match = re.match(pattern_old_format_with_ref, line.strip())
 
                 if match:
@@ -122,7 +131,10 @@ class EditorManager:
                     reference_part = match.group(6) or ""
                 else:
                     # Try to match old format without reference
-                    pattern_old_format_no_ref = r"^(\[ \]|\[x\]) (\d{4}-\d{2}-\d{2} \d{2}:\d{2})  (.+?)(  #.+)?(  due:[^ ]+)?$"
+                    pattern_old_format_no_ref = (
+                        r"^(\[ \]|\[x\]) (\d{4}-\d{2}-\d{2} \d{2}:\d{2})  (.+?)"
+                        r"(  #.+)?(  due:[^ ]+)?$"
+                    )
                     match = re.match(pattern_old_format_no_ref, line.strip())
 
                     if match:
@@ -164,6 +176,7 @@ class EditorManager:
                 due_date_raw = due_match.group(1)
                 # Parse the due date using DateParser
                 from fincli.utils import DateParser
+
                 due_date = DateParser.parse_due_date(due_date_raw)
 
         # Normalize status - handle both [] and [ ] as incomplete
@@ -204,7 +217,7 @@ class EditorManager:
                 task = self.task_manager.get_task(task_info["task_id"])
                 if task:
                     return task_info["task_id"]
-            except:
+            except Exception:
                 pass
         return None
 
@@ -416,8 +429,12 @@ class EditorManager:
 
             # Check for due date changes
             if original_tasks:
-                original_task = next((t for t in original_tasks if t["id"] == task_id), None)
-                if original_task and task_info.get("due_date") != original_task.get("due_date"):
+                original_task = next(
+                    (t for t in original_tasks if t["id"] == task_id), None
+                )
+                if original_task and task_info.get("due_date") != original_task.get(
+                    "due_date"
+                ):
                     # Due date was modified
                     if self.task_manager.update_task_due_date(
                         task_id, task_info.get("due_date")
@@ -441,7 +458,7 @@ class EditorManager:
                 try:
                     if self.task_manager.delete_task(task_id):
                         deleted_count += 1
-                except:
+                except Exception:
                     # Task might already be deleted or not exist
                     pass
 
@@ -475,9 +492,7 @@ class EditorManager:
             return 0, 0, 0, 0, 0
 
         # Create backup before editing
-        backup_id = self.backup_manager.create_backup(
-            "Auto-backup before editor session"
-        )
+        self.backup_manager.create_backup("Auto-backup before editor session")
 
         # Track original task IDs for deletion detection
         original_task_ids = {task["id"] for task in tasks}
@@ -502,7 +517,7 @@ class EditorManager:
             self._editor_opened = True
 
             # Open the editor - this is the only blocking operation
-            result = subprocess.run(editor_parts + [temp_file_path])
+            subprocess.run(editor_parts + [temp_file_path])
 
             # Reset the flag after editor closes
             self._editor_opened = False
@@ -554,7 +569,7 @@ class EditorManager:
             if os.path.exists(temp_file_path):
                 try:
                     os.unlink(temp_file_path)
-                except:
+                except Exception:
                     pass
 
             # Re-raise the exception
@@ -589,9 +604,7 @@ class EditorManager:
             return 0, 0, 0, 0, 0
 
         # Create backup before editing
-        backup_id = self.backup_manager.create_backup(
-            "Auto-backup before editor session"
-        )
+        self.backup_manager.create_backup("Auto-backup before editor session")
 
         # Track original task IDs for deletion detection
         original_task_ids = {task["id"] for task in tasks}
@@ -616,7 +629,7 @@ class EditorManager:
             self._editor_opened = True
 
             # Open the editor - this is the only blocking operation
-            result = subprocess.run(editor_parts + [temp_file_path])
+            subprocess.run(editor_parts + [temp_file_path])
 
             # Reset the flag after editor closes
             self._editor_opened = False

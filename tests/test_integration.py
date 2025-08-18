@@ -19,10 +19,10 @@ from fincli.tasks import TaskManager
 class TestIntegration:
     """Test full CLI to database integration."""
 
-    def test_full_cli_to_database_flow(self, temp_db_path, monkeypatch):
+    def test_full_cli_to_database_flow(self, monkeypatch):
         """Test complete flow from CLI command to database storage."""
-        # Set up environment
-        monkeypatch.setenv("FIN_DB_PATH", temp_db_path)
+        # Get the database path that the global isolation fixture set
+        temp_db_path = os.environ.get("FIN_DB_PATH")
 
         # Run CLI command
         result = subprocess.run(
@@ -57,10 +57,10 @@ class TestIntegration:
         assert tasks[0]["content"] == "Integration test task"
         assert set(tasks[0]["labels"]) == {"test", "integration"}
 
-    def test_multiple_cli_operations(self, temp_db_path, monkeypatch):
+    def test_multiple_cli_operations(self, monkeypatch):
         """Test multiple CLI operations on the same database."""
-        # Set up environment
-        monkeypatch.setenv("FIN_DB_PATH", temp_db_path)
+        # Get the database path that the global isolation fixture set
+        temp_db_path = os.environ.get("FIN_DB_PATH")
 
         # Add first task
         result1 = subprocess.run(
@@ -108,10 +108,10 @@ class TestIntegration:
         assert "First task" in task_contents
         assert "Second task" in task_contents
 
-    def test_cli_error_handling(self, temp_db_path, monkeypatch):
+    def test_cli_error_handling(self, monkeypatch):
         """Test CLI error handling and validation."""
-        # Set up environment
-        monkeypatch.setenv("FIN_DB_PATH", temp_db_path)
+        # Get the database path that the global isolation fixture set
+        temp_db_path = os.environ.get("FIN_DB_PATH")
 
         # Test with missing content
         result = subprocess.run(
@@ -136,10 +136,10 @@ class TestIntegration:
 
         assert len(tasks) == 0
 
-    def test_database_persistence_across_cli_calls(self, temp_db_path, monkeypatch):
+    def test_database_persistence_across_cli_calls(self, monkeypatch):
         """Test that database persists data across multiple CLI calls."""
-        # Set up environment
-        monkeypatch.setenv("FIN_DB_PATH", temp_db_path)
+        # Get the database path that the global isolation fixture set
+        temp_db_path = os.environ.get("FIN_DB_PATH")
 
         # Add task via CLI
         result = subprocess.run(
@@ -167,10 +167,10 @@ class TestIntegration:
         assert len(tasks) == 1
         assert tasks[0]["content"] == "Persistent task"
 
-    def test_special_characters_integration(self, temp_db_path, monkeypatch):
+    def test_special_characters_integration(self, monkeypatch):
         """Test handling of special characters in integration."""
-        # Set up environment
-        monkeypatch.setenv("FIN_DB_PATH", temp_db_path)
+        # Get the database path that the global isolation fixture set
+        temp_db_path = os.environ.get("FIN_DB_PATH")
 
         special_content = "Task with special chars: !@#$%^&*()_+-=[]{}|;':\",./<>?"
 
@@ -199,10 +199,10 @@ class TestIntegration:
         assert len(tasks) == 1
         assert tasks[0]["content"] == special_content
 
-    def test_label_normalization_integration(self, temp_db_path, monkeypatch):
+    def test_label_normalization_integration(self, monkeypatch):
         """Test label normalization in integration."""
-        # Set up environment
-        monkeypatch.setenv("FIN_DB_PATH", temp_db_path)
+        # Get the database path that the global isolation fixture set
+        temp_db_path = os.environ.get("FIN_DB_PATH")
 
         result = subprocess.run(
             [

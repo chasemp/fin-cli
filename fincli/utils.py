@@ -72,7 +72,6 @@ def format_task_for_display(task: Dict[str, Any]) -> str:
         primary_time_str = primary_timestamp.strftime("%Y-%m-%d %H:%M")
 
     # Check if task was modified after creation/completion
-    modified_after_primary = False
     modification_indicator = ""
 
     if task.get("modified_at"):
@@ -86,14 +85,12 @@ def format_task_for_display(task: Dict[str, Any]) -> str:
                 task["completed_at"].replace("Z", "+00:00")
             )
             if modified_timestamp > completed_timestamp:
-                modified_after_primary = True
                 modification_indicator = (
                     f" (mod: {modified_timestamp.strftime('%Y-%m-%d %H:%M')})"
                 )
         else:
             # For open tasks, check if modified after creation
             if modified_timestamp > primary_timestamp:
-                modified_after_primary = True
                 modification_indicator = (
                     f" (mod: {modified_timestamp.strftime('%Y-%m-%d %H:%M')})"
                 )
@@ -109,7 +106,10 @@ def format_task_for_display(task: Dict[str, Any]) -> str:
     if task.get("due_date"):
         due_date_display = f"  due:{task['due_date']}"
 
-    return f"{task_id} {status} {primary_time_str}{modification_indicator}  {task['content']}{labels_display}{due_date_display}"
+    return (
+        f"{task_id} {status} {primary_time_str}{modification_indicator}  "
+        f"{task['content']}{labels_display}{due_date_display}"
+    )
 
 
 def get_date_range(days: int = 1, weekdays_only: bool = True) -> tuple:
@@ -193,13 +193,15 @@ def filter_tasks_by_date_range(
             if lookback_date <= task_date <= today:
                 filtered_tasks.append(task)
 
-    # Sort by priority first, then by created_at ascending
-    # Important tasks (#i) come first, then today tasks (#t), then regular tasks
+    # Sort by priority first, then by created_at descending (most recent first)
+    # Important tasks (#i) come first, then today tasks (#t), then regular tasks by recency
     filtered_tasks.sort(
         key=lambda x: (
             not is_important_task(x),  # Important tasks first
             not is_today_task(x),  # Then today tasks
-            x["created_at"],  # Then by creation date
+            -datetime.fromisoformat(
+                x["created_at"].replace("Z", "+00:00")
+            ).timestamp(),  # Then by creation date descending
         )
     )
 
@@ -261,7 +263,9 @@ class DateParser:
             parsed_date = datetime.strptime(f"{current_year}-{date_str}", "%Y-%m/%d")
             # Check if this date has already passed this year, if so use next year
             if parsed_date.date() < date.today():
-                parsed_date = datetime.strptime(f"{current_year + 1}-{date_str}", "%Y-%m/%d")
+                parsed_date = datetime.strptime(
+                    f"{current_year + 1}-{date_str}", "%Y-%m/%d"
+                )
             return parsed_date.strftime("%Y-%m-%d")
         except ValueError:
             pass
@@ -278,7 +282,9 @@ class DateParser:
             parsed_date = datetime.strptime(f"{current_year}-{date_str}", "%Y-%m-%d")
             # Check if this date has already passed this year, if so use next year
             if parsed_date.date() < date.today():
-                parsed_date = datetime.strptime(f"{current_year + 1}-{date_str}", "%Y-%m-%d")
+                parsed_date = datetime.strptime(
+                    f"{current_year + 1}-{date_str}", "%Y-%m-%d"
+                )
             return parsed_date.strftime("%Y-%m-%d")
         except ValueError:
             pass
@@ -297,7 +303,7 @@ class DateParser:
             True if valid, False otherwise
         """
         try:
-            parsed_date = datetime.strptime(date_str, "%Y-%m-%d")
+            _ = datetime.strptime(date_str, "%Y-%m-%d")
             # Optionally prevent past dates
             # if parsed_date.date() < date.today():
             #     return False

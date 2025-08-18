@@ -5,6 +5,7 @@ Pytest configuration and fixtures for Fin test suite
 import os
 import tempfile
 from datetime import timedelta
+
 import pytest
 
 from fincli.db import DatabaseManager
@@ -23,6 +24,7 @@ def isolate_tests_from_real_database(monkeypatch):
         temp_db_path = tmp.name
 
     # Set the environment variable to use the temp database
+    # This ensures tests don't accidentally use the real database
     monkeypatch.setenv("FIN_DB_PATH", temp_db_path)
 
     # Clean up after the test
@@ -98,6 +100,22 @@ def cli_runner():
 
 
 @pytest.fixture
+def isolated_cli_runner(temp_db_path, monkeypatch):
+    """Create a Click CLI runner with isolated database environment."""
+    from click.testing import CliRunner
+
+    # Set up isolated environment for this test
+    monkeypatch.setenv("FIN_DB_PATH", temp_db_path)
+
+    runner = CliRunner()
+
+    yield runner
+
+    # Clean up environment variable after test
+    monkeypatch.delenv("FIN_DB_PATH", raising=False)
+
+
+@pytest.fixture
 def mock_home_dir(monkeypatch):
     """Mock home directory for testing."""
     with tempfile.TemporaryDirectory() as tmp_dir:
@@ -138,20 +156,20 @@ def allow_real_database(monkeypatch):
 def test_dates():
     """Provide consistent test dates for all date-related tests."""
     from datetime import date
-    
+
     # Use fixed, deterministic dates for consistent testing
     # This ensures our tests are not affected by when they run
     base_date = date(2025, 1, 15)  # Wednesday, January 15, 2025
-    
+
     return {
         "base": base_date,
         "today": base_date,
-        "yesterday": base_date - timedelta(days=1),      # Jan 14
-        "last_week": base_date - timedelta(days=7),     # Jan 8
-        "last_month": base_date - timedelta(days=30),   # Dec 16, 2024
-        "future": base_date + timedelta(days=7),        # Jan 22
-        "far_future": base_date + timedelta(days=30),   # Feb 14
-        "far_past": base_date - timedelta(days=90),     # Oct 17, 2024
+        "yesterday": base_date - timedelta(days=1),  # Jan 14
+        "last_week": base_date - timedelta(days=7),  # Jan 8
+        "last_month": base_date - timedelta(days=30),  # Dec 16, 2024
+        "future": base_date + timedelta(days=7),  # Jan 22
+        "far_future": base_date + timedelta(days=30),  # Feb 14
+        "far_past": base_date - timedelta(days=90),  # Oct 17, 2024
         "old_10_days": base_date - timedelta(days=10),  # Jan 5
     }
 
@@ -160,9 +178,9 @@ def test_dates():
 def test_datetimes():
     """Provide consistent datetime values for tests."""
     from datetime import datetime
-    
+
     base_datetime = datetime(2025, 1, 15, 10, 30, 0)  # 10:30 AM
-    
+
     return {
         "base": base_datetime,
         "morning": base_datetime.replace(hour=9, minute=0),
@@ -171,6 +189,3 @@ def test_datetimes():
         "yesterday": base_datetime - timedelta(days=1),
         "last_week": base_datetime - timedelta(days=7),
     }
-
-
-

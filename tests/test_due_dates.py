@@ -4,8 +4,9 @@ Tests for due date functionality in FinCLI
 Tests database schema, date parsing, CLI integration, and display formatting.
 """
 
-import pytest
 from datetime import date, datetime
+
+import pytest
 
 from fincli.db import DatabaseManager
 from fincli.tasks import TaskManager
@@ -52,8 +53,10 @@ class TestDateParser:
     def test_validate_due_date(self):
         """Test due date validation."""
         assert DateParser.validate_due_date("2025-06-17") is True
-        assert DateParser.validate_due_date("2025-02-29") is False  # 2025 is not a leap year
-        assert DateParser.validate_due_date("2024-02-29") is True   # 2024 is a leap year
+        assert (
+            DateParser.validate_due_date("2025-02-29") is False
+        )  # 2025 is not a leap year
+        assert DateParser.validate_due_date("2024-02-29") is True  # 2024 is a leap year
         assert DateParser.validate_due_date("invalid") is False
         assert DateParser.validate_due_date("2025-13-01") is False  # Invalid month
 
@@ -61,14 +64,14 @@ class TestDateParser:
         """Test overdue date detection."""
         from datetime import timedelta
         from unittest.mock import patch
-        
+
         yesterday = test_dates["yesterday"].strftime("%Y-%m-%d")
         tomorrow = test_dates["future"].strftime("%Y-%m-%d")
-        
+
         # Mock date.today() to return the fixture date for consistent testing
-        with patch('fincli.utils.date') as mock_date:
-            mock_date.today.return_value = test_dates['today']
-            
+        with patch("fincli.utils.date") as mock_date:
+            mock_date.today.return_value = test_dates["today"]
+
             assert DateParser.is_overdue(yesterday) is True
             assert DateParser.is_overdue(tomorrow) is False
 
@@ -76,15 +79,19 @@ class TestDateParser:
         """Test due soon detection."""
         from datetime import timedelta
         from unittest.mock import patch
-        
+
         today = test_dates["today"].strftime("%Y-%m-%d")
-        tomorrow = test_dates["future"].strftime("%Y-%m-%d")  # 7 days away, not due soon within 3 days
-        next_week = test_dates["far_future"].strftime("%Y-%m-%d")  # 30+ days away, not due soon
-        
+        tomorrow = test_dates["future"].strftime(
+            "%Y-%m-%d"
+        )  # 7 days away, not due soon within 3 days
+        next_week = test_dates["far_future"].strftime(
+            "%Y-%m-%d"
+        )  # 30+ days away, not due soon
+
         # Mock date.today() to return the fixture date for consistent testing
-        with patch('fincli.utils.date') as mock_date:
-            mock_date.today.return_value = test_dates['today']
-            
+        with patch("fincli.utils.date") as mock_date:
+            mock_date.today.return_value = test_dates["today"]
+
             assert DateParser.is_due_soon(today, days=3) is True
             assert DateParser.is_due_soon(tomorrow, days=3) is False  # 7 days > 3 days
             assert DateParser.is_due_soon(next_week, days=3) is False
@@ -96,34 +103,34 @@ class TestDatabaseSchema:
     def test_database_has_due_date_column(self, temp_db_path):
         """Test that database has due_date column."""
         db_manager = DatabaseManager(temp_db_path)
-        
+
         with db_manager.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("PRAGMA table_info(tasks)")
             columns = [column[1] for column in cursor.fetchall()]
-            
+
             assert "due_date" in columns
 
     def test_due_date_column_type(self, temp_db_path):
         """Test that due_date column is TEXT type."""
         db_manager = DatabaseManager(temp_db_path)
-        
+
         with db_manager.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("PRAGMA table_info(tasks)")
             columns = {column[1]: column[2] for column in cursor.fetchall()}
-            
+
             assert columns["due_date"] == "TEXT"
 
     def test_due_date_index_exists(self, temp_db_path):
         """Test that due_date index exists."""
         db_manager = DatabaseManager(temp_db_path)
-        
+
         with db_manager.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("PRAGMA index_list(tasks)")
             indexes = [index[1] for index in cursor.fetchall()]
-            
+
             assert "idx_tasks_due_date" in indexes
 
 
@@ -134,15 +141,13 @@ class TestTaskManagerDueDates:
         """Test adding a task with a due date."""
         db_manager = DatabaseManager(temp_db_path)
         task_manager = TaskManager(db_manager)
-        
+
         task_id = task_manager.add_task(
-            "Test task with due date",
-            labels=["test"],
-            due_date="2025-06-17"
+            "Test task with due date", labels=["test"], due_date="2025-06-17"
         )
-        
+
         assert task_id == 1
-        
+
         # Verify task was added with due date
         task = task_manager.get_task(task_id)
         assert task["due_date"] == "2025-06-17"
@@ -152,11 +157,11 @@ class TestTaskManagerDueDates:
         """Test adding a task without a due date."""
         db_manager = DatabaseManager(temp_db_path)
         task_manager = TaskManager(db_manager)
-        
+
         task_id = task_manager.add_task("Test task without due date")
-        
+
         assert task_id == 1
-        
+
         # Verify task was added without due date
         task = task_manager.get_task(task_id)
         assert task["due_date"] is None
@@ -165,14 +170,14 @@ class TestTaskManagerDueDates:
         """Test updating a task's due date."""
         db_manager = DatabaseManager(temp_db_path)
         task_manager = TaskManager(db_manager)
-        
+
         # Add task without due date
         task_id = task_manager.add_task("Test task")
-        
+
         # Update due date
         result = task_manager.update_task_due_date(task_id, "2025-06-17")
         assert result is True
-        
+
         # Verify due date was updated
         task = task_manager.get_task(task_id)
         assert task["due_date"] == "2025-06-17"
@@ -181,13 +186,10 @@ class TestTaskManagerDueDates:
         """Test updating due date when no change is needed."""
         db_manager = DatabaseManager(temp_db_path)
         task_manager = TaskManager(db_manager)
-        
+
         # Add task with due date
-        task_id = task_manager.add_task(
-            "Test task",
-            due_date="2025-06-17"
-        )
-        
+        task_id = task_manager.add_task("Test task", due_date="2025-06-17")
+
         # Try to update with same due date
         result = task_manager.update_task_due_date(task_id, "2025-06-17")
         assert result is False  # No change needed
@@ -196,17 +198,14 @@ class TestTaskManagerDueDates:
         """Test removing a task's due date."""
         db_manager = DatabaseManager(temp_db_path)
         task_manager = TaskManager(db_manager)
-        
+
         # Add task with due date
-        task_id = task_manager.add_task(
-            "Test task",
-            due_date="2025-06-17"
-        )
-        
+        task_id = task_manager.add_task("Test task", due_date="2025-06-17")
+
         # Remove due date
         result = task_manager.update_task_due_date(task_id, None)
         assert result is True
-        
+
         # Verify due date was removed
         task = task_manager.get_task(task_id)
         assert task["due_date"] is None
@@ -215,13 +214,13 @@ class TestTaskManagerDueDates:
         """Test that list_tasks includes due_date field."""
         db_manager = DatabaseManager(temp_db_path)
         task_manager = TaskManager(db_manager)
-        
+
         # Add tasks with and without due dates
         task_manager.add_task("Task 1", due_date="2025-06-17")
         task_manager.add_task("Task 2")
-        
+
         tasks = task_manager.list_tasks()
-        
+
         assert len(tasks) == 2
         assert tasks[0]["due_date"] == "2025-06-17"
         assert tasks[1]["due_date"] is None
@@ -234,16 +233,14 @@ class TestDisplayFormatting:
         """Test that tasks with due dates show due date at end."""
         db_manager = DatabaseManager(temp_db_path)
         task_manager = TaskManager(db_manager)
-        
+
         task_id = task_manager.add_task(
-            "Test task with due date",
-            labels=["test"],
-            due_date="2025-06-17"
+            "Test task with due date", labels=["test"], due_date="2025-06-17"
         )
-        
+
         task = task_manager.get_task(task_id)
         formatted = format_task_for_display(task)
-        
+
         # Due date should appear at end of line
         assert formatted.endswith("due:2025-06-17")
         assert "Test task with due date" in formatted
@@ -252,12 +249,12 @@ class TestDisplayFormatting:
         """Test that tasks without due dates don't show due date."""
         db_manager = DatabaseManager(temp_db_path)
         task_manager = TaskManager(db_manager)
-        
+
         task_id = task_manager.add_task("Test task without due date")
-        
+
         task = task_manager.get_task(task_id)
         formatted = format_task_for_display(task)
-        
+
         # Should not contain due date
         assert "due:" not in formatted
         assert "Test task without due date" in formatted
@@ -266,16 +263,14 @@ class TestDisplayFormatting:
         """Test that tasks with both labels and due dates format correctly."""
         db_manager = DatabaseManager(temp_db_path)
         task_manager = TaskManager(db_manager)
-        
+
         task_id = task_manager.add_task(
-            "Test task",
-            labels=["work", "urgent"],
-            due_date="2025-06-17"
+            "Test task", labels=["work", "urgent"], due_date="2025-06-17"
         )
-        
+
         task = task_manager.get_task(task_id)
         formatted = format_task_for_display(task)
-        
+
         # Should have labels and due date at end
         assert "#work" in formatted
         assert "#urgent" in formatted
@@ -288,17 +283,17 @@ class TestCLIIntegration:
     def test_cli_add_task_with_due_date(self, temp_db_path, monkeypatch):
         """Test CLI command adds task with due date."""
         from fincli.cli import add_task
-        
+
         # Mock the database path
         monkeypatch.setenv("FIN_DB_PATH", str(temp_db_path))
-        
+
         # Add task with due date
         add_task("Test CLI task", ("test",), "cli", "2025-06-17")
-        
+
         # Verify task was added
         db_manager = DatabaseManager(temp_db_path)
         task_manager = TaskManager(db_manager)
-        
+
         tasks = task_manager.list_tasks()
         assert len(tasks) == 1
         assert tasks[0]["due_date"] == "2025-06-17"
@@ -311,24 +306,22 @@ class TestEditorIntegration:
     def test_editor_creates_edit_file_with_due_dates(self, temp_db_path):
         """Test that editor creates edit file content with due dates."""
         from fincli.editor import EditorManager
-        
+
         db_manager = DatabaseManager(temp_db_path)
         task_manager = TaskManager(db_manager)
         editor_manager = EditorManager(db_manager)
-        
+
         # Add a task with due date
-        task_id = task_manager.add_task(
-            "Test task with due date",
-            labels=["test"],
-            due_date="2025-06-17"
+        task_manager.add_task(
+            "Test task with due date", labels=["test"], due_date="2025-06-17"
         )
-        
+
         # Get tasks for editing
         tasks = editor_manager.get_tasks_for_editing()
-        
+
         # Create edit file content
         content = editor_manager.create_edit_file_content(tasks)
-        
+
         # Check that due date appears in the content
         assert "due:2025-06-17" in content
         assert "Test task with due date" in content
@@ -336,24 +329,21 @@ class TestEditorIntegration:
     def test_editor_parses_due_date_changes(self, temp_db_path):
         """Test that editor can parse due date changes."""
         from fincli.editor import EditorManager
-        
+
         db_manager = DatabaseManager(temp_db_path)
         task_manager = TaskManager(db_manager)
         editor_manager = EditorManager(db_manager)
-        
+
         # Add a task with due date
-        task_id = task_manager.add_task(
-            "Test task",
-            due_date="2025-06-17"
-        )
-        
+        task_id = task_manager.add_task("Test task", due_date="2025-06-17")
+
         # Get original task
         original_task = task_manager.get_task(task_id)
-        
+
         # Create edit file content
         tasks = editor_manager.get_tasks_for_editing()
         original_content = editor_manager.create_edit_file_content(tasks)
-        
+
         # Modify the due date in the content
         modified_lines = []
         for line in original_content.splitlines():
@@ -361,9 +351,9 @@ class TestEditorIntegration:
                 # Change the due date
                 line = line.replace("due:2025-06-17", "due:2025-07-15")
             modified_lines.append(line)
-        
+
         modified_content = "\n".join(modified_lines)
-        
+
         # Parse the modified content
         (
             completed_count,
@@ -371,11 +361,13 @@ class TestEditorIntegration:
             new_tasks_count,
             content_modified_count,
             deleted_count,
-        ) = editor_manager.parse_edited_content(modified_content, original_tasks=[original_task])
-        
+        ) = editor_manager.parse_edited_content(
+            modified_content, original_tasks=[original_task]
+        )
+
         # Should detect due date change
         assert content_modified_count == 1
-        
+
         # Verify due date was updated
         updated_task = task_manager.get_task(task_id)
         assert updated_task["due_date"] == "2025-07-15"
@@ -383,24 +375,21 @@ class TestEditorIntegration:
     def test_editor_parses_due_date_removal(self, temp_db_path):
         """Test that editor can parse due date removal."""
         from fincli.editor import EditorManager
-        
+
         db_manager = DatabaseManager(temp_db_path)
         task_manager = TaskManager(db_manager)
         editor_manager = EditorManager(db_manager)
-        
+
         # Add a task with due date
-        task_id = task_manager.add_task(
-            "Test task",
-            due_date="2025-06-17"
-        )
-        
+        task_id = task_manager.add_task("Test task", due_date="2025-06-17")
+
         # Get original task
         original_task = task_manager.get_task(task_id)
-        
+
         # Create edit file content
         tasks = editor_manager.get_tasks_for_editing()
         original_content = editor_manager.create_edit_file_content(tasks)
-        
+
         # Remove the due date from the content
         modified_lines = []
         for line in original_content.splitlines():
@@ -408,9 +397,9 @@ class TestEditorIntegration:
                 # Remove the due date
                 line = line.replace("  due:2025-06-17", "")
             modified_lines.append(line)
-        
+
         modified_content = "\n".join(modified_lines)
-        
+
         # Parse the modified content
         (
             completed_count,
@@ -418,11 +407,13 @@ class TestEditorIntegration:
             new_tasks_count,
             content_modified_count,
             deleted_count,
-        ) = editor_manager.parse_edited_content(modified_content, original_tasks=[original_task])
-        
+        ) = editor_manager.parse_edited_content(
+            modified_content, original_tasks=[original_task]
+        )
+
         # Should detect due date change
         assert content_modified_count == 1
-        
+
         # Verify due date was removed
         updated_task = task_manager.get_task(task_id)
         assert updated_task["due_date"] is None
@@ -430,13 +421,13 @@ class TestEditorIntegration:
     def test_editor_parses_new_task_with_due_date(self, temp_db_path):
         """Test that editor can parse new tasks with due dates."""
         from fincli.editor import EditorManager
-        
+
         db_manager = DatabaseManager(temp_db_path)
         editor_manager = EditorManager(db_manager)
-        
+
         # Create edit file content with a new task line (no task ID, no timestamp)
         new_task_line = "[ ] New task with due date  #test  due:2025-09-15"
-        
+
         # Parse the content
         (
             completed_count,
@@ -445,10 +436,10 @@ class TestEditorIntegration:
             content_modified_count,
             deleted_count,
         ) = editor_manager.parse_edited_content(new_task_line)
-        
+
         # Should create new task
         assert new_tasks_count == 1
-        
+
         # Verify task was created with due date
         task_manager = TaskManager(db_manager)
         tasks = task_manager.list_tasks()

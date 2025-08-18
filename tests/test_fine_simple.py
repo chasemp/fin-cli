@@ -104,8 +104,10 @@ class TestFineCommandSimple:
         # Test date filtering - use the actual creation date of the task
         # Get the actual task to see its creation timestamp
         actual_task = task_manager.get_task(1)  # First task
-        actual_created_date = actual_task["created_at"].split(" ")[0]  # Extract date part
-        
+        actual_created_date = actual_task["created_at"].split(" ")[
+            0
+        ]  # Extract date part
+
         today_tasks = editor_manager.get_tasks_for_editing(
             target_date=actual_created_date
         )

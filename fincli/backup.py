@@ -119,7 +119,7 @@ class DatabaseBackup:
                 cursor = conn.cursor()
                 cursor.execute("SELECT COUNT(*) FROM tasks")
                 return cursor.fetchone()[0]
-        except:
+        except Exception:
             return 0
 
     def _save_metadata(self, backup_id: int, metadata: dict):
@@ -141,7 +141,7 @@ class DatabaseBackup:
         try:
             with open(meta_path, "r") as f:
                 return json.load(f)
-        except:
+        except (OSError, ValueError):
             return None
 
     def _cleanup_old_backups(self):

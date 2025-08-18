@@ -112,11 +112,9 @@ class TestFineCommand:
 
     def test_find_matching_task(self, db_manager):
         """Test finding matching tasks."""
-        from fincli.tasks import TaskManager
-
         task_manager = TaskManager(db_manager)
         task_id = task_manager.add_task("Test task", labels=["work"])
-        task = task_manager.get_task(task_id)
+        _ = task_manager.get_task(task_id)
 
         editor_manager = EditorManager(db_manager)
         task_info = {
@@ -133,7 +131,6 @@ class TestFineCommand:
         # Set environment variable to use temp database
         monkeypatch.setenv("FIN_DB_PATH", temp_db_path)
 
-        from fincli.tasks import TaskManager
         from fincli.editor import EditorManager
 
         # Use the fixture-provided database manager
@@ -143,7 +140,7 @@ class TestFineCommand:
 
         # Add a test task
         task_id = task_manager.add_task("Test task for editing", labels=["work"])
-        task = task_manager.get_task(task_id)
+        _ = task_manager.get_task(task_id)
 
         # Test finding the task - pass task_info with task_id
         task_info = {"task_id": task_id}
