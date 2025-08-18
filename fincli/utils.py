@@ -5,7 +5,7 @@ Contains date/time helpers, formatting, and utility functions.
 """
 
 from datetime import date, datetime, timedelta
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 
 def is_important_task(task: Dict[str, Any]) -> bool:
@@ -104,7 +104,12 @@ def format_task_for_display(task: Dict[str, Any]) -> str:
         hashtags = [f"#{label}" for label in task["labels"]]
         labels_display = f"  {','.join(hashtags)}"
 
-    return f"{task_id} {status} {primary_time_str}{modification_indicator}  {task['content']}{labels_display}"
+    # Format due date (appears at end of line as requested)
+    due_date_display = ""
+    if task.get("due_date"):
+        due_date_display = f"  due:{task['due_date']}"
+
+    return f"{task_id} {status} {primary_time_str}{modification_indicator}  {task['content']}{labels_display}{due_date_display}"
 
 
 def get_date_range(days: int = 1, weekdays_only: bool = True) -> tuple:
@@ -222,3 +227,117 @@ def get_editor() -> str:
 
     # Final fallback
     return "nano"
+
+
+class DateParser:
+    """Utility class for parsing and validating due dates in various formats."""
+
+    @staticmethod
+    def parse_due_date(date_str: str) -> Optional[str]:
+        """
+        Parse a due date string into YYYY-MM-DD format.
+
+        Args:
+            date_str: Date string in various formats (MM/DD, YYYY-MM-DD, MM/DD/YYYY)
+
+        Returns:
+            Date string in YYYY-MM-DD format, or None if invalid
+        """
+        if not date_str or not date_str.strip():
+            return None
+
+        date_str = date_str.strip()
+        current_year = date.today().year
+
+        # Try YYYY-MM-DD format first (most explicit)
+        try:
+            parsed_date = datetime.strptime(date_str, "%Y-%m-%d")
+            return parsed_date.strftime("%Y-%m-%d")
+        except ValueError:
+            pass
+
+        # Try MM/DD format (assume current year)
+        try:
+            parsed_date = datetime.strptime(f"{current_year}-{date_str}", "%Y-%m/%d")
+            # Check if this date has already passed this year, if so use next year
+            if parsed_date.date() < date.today():
+                parsed_date = datetime.strptime(f"{current_year + 1}-{date_str}", "%Y-%m/%d")
+            return parsed_date.strftime("%Y-%m-%d")
+        except ValueError:
+            pass
+
+        # Try MM/DD/YYYY format
+        try:
+            parsed_date = datetime.strptime(date_str, "%m/%d/%Y")
+            return parsed_date.strftime("%Y-%m-%d")
+        except ValueError:
+            pass
+
+        # Try MM-DD format (assume current year)
+        try:
+            parsed_date = datetime.strptime(f"{current_year}-{date_str}", "%Y-%m-%d")
+            # Check if this date has already passed this year, if so use next year
+            if parsed_date.date() < date.today():
+                parsed_date = datetime.strptime(f"{current_year + 1}-{date_str}", "%Y-%m-%d")
+            return parsed_date.strftime("%Y-%m-%d")
+        except ValueError:
+            pass
+
+        return None
+
+    @staticmethod
+    def validate_due_date(date_str: str) -> bool:
+        """
+        Validate if a date string is a valid due date.
+
+        Args:
+            date_str: Date string in YYYY-MM-DD format
+
+        Returns:
+            True if valid, False otherwise
+        """
+        try:
+            parsed_date = datetime.strptime(date_str, "%Y-%m-%d")
+            # Optionally prevent past dates
+            # if parsed_date.date() < date.today():
+            #     return False
+            return True
+        except ValueError:
+            return False
+
+    @staticmethod
+    def is_overdue(due_date_str: str) -> bool:
+        """
+        Check if a due date is overdue.
+
+        Args:
+            due_date_str: Due date in YYYY-MM-DD format
+
+        Returns:
+            True if overdue, False otherwise
+        """
+        try:
+            due_date = datetime.strptime(due_date_str, "%Y-%m-%d").date()
+            return due_date < date.today()
+        except ValueError:
+            return False
+
+    @staticmethod
+    def is_due_soon(due_date_str: str, days: int = 3) -> bool:
+        """
+        Check if a due date is coming up soon.
+
+        Args:
+            due_date_str: Due date in YYYY-MM-DD format
+            days: Number of days to consider "soon" (default: 3)
+
+        Returns:
+            True if due soon, False otherwise
+        """
+        try:
+            due_date = datetime.strptime(due_date_str, "%Y-%m-%d").date()
+            today = date.today()
+            days_until_due = (due_date - today).days
+            return 0 <= days_until_due <= days
+        except ValueError:
+            return False

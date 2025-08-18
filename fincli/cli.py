@@ -22,6 +22,7 @@ from fincli.intake import import_from_source
 from fincli.labels import LabelManager
 from fincli.tasks import TaskManager
 from fincli.utils import (
+    DateParser,
     filter_tasks_by_date_range,
     format_task_for_display,
     is_important_task,
@@ -34,7 +35,7 @@ def _get_db_manager():
     return DatabaseManager()
 
 
-def add_task(content: str, labels: tuple, source: str = "cli"):
+def add_task(content: str, labels: tuple, source: str = "cli", due_date: str = None):
     """Add a task to the database."""
     # Only create database connection when function is called, not at import time
     db_manager = _get_db_manager()
@@ -54,7 +55,7 @@ def add_task(content: str, labels: tuple, source: str = "cli"):
         click.echo(f"   Reserved words: {', '.join(sorted(reserved_words))}")
         click.echo(f"   Use complex filtering instead: fin list -l 'work and urgent'")
         click.echo(
-            f"   Use special patterns: #due:2025-08-10, #recur:daily, #depends:task123"
+            f"   Use special patterns: #due:06/17, #due:2025-08-10, #recur:daily, #depends:task123"
         )
         sys.exit(1)
 
@@ -64,8 +65,8 @@ def add_task(content: str, labels: tuple, source: str = "cli"):
     #     if "t" not in labels_list:
     #         labels_list.append("t")
 
-    # Add the task with labels (TaskManager handles normalization)
-    task_manager.add_task(content, labels_list, source)
+    # Add the task with due date and labels (TaskManager handles normalization)
+    task_manager.add_task(content, labels_list, source, due_date)
 
     # Get normalized labels for display (sorted alphabetically)
     normalized_labels = []
@@ -78,10 +79,14 @@ def add_task(content: str, labels: tuple, source: str = "cli"):
         normalized_labels.sort()
 
     # Format output to match test expectations
+    due_date_display = ""
+    if due_date:
+        due_date_display = f" (due: {due_date})"
+    
     if normalized_labels:
-        click.echo(f'✅ Task added: "{content}" [{", ".join(normalized_labels)}]')
+        click.echo(f'✅ Task added: "{content}" [{", ".join(normalized_labels)}]{due_date_display}')
     else:
-        click.echo(f'✅ Task added: "{content}"')
+        click.echo(f'✅ Task added: "{content}"{due_date_display}')
 
 
 def handle_direct_task(args):
@@ -130,11 +135,19 @@ def handle_direct_task(args):
     recurring = None
     dependencies = []
 
-    # Extract due date: #due:YYYY-MM-DD
-    due_match = re.search(r"#due:(\d{4}-\d{2}-\d{2})", content)
+    # Extract due date: #due:MM/DD or #due:YYYY-MM-DD or #due:MM/DD/YYYY
+    due_match = re.search(r"#due:([^ ]+)", content)
     if due_match:
-        due_date = due_match.group(1)
-        content = re.sub(r"#due:\d{4}-\d{2}-\d{2}", "", content)
+        due_date_raw = due_match.group(1)
+        # Parse the due date using DateParser
+        due_date = DateParser.parse_due_date(due_date_raw)
+        if due_date:
+            # Remove the due date from content
+            content = re.sub(r"#due:[^ ]+", "", content)
+        else:
+            click.echo(f"❌ Error: Invalid due date format: {due_date_raw}")
+            click.echo("   Supported formats: MM/DD, YYYY-MM-DD, MM/DD/YYYY")
+            sys.exit(1)
 
     # Extract recurring: #recur:daily, #recur:weekly, etc.
     recur_match = re.search(r"#recur:(\w+)", content)
@@ -185,14 +198,12 @@ def handle_direct_task(args):
         sys.exit(1)
 
     # Add special features as labels for now (we'll enhance the database schema later)
-    if due_date:
-        labels.append(f"due:{due_date}")
     if recurring:
         labels.append(f"recur:{recurring}")
     for dep in dependencies:
         labels.append(f"depends:{dep}")
 
-    add_task(content, tuple(labels), source)
+    add_task(content, tuple(labels), source, due_date)
 
 
 @click.group(context_settings=dict(help_option_names=["-h", "--help"]))

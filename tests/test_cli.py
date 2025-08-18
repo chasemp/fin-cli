@@ -453,7 +453,7 @@ class TestCLI:
                 main()
 
             output = f.getvalue()
-            assert '✅ Task added: "Project deadline" [due:2025-08-10]' in output
+            assert '✅ Task added: "Project deadline" (due: 2025-08-10)' in output
         finally:
             sys.argv = original_argv
 
