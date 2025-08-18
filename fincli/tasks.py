@@ -27,6 +27,7 @@ class TaskManager:
         content: str,
         labels: Optional[List[str]] = None,
         source: str = "cli",
+        due_date: Optional[str] = None,
     ) -> int:
         """
         Add a new task to the database.
@@ -35,6 +36,7 @@ class TaskManager:
             content: The task description (markdown-formatted)
             labels: Optional list of labels (will be normalized and stored as comma-separated)
             source: Source of the task (default: "cli")
+            due_date: Optional due date in YYYY-MM-DD format
 
         Returns:
             The ID of the newly created task
@@ -61,10 +63,10 @@ class TaskManager:
 
             cursor.execute(
                 """
-                INSERT INTO tasks (content, labels, source)
-                VALUES (?, ?, ?)
+                INSERT INTO tasks (content, labels, source, due_date)
+                VALUES (?, ?, ?, ?)
             """,
-                (content, labels_str, source),
+                (content, labels_str, source, due_date),
             )
 
             task_id = cursor.lastrowid
@@ -87,7 +89,7 @@ class TaskManager:
 
             cursor.execute(
                 """
-                SELECT id, content, created_at, modified_at, completed_at, labels, source
+                SELECT id, content, created_at, modified_at, completed_at, labels, source, due_date
                 FROM tasks WHERE id = ?
                 """,
                 (task_id,),
@@ -105,6 +107,7 @@ class TaskManager:
                 "completed_at": row[4],
                 "labels": row[5].split(",") if row[5] else [],
                 "source": row[6],
+                "due_date": row[7],
             }
 
     def list_tasks(self, include_completed: bool = False) -> List[Dict[str, Any]]:
@@ -121,7 +124,7 @@ class TaskManager:
             cursor = conn.cursor()
 
             query = """
-                SELECT id, content, created_at, modified_at, completed_at, labels, source
+                SELECT id, content, created_at, modified_at, completed_at, labels, source, due_date
                 FROM tasks
             """
 
@@ -143,6 +146,7 @@ class TaskManager:
                         "completed_at": row[4],
                         "labels": row[5].split(",") if row[5] else [],
                         "source": row[6],
+                        "due_date": row[7],
                     }
                 )
 
@@ -212,6 +216,37 @@ class TaskManager:
                     "UPDATE tasks SET completed_at = NULL, modified_at = CURRENT_TIMESTAMP WHERE id = ?",
                     (task_id,),
                 )
+
+            conn.commit()
+
+        return True
+
+    def update_task_due_date(self, task_id: int, due_date: Optional[str]) -> bool:
+        """
+        Update task due date and set modified_at timestamp.
+
+        Args:
+            task_id: Task ID to update
+            due_date: New due date in YYYY-MM-DD format, or None to remove due date
+
+        Returns:
+            True if updated, False if not found or no change
+        """
+        task = self.get_task(task_id)
+        if not task:
+            return False
+
+        current_due_date = task.get("due_date")
+        if current_due_date == due_date:
+            return False  # No change needed
+
+        with self.db_manager.get_connection() as conn:
+            cursor = conn.cursor()
+
+            cursor.execute(
+                "UPDATE tasks SET due_date = ?, modified_at = CURRENT_TIMESTAMP WHERE id = ?",
+                (due_date, task_id),
+            )
 
             conn.commit()
 
