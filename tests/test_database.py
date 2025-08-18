@@ -65,6 +65,7 @@ class TestDatabaseManager:
                 "completed_at",
                 "labels",
                 "source",
+                "due_date",
             ]
 
             assert set(column_names) == set(expected_columns)

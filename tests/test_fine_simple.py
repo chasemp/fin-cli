@@ -61,7 +61,7 @@ class TestFineCommandSimple:
             in result.output
         )
 
-    def test_fine_command_task_filtering(self, temp_db_path, monkeypatch):
+    def test_fine_command_task_filtering(self, temp_db_path, monkeypatch, test_dates):
         """Test fine command task filtering logic."""
         # Mock the database path
         monkeypatch.setattr(
@@ -84,7 +84,8 @@ class TestFineCommandSimple:
 
         with sqlite3.connect(db_manager.db_path) as conn:
             cursor = conn.cursor()
-            yesterday = date.today() - timedelta(days=1)
+            # Use test_dates fixture for consistent dates
+            yesterday = test_dates["yesterday"]
             cursor.execute(
                 "UPDATE tasks SET completed_at = ? WHERE id = ?",
                 (yesterday.strftime("%Y-%m-%d 12:00:00"), yesterday_task_id),
@@ -102,7 +103,7 @@ class TestFineCommandSimple:
 
         # Test date filtering
         today_tasks = editor_manager.get_tasks_for_editing(
-            target_date=date.today().strftime("%Y-%m-%d")
+            target_date=test_dates["today"].strftime("%Y-%m-%d")
         )
         assert len(today_tasks) == 1
         assert today_tasks[0]["content"] == "Today's task"

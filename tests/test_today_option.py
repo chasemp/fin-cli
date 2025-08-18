@@ -140,7 +140,7 @@ class TestTodayWithOtherFilters:
 class TestTodayFilteringLogic:
     """Test the actual filtering logic for --today option."""
     
-    def test_today_filtering_completed_tasks(self, temp_db_path):
+    def test_today_filtering_completed_tasks(self, temp_db_path, test_dates):
         """Test that --today correctly filters completed tasks from today."""
         # Create a task manager with test data
         db_manager = DatabaseManager(db_path=temp_db_path)
@@ -152,7 +152,7 @@ class TestTodayFilteringLogic:
         task_manager.update_task_completion(task_id, True)
         
         # Add a task completed yesterday
-        yesterday = today - timedelta(days=1)
+        yesterday = test_dates["yesterday"]
         yesterday_str = yesterday.isoformat()
         task_id2 = task_manager.add_task("Task completed yesterday", source="test")
         # Manually set completion date to yesterday
@@ -175,7 +175,7 @@ class TestTodayFilteringLogic:
         assert len(today_tasks) == 1
         assert today_tasks[0]["content"] == "Task completed today"
     
-    def test_today_filtering_open_tasks(self, temp_db_path):
+    def test_today_filtering_open_tasks(self, temp_db_path, test_dates):
         """Test that --today correctly filters open tasks created today."""
         # Create a task manager with test data
         db_manager = DatabaseManager(db_path=temp_db_path)
@@ -185,7 +185,7 @@ class TestTodayFilteringLogic:
         task_id = task_manager.add_task("Task created today", source="test")
         
         # Add a task created yesterday
-        yesterday = date.today() - timedelta(days=1)
+        yesterday = test_dates["yesterday"]
         yesterday_str = yesterday.isoformat()
         task_id2 = task_manager.add_task("Task created yesterday", source="test")
         # Manually set creation date to yesterday

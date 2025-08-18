@@ -426,11 +426,40 @@ def _list_tasks_impl(days, label, status, today=False, due=None, verbose=False):
     today_tasks = [
         task for task in tasks if is_today_task(task) and not is_important_task(task)
     ]
+    
+    # Due date sections (only for open tasks)
+    from fincli.utils import DateParser
+    from datetime import date
+    overdue_tasks = []
+    due_soon_tasks = []
+    due_today_tasks = []
+    
+    for task in tasks:
+        if not task["completed_at"] and task.get("due_date"):  # Only open tasks with due dates
+            if DateParser.is_overdue(task["due_date"]):
+                overdue_tasks.append(task)
+            elif task["due_date"] == date.today().strftime("%Y-%m-%d"):
+                due_today_tasks.append(task)
+            elif DateParser.is_due_soon(task["due_date"], days=3):
+                due_soon_tasks.append(task)
+    
     # Regular tasks (no #i or #t) go in Open section
     open_tasks = [
         task
         for task in tasks
-        if not is_important_task(task) and not is_today_task(task)
+        if not task["completed_at"]
+        and not is_important_task(task)
+        and not is_today_task(task)
+        and not task.get("due_date")  # Exclude tasks with due dates (they go in due date sections)
+    ]
+    
+    # Completed tasks go in Completed section
+    completed_tasks = [
+        task
+        for task in tasks
+        if task["completed_at"]
+        and not is_important_task(task)
+        and not is_today_task(task)
     ]
 
     # Display Important section
@@ -449,10 +478,42 @@ def _list_tasks_impl(days, label, status, today=False, due=None, verbose=False):
             click.echo(formatted_task)
         click.echo()
 
+    # Display Overdue section
+    if overdue_tasks:
+        click.echo("🚨 Overdue")
+        for task in overdue_tasks:
+            formatted_task = format_task_for_display(task)
+            click.echo(formatted_task)
+        click.echo()
+
+    # Display Due Soon section
+    if due_soon_tasks:
+        click.echo("⏰ Due Soon")
+        for task in due_soon_tasks:
+            formatted_task = format_task_for_display(task)
+            click.echo(formatted_task)
+        click.echo()
+
+    # Display Due Today section
+    if due_today_tasks:
+        click.echo("📅 Due Today")
+        for task in due_today_tasks:
+            formatted_task = format_task_for_display(task)
+            click.echo(formatted_task)
+        click.echo()
+
     # Display Open section
     if open_tasks:
         click.echo("Open")
         for task in open_tasks:
+            formatted_task = format_task_for_display(task)
+            click.echo(formatted_task)
+        click.echo()
+    
+    # Display Completed section
+    if completed_tasks:
+        click.echo("Completed")
+        for task in completed_tasks:
             formatted_task = format_task_for_display(task)
             click.echo(formatted_task)
 
