@@ -1,17 +1,18 @@
 """
 Context management for FinCLI
 
-Handles session-based context filtering using environment variables.
+Handles session-based context filtering using configuration file.
 """
 
-import os
 from typing import List, Optional
+
+from .config import Config
 
 
 class ContextManager:
-    """Manages task contexts using environment variables."""
+    """Manages task contexts using configuration file."""
 
-    ENV_VAR = "FIN_CONTEXT"
+    CONFIG_KEY = "current_context"
     DEFAULT_CONTEXT = "default"
 
     @classmethod
@@ -24,22 +25,24 @@ class ContextManager:
         if not cls._is_valid_context_name(context_name):
             raise ValueError(f"Invalid context name: {context_name}")
 
-        os.environ[cls.ENV_VAR] = context_name
+        config = Config()
+        config.set(cls.CONFIG_KEY, context_name)
 
     @classmethod
     def get_current_context(cls) -> str:
-        """Get the current context from environment.
+        """Get the current context from configuration.
 
         Returns:
             Current context name, defaults to 'default'
         """
-        return os.environ.get(cls.ENV_VAR, cls.DEFAULT_CONTEXT)
+        config = Config()
+        return config.get(cls.CONFIG_KEY, cls.DEFAULT_CONTEXT)
 
     @classmethod
     def clear_context(cls) -> None:
         """Clear the current context, reverting to default."""
-        if cls.ENV_VAR in os.environ:
-            del os.environ[cls.ENV_VAR]
+        config = Config()
+        config.set(cls.CONFIG_KEY, cls.DEFAULT_CONTEXT)
 
     @classmethod
     def list_contexts(cls, db_manager) -> List[str]:

@@ -225,8 +225,10 @@ class TestFinsCommand:
         # Add task with explicit default context to ensure it's found
         task_manager.add_task("Test task", labels=["work"], context="default")
 
-        # Set default context in environment for the test
-        monkeypatch.setenv("FIN_CONTEXT", "default")
+        # Set default context in config for the test
+        from fincli.contexts import ContextManager
+
+        ContextManager.set_context("default")
 
         result = isolated_cli_runner.invoke(list_tasks)
         assert result.exit_code == 0
@@ -244,11 +246,12 @@ class TestFinsIntegration:
 
         db_manager = DatabaseManager(temp_db_path)
         task_manager = TaskManager(db_manager)
-        task_manager.add_task("Test task", labels=["work"])
+        # Create task with default context to ensure it's found
+        task_manager.add_task("Test task", labels=["work"], context="default")
 
-        # Run fins command
+        # Run fins command with default context
         result = subprocess.run(
-            [sys.executable, "-m", "fincli.cli", "list-tasks"],
+            [sys.executable, "-m", "fincli.cli", "-c", "default", "list-tasks"],
             capture_output=True,
             text=True,
             env={"FIN_DB_PATH": temp_db_path},
@@ -327,11 +330,12 @@ class TestFinsIntegration:
 
         db_manager = DatabaseManager(temp_db_path)
         task_manager = TaskManager(db_manager)
-        task_manager.add_task("Test task", labels=["work"])
+        # Create task with default context to ensure it's found
+        task_manager.add_task("Test task", labels=["work"], context="default")
 
-        # Run fins command
+        # Run fins command with default context
         result = subprocess.run(
-            [sys.executable, "-m", "fincli.cli", "list-tasks"],
+            [sys.executable, "-m", "fincli.cli", "-c", "default", "list-tasks"],
             capture_output=True,
             text=True,
             env={"FIN_DB_PATH": temp_db_path},
