@@ -2,7 +2,6 @@
 Tests for the contexts module.
 """
 
-import os
 from unittest.mock import patch
 
 import pytest
@@ -18,17 +17,15 @@ class TestContextManager:
     def test_set_context(self):
         """Test setting a context."""
         # Clear any existing context
-        if ContextManager.ENV_VAR in os.environ:
-            del os.environ[ContextManager.ENV_VAR]
+        ContextManager.clear_context()
 
         ContextManager.set_context("work")
-        assert os.environ[ContextManager.ENV_VAR] == "work"
+        assert ContextManager.get_current_context() == "work"
 
     def test_get_current_context_default(self):
         """Test getting current context when none is set."""
         # Clear any existing context
-        if ContextManager.ENV_VAR in os.environ:
-            del os.environ[ContextManager.ENV_VAR]
+        ContextManager.clear_context()
 
         assert ContextManager.get_current_context() == "default"
 
@@ -61,7 +58,7 @@ class TestContextManager:
         for name in valid_names:
             try:
                 ContextManager.set_context(name)
-                assert os.environ[ContextManager.ENV_VAR] == name
+                assert ContextManager.get_current_context() == name
             except ValueError:
                 pytest.fail(f"Valid context name '{name}' was rejected")
 
