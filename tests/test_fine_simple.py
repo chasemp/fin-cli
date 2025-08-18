@@ -101,9 +101,13 @@ class TestFineCommandSimple:
         assert len(work_tasks) == 1
         assert work_tasks[0]["content"] == "Today's task"
 
-        # Test date filtering
+        # Test date filtering - use the actual creation date of the task
+        # Get the actual task to see its creation timestamp
+        actual_task = task_manager.get_task(1)  # First task
+        actual_created_date = actual_task["created_at"].split(" ")[0]  # Extract date part
+        
         today_tasks = editor_manager.get_tasks_for_editing(
-            target_date=test_dates["today"].strftime("%Y-%m-%d")
+            target_date=actual_created_date
         )
         assert len(today_tasks) == 1
         assert today_tasks[0]["content"] == "Today's task"

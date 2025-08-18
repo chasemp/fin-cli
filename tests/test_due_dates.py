@@ -60,24 +60,34 @@ class TestDateParser:
     def test_is_overdue(self, test_dates):
         """Test overdue date detection."""
         from datetime import timedelta
+        from unittest.mock import patch
         
         yesterday = test_dates["yesterday"].strftime("%Y-%m-%d")
         tomorrow = test_dates["future"].strftime("%Y-%m-%d")
         
-        assert DateParser.is_overdue(yesterday) is True
-        assert DateParser.is_overdue(tomorrow) is False
+        # Mock date.today() to return the fixture date for consistent testing
+        with patch('fincli.utils.date') as mock_date:
+            mock_date.today.return_value = test_dates['today']
+            
+            assert DateParser.is_overdue(yesterday) is True
+            assert DateParser.is_overdue(tomorrow) is False
 
     def test_is_due_soon(self, test_dates):
         """Test due soon detection."""
         from datetime import timedelta
+        from unittest.mock import patch
         
         today = test_dates["today"].strftime("%Y-%m-%d")
         tomorrow = test_dates["future"].strftime("%Y-%m-%d")  # 7 days away, not due soon within 3 days
         next_week = test_dates["far_future"].strftime("%Y-%m-%d")  # 30+ days away, not due soon
         
-        assert DateParser.is_due_soon(today, days=3) is True
-        assert DateParser.is_due_soon(tomorrow, days=3) is False  # 7 days > 3 days
-        assert DateParser.is_due_soon(next_week, days=3) is False
+        # Mock date.today() to return the fixture date for consistent testing
+        with patch('fincli.utils.date') as mock_date:
+            mock_date.today.return_value = test_dates['today']
+            
+            assert DateParser.is_due_soon(today, days=3) is True
+            assert DateParser.is_due_soon(tomorrow, days=3) is False  # 7 days > 3 days
+            assert DateParser.is_due_soon(next_week, days=3) is False
 
 
 class TestDatabaseSchema:
