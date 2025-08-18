@@ -30,7 +30,7 @@ class AnalyticsManager:
             cursor.execute(
                 """
                 SELECT
-                    id, content, created_at, completed_at, labels, source
+                    id, content, created_at, completed_at, labels, source, due_date
                 FROM tasks
                 WHERE created_at >= ?
                 ORDER BY created_at DESC
@@ -48,6 +48,7 @@ class AnalyticsManager:
                         "completed_at": row[3],
                         "labels": row[4].split(",") if row[4] else [],
                         "source": row[5],
+                        "due_date": row[6],
                     }
                 )
 
@@ -116,6 +117,12 @@ class AnalyticsManager:
                 "7_days": self._get_overdue_tasks(tasks, 7),
                 "30_days": self._get_overdue_tasks(tasks, 30),
             },
+            "due_dates": {
+                "overdue": self._get_due_date_overdue_tasks(tasks),
+                "due_soon": self._get_due_soon_tasks(tasks, 7),
+                "due_today": self._get_due_today_tasks(tasks),
+                "total_with_due_dates": len([t for t in tasks if t.get("due_date")]),
+            },
             "recurring": self._get_recurring_tasks(tasks),
             "by_label": self._get_tasks_by_label(tasks),
         }
@@ -130,7 +137,7 @@ class AnalyticsManager:
             return datetime.now()
 
     def _get_overdue_tasks(self, tasks: List[Dict], days_threshold: int) -> List[Dict]:
-        """Get tasks that are overdue by the specified number of days."""
+        """Get tasks that are overdue by the specified number of days (based on creation date)."""
         cutoff_date = datetime.now() - timedelta(days=days_threshold)
         overdue = []
 
@@ -141,6 +148,44 @@ class AnalyticsManager:
                     overdue.append(task)
 
         return overdue
+
+    def _get_due_date_overdue_tasks(self, tasks: List[Dict]) -> List[Dict]:
+        """Get tasks that are overdue based on due dates."""
+        from .utils import DateParser
+        
+        overdue = []
+        for task in tasks:
+            if not task["completed_at"] and task.get("due_date"):  # Only open tasks with due dates
+                if DateParser.is_overdue(task["due_date"]):
+                    overdue.append(task)
+        
+        return overdue
+
+    def _get_due_soon_tasks(self, tasks: List[Dict], days: int = 7) -> List[Dict]:
+        """Get tasks that are due soon (within specified days)."""
+        from .utils import DateParser
+        
+        due_soon = []
+        for task in tasks:
+            if not task["completed_at"] and task.get("due_date"):  # Only open tasks with due dates
+                if DateParser.is_due_soon(task["due_date"], days):
+                    due_soon.append(task)
+        
+        return due_soon
+
+    def _get_due_today_tasks(self, tasks: List[Dict]) -> List[Dict]:
+        """Get tasks that are due today."""
+        from .utils import DateParser
+        
+        due_today = []
+        today = date.today().strftime("%Y-%m-%d")
+        
+        for task in tasks:
+            if not task["completed_at"] and task.get("due_date"):  # Only open tasks with due dates
+                if task["due_date"] == today:
+                    due_today.append(task)
+        
+        return due_today
 
     def _get_recurring_tasks(self, tasks: List[Dict]) -> List[Dict]:
         """Get tasks that appear to be recurring (have recurring-related labels)."""
@@ -193,6 +238,8 @@ class AnalyticsManager:
 ✅ {stats['today']['completed']} tasks completed today
 📝 {stats['today']['created']} new tasks added today
 🕗 {len(stats['overdue']['3_days'])} tasks overdue > 3 days
+📅 {len(stats['due_dates']['due_today'])} tasks due today
+⏰ {len(stats['due_dates']['overdue'])} tasks overdue (due dates)
 🔁 {len(stats['recurring'])} recurring tasks flagged
 
 Top labels today:
@@ -205,10 +252,16 @@ Top labels today:
 - ✅ **{stats['today']['completed']}** tasks completed today
 - 📝 **{stats['today']['created']}** new tasks added today
 - 🕗 **{len(stats['overdue']['3_days'])}** tasks overdue > 3 days
+- 📅 **{len(stats['due_dates']['due_today'])}** tasks due today
+- ⏰ **{len(stats['due_dates']['overdue'])}** tasks overdue (due dates)
 - 🔁 **{len(stats['recurring'])}** recurring tasks flagged
 
 ## Top Labels
 {self._format_label_summary_md(stats['by_label'])}"""
+
+        elif format == "csv":
+            return f"""Date,Period,Total Tasks,Open Tasks,Completed Tasks,Today Created,Today Completed,Overdue 3 Days,Due Today,Overdue Due Dates,Recurring Tasks
+{date.today().strftime("%Y-%m-%d")},Daily,{stats["total_tasks"]},{stats["open_tasks"]},{stats["completed_tasks"]},{stats["today"]["created"]},{stats["today"]["completed"]},{len(stats["overdue"]["3_days"])},{len(stats["due_dates"]["due_today"])},{len(stats["due_dates"]["overdue"])},{len(stats["recurring"])}"""
 
         return ""
 
@@ -220,6 +273,8 @@ Top labels today:
 ✅ {stats['this_week']['completed']} tasks completed this week
 📝 {stats['this_week']['created']} new tasks added this week
 🕗 {len(stats['overdue']['7_days'])} tasks still open > 7 days
+📅 {len(stats['due_dates']['due_today'])} tasks due today
+⏰ {len(stats['due_dates']['overdue'])} tasks overdue (due dates)
 🔁 {len(stats['recurring'])} recurring tasks flagged as overdue
 
 Top labels this week:
@@ -232,6 +287,8 @@ Top labels this week:
 - ✅ **{stats['this_week']['completed']}** tasks completed this week
 - 📝 **{stats['this_week']['created']}** new tasks added this week
 - 🕗 **{len(stats['overdue']['7_days'])}** tasks still open > 7 days
+- 📅 **{len(stats['due_dates']['due_today'])}** tasks due today
+- ⏰ **{len(stats['due_dates']['overdue'])}** tasks overdue (due dates)
 - 🔁 **{len(stats['recurring'])}** recurring tasks flagged as overdue
 
 ## Top Labels
@@ -250,6 +307,8 @@ Top labels this week:
 ✅ {stats['this_month']['completed']} tasks completed this month
 📝 {stats['this_month']['created']} new tasks added this month
 🕗 {len(stats['overdue']['30_days'])} tasks still open > 30 days
+📅 {len(stats['due_dates']['due_today'])} tasks due today
+⏰ {len(stats['due_dates']['overdue'])} tasks overdue (due dates)
 🔁 {len(stats['recurring'])} recurring tasks flagged as overdue
 
 Top labels this month:
@@ -262,6 +321,8 @@ Top labels this month:
 - ✅ **{stats['this_month']['completed']}** tasks completed this month
 - 📝 **{stats['this_month']['created']}** new tasks added this month
 - 🕗 **{len(stats['overdue']['30_days'])}** tasks still open > 30 days
+- 📅 **{len(stats['due_dates']['due_today'])}** tasks due today
+- ⏰ **{len(stats['due_dates']['overdue'])}** tasks overdue (due dates)
 - 🔁 **{len(stats['recurring'])}** recurring tasks flagged as overdue
 
 ## Top Labels
