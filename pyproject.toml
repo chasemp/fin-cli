@@ -1,5 +1,5 @@
 [tool.black]
-line-length = 120
+line-length = 999
 target-version = ['py39']
 include = '\.pyi?$'
 extend-exclude = '''
@@ -18,10 +18,11 @@ extend-exclude = '''
 )/
 | pyproject\.toml
 '''
+preview = false
 
 [tool.isort]
 profile = "black"
-line_length = 120
+line_length = 999
 multi_line_output = 3
 include_trailing_comma = true
 force_grid_wrap = 0
