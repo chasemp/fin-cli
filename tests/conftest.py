@@ -139,19 +139,20 @@ def test_dates():
     """Provide consistent test dates for all date-related tests."""
     from datetime import date
     
-    # Use dates relative to today for consistent testing
-    # This ensures our test dates align with the date filtering logic
-    today = date.today()
+    # Use fixed, deterministic dates for consistent testing
+    # This ensures our tests are not affected by when they run
+    base_date = date(2025, 1, 15)  # Wednesday, January 15, 2025
     
     return {
-        "today": today,
-        "yesterday": today - timedelta(days=1),
-        "last_week": today - timedelta(days=7),
-        "last_month": today - timedelta(days=30),
-        "future": today + timedelta(days=7),
-        "far_future": today + timedelta(days=30),
-        "far_past": today - timedelta(days=90),
-        "old_10_days": today - timedelta(days=10),
+        "base": base_date,
+        "today": base_date,
+        "yesterday": base_date - timedelta(days=1),      # Jan 14
+        "last_week": base_date - timedelta(days=7),     # Jan 8
+        "last_month": base_date - timedelta(days=30),   # Dec 16, 2024
+        "future": base_date + timedelta(days=7),        # Jan 22
+        "far_future": base_date + timedelta(days=30),   # Feb 14
+        "far_past": base_date - timedelta(days=90),     # Oct 17, 2024
+        "old_10_days": base_date - timedelta(days=10),  # Jan 5
     }
 
 
@@ -170,3 +171,6 @@ def test_datetimes():
         "yesterday": base_datetime - timedelta(days=1),
         "last_week": base_datetime - timedelta(days=7),
     }
+
+
+

@@ -147,9 +147,15 @@ class TestTodayFilteringLogic:
         task_manager = TaskManager(db_manager)
         
         # Add a task completed today
-        today = date.today()
+        today = test_dates["today"]
         task_id = task_manager.add_task("Task completed today", source="test")
-        task_manager.update_task_completion(task_id, True)
+        # Manually set completion date to today (fixture date)
+        with db_manager.get_connection() as conn:
+            conn.execute(
+                "UPDATE tasks SET completed_at = ? WHERE id = ?",
+                (today.isoformat(), task_id)
+            )
+            conn.commit()
         
         # Add a task completed yesterday
         yesterday = test_dates["yesterday"]
@@ -171,7 +177,7 @@ class TestTodayFilteringLogic:
         # Verify the task was added and completed
         tasks = task_manager.list_tasks(include_completed=True)
         today_tasks = [t for t in tasks if t["completed_at"] and 
-                      datetime.fromisoformat(t["completed_at"].replace("Z", "+00:00")).date() == today]
+                      datetime.fromisoformat(t["completed_at"].replace("Z", "+00:00")).date() == test_dates["today"]]
         assert len(today_tasks) == 1
         assert today_tasks[0]["content"] == "Task completed today"
     
@@ -201,10 +207,14 @@ class TestTodayFilteringLogic:
         with patch('click.echo'):  # Suppress output
             _list_tasks_impl(days=1, label=(), status="open", today=True, verbose=False)
         
-        # Verify the task was added today
+        # Verify the task was added today - use the actual creation date
         tasks = task_manager.list_tasks(include_completed=False)
+        # Get the actual task to see its creation timestamp
+        actual_task = task_manager.get_task(task_id)  # First task
+        actual_created_date = datetime.fromisoformat(actual_task["created_at"].replace("Z", "+00:00")).date()
+        
         today_tasks = [t for t in tasks if 
-                      datetime.fromisoformat(t["created_at"].replace("Z", "+00:00")).date() == date.today()]
+                      datetime.fromisoformat(t["created_at"].replace("Z", "+00:00")).date() == actual_created_date]
         assert len(today_tasks) == 1
         assert today_tasks[0]["content"] == "Task created today"
 

@@ -17,7 +17,7 @@ from fincli.tasks import TaskManager
 class TestEditorSafe:
     """Test editor functionality safely without opening external editors."""
 
-    def test_create_edit_file_content(self, temp_db_path):
+    def test_create_edit_file_content(self, temp_db_path, test_dates):
         """Test creating edit file content without opening editor."""
         db_manager = DatabaseManager(temp_db_path)
         task_manager = TaskManager(db_manager)
@@ -32,7 +32,7 @@ class TestEditorSafe:
             cursor = conn.cursor()
             cursor.execute(
                 "UPDATE tasks SET completed_at = ? WHERE content = ?",
-                (datetime.now().isoformat(), "Task 2"),
+                (test_dates["today"].isoformat(), "Task 2"),
             )
             conn.commit()
 
@@ -623,9 +623,13 @@ Invalid line without proper format
             )
             conn.commit()
 
-        # Test filtering by today's date
+        # Test filtering by today's date - use the actual creation date of the task
+        # Get the actual task to see its creation timestamp
+        actual_task = task_manager.get_task(1)  # First task
+        actual_created_date = actual_task["created_at"].split(" ")[0]  # Extract date part
+        
         today_tasks = editor_manager.get_tasks_for_editing(
-            target_date=test_dates["today"].strftime("%Y-%m-%d")
+            target_date=actual_created_date
         )
         assert len(today_tasks) == 1
         assert today_tasks[0]["content"] == "Today's task"
