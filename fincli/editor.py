@@ -136,7 +136,7 @@ class EditorManager:
                         reference_part = ""
                     else:
                         # Try to match new tasks without timestamp (just checkbox and content)
-                        pattern_new_task = r"^(\[ \]|\[\]|\[x\]) (.+?)( +#[^ ]+)*?( +due:[^ ]+)?$"
+                        pattern_new_task = r"^(\[ \]|\[\]|\[x\]) (.+?)((?: +#[^ ]+)*?)((?: +due:[^ ]+)?)$"
                         match = re.match(pattern_new_task, line.strip())
 
                         if not match:

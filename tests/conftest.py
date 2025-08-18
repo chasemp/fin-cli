@@ -4,6 +4,7 @@ Pytest configuration and fixtures for Fin test suite
 
 import os
 import tempfile
+from datetime import timedelta
 import pytest
 
 from fincli.db import DatabaseManager
@@ -131,3 +132,41 @@ def allow_real_database(monkeypatch):
     # Remove the FIN_DB_PATH environment variable to allow real database behavior
     monkeypatch.delenv("FIN_DB_PATH", raising=False)
     yield
+
+
+@pytest.fixture
+def test_dates():
+    """Provide consistent test dates for all date-related tests."""
+    from datetime import date
+    
+    # Use dates relative to today for consistent testing
+    # This ensures our test dates align with the date filtering logic
+    today = date.today()
+    
+    return {
+        "today": today,
+        "yesterday": today - timedelta(days=1),
+        "last_week": today - timedelta(days=7),
+        "last_month": today - timedelta(days=30),
+        "future": today + timedelta(days=7),
+        "far_future": today + timedelta(days=30),
+        "far_past": today - timedelta(days=90),
+        "old_10_days": today - timedelta(days=10),
+    }
+
+
+@pytest.fixture
+def test_datetimes():
+    """Provide consistent datetime values for tests."""
+    from datetime import datetime
+    
+    base_datetime = datetime(2025, 1, 15, 10, 30, 0)  # 10:30 AM
+    
+    return {
+        "base": base_datetime,
+        "morning": base_datetime.replace(hour=9, minute=0),
+        "afternoon": base_datetime.replace(hour=14, minute=0),
+        "evening": base_datetime.replace(hour=18, minute=0),
+        "yesterday": base_datetime - timedelta(days=1),
+        "last_week": base_datetime - timedelta(days=7),
+    }

@@ -51,14 +51,20 @@ class TestEditorSafe:
             lines[2] == "#   • Checkbox changes ([ ] ↔ [x]) - mark complete/incomplete"
         )
         assert lines[3] == "#   • Content changes - reword tasks (keeps same task ID)"
-        assert lines[4] == "#   • New tasks - add lines without #ref:task_XXX"
-        assert lines[5] == "#   • Task deletion - remove lines to delete tasks"
-        assert lines[6] == "# Lines starting with # are ignored"
+        assert lines[4] == "#   • Due date changes - edit due:YYYY-MM-DD at end of line"
+        assert lines[5] == "#   • New tasks - add lines without #ref:task_XXX"
+        assert lines[6] == "#   • Task deletion - remove lines to delete tasks"
+        assert lines[7] == "# Lines starting with # are ignored"
         assert (
-            lines[7]
+            lines[8]
             == "# DO NOT modify the #ref:task_XXX part - it's used to track changes"
         )
-        assert lines[8] == ""
+        assert lines[9] == "#"
+        assert lines[10] == "# Due date examples:"
+        assert lines[11] == "#   • due:2025-06-17 (specific date)"
+        assert lines[12] == "#   • due:06/17 (current/next year)"
+        assert lines[13] == "#   • Remove due: to remove due date"
+        assert lines[14] == ""
 
         # Check that both tasks are in the content with reference IDs
         content_str = "\n".join(lines)
@@ -596,7 +602,7 @@ Invalid line without proper format
         assert len(personal_tasks) == 1
         assert personal_tasks[0]["content"] == "Personal task"
 
-    def test_get_tasks_for_editing_date_filter(self, temp_db_path):
+    def test_get_tasks_for_editing_date_filter(self, temp_db_path, test_dates):
         """Test getting tasks for editing with date filtering."""
         db_manager = DatabaseManager(temp_db_path)
         task_manager = TaskManager(db_manager)
@@ -609,7 +615,8 @@ Invalid line without proper format
         # Mark yesterday's task as completed with yesterday's date
         with db_manager.get_connection() as conn:
             cursor = conn.cursor()
-            yesterday = date.today() - timedelta(days=1)
+            # Use test_dates fixture for consistent dates
+            yesterday = test_dates["yesterday"]
             cursor.execute(
                 "UPDATE tasks SET completed_at = ? WHERE content = ?",
                 (yesterday.strftime("%Y-%m-%d 12:00:00"), "Yesterday's task"),
@@ -618,14 +625,14 @@ Invalid line without proper format
 
         # Test filtering by today's date
         today_tasks = editor_manager.get_tasks_for_editing(
-            target_date=date.today().strftime("%Y-%m-%d")
+            target_date=test_dates["today"].strftime("%Y-%m-%d")
         )
         assert len(today_tasks) == 1
         assert today_tasks[0]["content"] == "Today's task"
 
         # Test filtering by yesterday's date
         yesterday_tasks = editor_manager.get_tasks_for_editing(
-            target_date=(date.today() - timedelta(days=1)).strftime("%Y-%m-%d")
+            target_date=test_dates["yesterday"].strftime("%Y-%m-%d")
         )
         assert len(yesterday_tasks) == 1
         assert yesterday_tasks[0]["content"] == "Yesterday's task"
