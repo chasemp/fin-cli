@@ -2,8 +2,8 @@
 Database manager tests
 """
 
-import sqlite3
 from pathlib import Path
+import sqlite3
 
 import pytest
 
@@ -96,9 +96,7 @@ class TestDatabaseManager:
         from fincli.tasks import TaskManager
 
         task_manager = TaskManager(db_manager)
-        task_id = task_manager.add_task(
-            "Test task with labels", labels=["work", "urgent"], source="test"
-        )
+        task_id = task_manager.add_task("Test task with labels", labels=["work", "urgent"], source="test")
 
         assert task_id == 1
 
@@ -114,9 +112,7 @@ class TestDatabaseManager:
         from fincli.tasks import TaskManager
 
         task_manager = TaskManager(db_manager)
-        task_id = task_manager.add_task(
-            "Test task", labels=["WORK", "Urgent", "  test  "]
-        )
+        task_id = task_manager.add_task("Test task", labels=["WORK", "Urgent", "  test  "])
 
         task = task_manager.get_task(task_id)
         assert set(task["labels"]) == {"work", "urgent", "test"}
@@ -167,9 +163,7 @@ class TestDatabaseManager:
         # Mark a task as completed
         with sqlite3.connect(populated_db.db_path) as conn:
             cursor = conn.cursor()
-            cursor.execute(
-                "UPDATE tasks SET completed_at = CURRENT_TIMESTAMP WHERE id = 1"
-            )
+            cursor.execute("UPDATE tasks SET completed_at = CURRENT_TIMESTAMP WHERE id = 1")
             conn.commit()
 
         from fincli.tasks import TaskManager
@@ -187,9 +181,7 @@ class TestDatabaseManager:
         # Mark a task as completed
         with sqlite3.connect(populated_db.db_path) as conn:
             cursor = conn.cursor()
-            cursor.execute(
-                "UPDATE tasks SET completed_at = CURRENT_TIMESTAMP WHERE id = 1"
-            )
+            cursor.execute("UPDATE tasks SET completed_at = CURRENT_TIMESTAMP WHERE id = 1")
             conn.commit()
 
         from fincli.tasks import TaskManager

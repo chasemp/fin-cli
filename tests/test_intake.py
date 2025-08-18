@@ -198,6 +198,4 @@ class TestImportSourceValidation:
         from fincli.intake import SOURCES
 
         for source_name in SOURCES.keys():
-            assert isinstance(
-                source_name, str
-            ), f"Source name {source_name} is not a string"
+            assert isinstance(source_name, str), f"Source name {source_name} is not a string"

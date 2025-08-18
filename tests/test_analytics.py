@@ -4,9 +4,9 @@ Analytics tests for FinCLI
 Tests for task analytics, digest generation, and reporting functionality.
 """
 
+from datetime import date, datetime
 import os
 import tempfile
-from datetime import date, datetime
 
 import pytest
 
@@ -69,9 +69,7 @@ class TestAnalyticsManager:
 
     def test_get_task_counts_populated(self, populated_analytics):
         """Test task counts with populated database."""
-        stats = populated_analytics.get_task_counts(
-            60
-        )  # Look back 60 days to include the overdue task
+        stats = populated_analytics.get_task_counts(60)  # Look back 60 days to include the overdue task
 
         assert stats["total_tasks"] >= 4  # At least our test tasks
         assert stats["open_tasks"] >= 3  # Most tasks are open
@@ -234,9 +232,7 @@ class TestDigestGeneration:
 
     def test_generate_monthly_digest_markdown(self, analytics_with_data):
         """Test monthly digest generation in markdown format."""
-        digest = analytics_with_data.generate_digest(
-            period="monthly", format="markdown"
-        )
+        digest = analytics_with_data.generate_digest(period="monthly", format="markdown")
 
         assert "# Monthly Digest" in digest
         assert "## Summary" in digest
@@ -366,9 +362,7 @@ class TestAnalyticsCLI:
             lambda self, db_path=None: self._init_mock_db(temp_db_path),
         )
 
-        result = cli_runner.invoke(
-            cli, ["digest", "--period", "weekly", "--format", "text"]
-        )
+        result = cli_runner.invoke(cli, ["digest", "--period", "weekly", "--format", "text"])
 
         assert result.exit_code == 0
         assert "📊 Weekly Digest" in result.output
@@ -385,9 +379,7 @@ class TestAnalyticsCLI:
             lambda self, db_path=None: self._init_mock_db(temp_db_path),
         )
 
-        result = cli_runner.invoke(
-            cli, ["digest", "--period", "daily", "--format", "markdown"]
-        )
+        result = cli_runner.invoke(cli, ["digest", "--period", "daily", "--format", "markdown"])
 
         assert result.exit_code == 0
         assert "# Daily Digest" in result.output
@@ -404,9 +396,7 @@ class TestAnalyticsCLI:
             lambda self, db_path=None: self._init_mock_db(temp_db_path),
         )
 
-        result = cli_runner.invoke(
-            cli, ["digest", "--period", "monthly", "--format", "html"]
-        )
+        result = cli_runner.invoke(cli, ["digest", "--period", "monthly", "--format", "html"])
 
         assert result.exit_code == 0
         # HTML format should contain HTML tags
@@ -439,9 +429,7 @@ class TestAnalyticsCLI:
         assert "--format" in result.output
         assert "--output" in result.output
 
-    def test_report_command_weekly_markdown(
-        self, cli_runner, temp_db_path, monkeypatch
-    ):
+    def test_report_command_weekly_markdown(self, cli_runner, temp_db_path, monkeypatch):
         """Test report command with weekly period and markdown format."""
         from fincli.cli import cli
 
@@ -451,9 +439,7 @@ class TestAnalyticsCLI:
             lambda self, db_path=None: self._init_mock_db(temp_db_path),
         )
 
-        result = cli_runner.invoke(
-            cli, ["report", "--period", "weekly", "--format", "markdown"]
-        )
+        result = cli_runner.invoke(cli, ["report", "--period", "weekly", "--format", "markdown"])
 
         assert result.exit_code == 0
         assert "# Weekly Digest" in result.output
@@ -512,9 +498,7 @@ class TestAnalyticsEdgeCases:
         task_manager = analytics.task_manager
         task_manager.add_task("Task with no labels", labels=None)
         task_manager.add_task("Task with empty labels", labels="")
-        task_manager.add_task(
-            "Task with special chars: @#$%", labels=["special", "test"]
-        )
+        task_manager.add_task("Task with special chars: @#$%", labels=["special", "test"])
 
         return analytics
 

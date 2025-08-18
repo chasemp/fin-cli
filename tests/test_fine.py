@@ -4,9 +4,9 @@ Tests for the fine command functionality.
 Tests the fine command which opens tasks in an external editor.
 """
 
+from datetime import date
 import os
 import sys
-from datetime import date
 from unittest.mock import patch
 
 import pytest

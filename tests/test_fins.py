@@ -2,10 +2,10 @@
 Tests for fins command functionality.
 """
 
+from datetime import date
 import re
 import subprocess
 import sys
-from datetime import date
 
 from fincli.cli import list_tasks
 from fincli.db import DatabaseManager
@@ -103,9 +103,7 @@ class TestFinsCommand:
         assert "Today's task" in formatted_tasks[0]
         assert formatted_tasks[0].startswith(f"{task_id} [ ]")
 
-    def test_query_tasks_yesterday_completed(
-        self, temp_db_path, monkeypatch, test_dates
-    ):
+    def test_query_tasks_yesterday_completed(self, temp_db_path, monkeypatch, test_dates):
         """Test querying tasks from yesterday that are completed."""
         # Mock the database path
         monkeypatch.setattr(
@@ -118,9 +116,7 @@ class TestFinsCommand:
         task_manager = TaskManager(db_manager)
 
         # Add a task for yesterday and mark it as completed
-        yesterday_task_id = task_manager.add_task(
-            "Yesterday's completed task", labels=["work"]
-        )
+        yesterday_task_id = task_manager.add_task("Yesterday's completed task", labels=["work"])
         import sqlite3
 
         with sqlite3.connect(db_manager.db_path) as conn:
@@ -150,9 +146,7 @@ class TestFinsCommand:
             assert len(filtered_tasks) >= 1
             completed_tasks = [t for t in filtered_tasks if t.get("completed_at")]
             assert len(completed_tasks) >= 1
-            assert any(
-                "Yesterday's completed task" in t["content"] for t in completed_tasks
-            )
+            assert any("Yesterday's completed task" in t["content"] for t in completed_tasks)
 
     def test_query_tasks_week_flag(self, temp_db_path, monkeypatch, test_dates):
         """Test querying tasks with week flag."""
@@ -170,9 +164,7 @@ class TestFinsCommand:
         task_manager.add_task("Today's task", labels=["work"])
 
         # Add a task for yesterday (mark as completed)
-        yesterday_task_id = task_manager.add_task(
-            "Yesterday's task", labels=["personal"]
-        )
+        yesterday_task_id = task_manager.add_task("Yesterday's task", labels=["personal"])
         import sqlite3
 
         with sqlite3.connect(db_manager.db_path) as conn:
@@ -215,18 +207,14 @@ class TestFinsCommand:
         assert result.exit_code == 0
         assert "List tasks with optional filtering" in result.output
 
-    def test_fins_command_no_tasks(
-        self, isolated_cli_runner, temp_db_path, monkeypatch
-    ):
+    def test_fins_command_no_tasks(self, isolated_cli_runner, temp_db_path, monkeypatch):
         """Test fins command with no tasks."""
         # Set up empty database
         result = isolated_cli_runner.invoke(list_tasks)
         assert result.exit_code == 0
         assert "📝 No tasks found matching your criteria." in result.output
 
-    def test_fins_command_with_tasks(
-        self, isolated_cli_runner, temp_db_path, monkeypatch
-    ):
+    def test_fins_command_with_tasks(self, isolated_cli_runner, temp_db_path, monkeypatch):
         """Test fins command with tasks."""
         # Set up database with tasks
         from fincli.db import DatabaseManager
@@ -284,9 +272,7 @@ class TestFinsIntegration:
         task_manager.add_task("Today's task", labels=["work"])
 
         # Add a task for yesterday (mark as completed)
-        yesterday_task_id = task_manager.add_task(
-            "Yesterday's task", labels=["personal"]
-        )
+        yesterday_task_id = task_manager.add_task("Yesterday's task", labels=["personal"])
         import sqlite3
 
         with sqlite3.connect(db_manager.db_path) as conn:
@@ -383,13 +369,11 @@ class TestFinsStandaloneCommand:
         assert result.exit_code == 0
         assert "Query and display completed tasks" in result.output
 
-    def test_fins_command_default_behavior(
-        self, isolated_cli_runner, temp_db_path, monkeypatch, test_dates
-    ):
+    def test_fins_command_default_behavior(self, isolated_cli_runner, temp_db_path, monkeypatch, test_dates):
         """Test fins command default behavior (completed tasks from past 7 days)."""
         # Set up database with completed tasks
-        import sqlite3
         from datetime import datetime, timedelta
+        import sqlite3
 
         from fincli.db import DatabaseManager
         from fincli.tasks import TaskManager
@@ -428,13 +412,11 @@ class TestFinsStandaloneCommand:
             assert filtered_tasks[0]["content"] == "Completed task"
             assert filtered_tasks[0]["completed_at"] is not None
 
-    def test_fins_command_today_flag(
-        self, isolated_cli_runner, temp_db_path, monkeypatch, test_dates
-    ):
+    def test_fins_command_today_flag(self, isolated_cli_runner, temp_db_path, monkeypatch, test_dates):
         """Test fins command with --today flag."""
         # Set up database with completed tasks
-        import sqlite3
         from datetime import datetime, timedelta
+        import sqlite3
 
         from fincli.db import DatabaseManager
         from fincli.tasks import TaskManager
@@ -468,29 +450,23 @@ class TestFinsStandaloneCommand:
         for task in all_tasks:
             if task["completed_at"]:
                 # For completed tasks, check if completed today
-                completed_dt = datetime.fromisoformat(
-                    task["completed_at"].replace("Z", "+00:00")
-                )
+                completed_dt = datetime.fromisoformat(task["completed_at"].replace("Z", "+00:00"))
                 if completed_dt.date() == today_date:
                     filtered_tasks.append(task)
             else:
                 # For open tasks, check if created today
-                created_dt = datetime.fromisoformat(
-                    task["created_at"].replace("Z", "+00:00")
-                )
+                created_dt = datetime.fromisoformat(task["created_at"].replace("Z", "+00:00"))
                 if created_dt.date() == today_date:
                     filtered_tasks.append(task)
 
         # Should not include yesterday's task when using --today logic
         assert len(filtered_tasks) == 0
 
-    def test_fins_command_label_filter(
-        self, isolated_cli_runner, temp_db_path, monkeypatch, test_dates
-    ):
+    def test_fins_command_label_filter(self, isolated_cli_runner, temp_db_path, monkeypatch, test_dates):
         """Test fins command with label filtering."""
         # Set up database with completed tasks
-        import sqlite3
         from datetime import datetime, timedelta
+        import sqlite3
 
         from fincli.db import DatabaseManager
         from fincli.tasks import TaskManager
@@ -528,29 +504,19 @@ class TestFinsStandaloneCommand:
             filtered_tasks = filter_tasks_by_date_range(all_tasks, days=7)
 
             # Apply label filtering manually
-            work_tasks = [
-                task
-                for task in filtered_tasks
-                if task.get("labels") and "work" in task["labels"]
-            ]
-            personal_tasks = [
-                task
-                for task in filtered_tasks
-                if task.get("labels") and "personal" in task["labels"]
-            ]
+            work_tasks = [task for task in filtered_tasks if task.get("labels") and "work" in task["labels"]]
+            personal_tasks = [task for task in filtered_tasks if task.get("labels") and "personal" in task["labels"]]
 
             assert len(work_tasks) == 1
             assert work_tasks[0]["content"] == "Work task"
             assert len(personal_tasks) == 1
             assert personal_tasks[0]["content"] == "Personal task"
 
-    def test_fins_command_no_tasks(
-        self, isolated_cli_runner, temp_db_path, monkeypatch
-    ):
+    def test_fins_command_no_tasks(self, isolated_cli_runner, temp_db_path, monkeypatch):
         """Test fins command with no tasks."""
         # Set up empty database
-        import sqlite3
         from datetime import datetime, timedelta
+        import sqlite3
 
         from fincli.db import DatabaseManager
         from fincli.tasks import TaskManager
@@ -566,8 +532,8 @@ class TestFinsStandaloneCommand:
     def test_days_parameter_edge_cases(self, temp_db_path, monkeypatch, test_dates):
         """Test --days parameter with edge cases."""
         # Set up database with tasks
-        import sqlite3
         from datetime import datetime, timedelta
+        import sqlite3
 
         from fincli.db import DatabaseManager
         from fincli.tasks import TaskManager
@@ -612,23 +578,17 @@ class TestFinsStandaloneCommand:
             # The "Today's task" might not be included if it was created outside the 0-day window
             # This depends on when the test runs vs when the task was created
             # The important thing is that the filtering logic works correctly
-            assert (
-                len(today_tasks) >= 0
-            )  # The task might not be included depending on timing
+            assert len(today_tasks) >= 0  # The task might not be included depending on timing
 
             # Test days=1 (today and yesterday)
             filtered_tasks = filter_tasks_by_date_range(all_tasks, days=1)
             recent_tasks = [
-                t
-                for t in filtered_tasks
-                if "Today's task" in t["content"] or "Yesterday's task" in t["content"]
+                t for t in filtered_tasks if "Today's task" in t["content"] or "Yesterday's task" in t["content"]
             ]
             # The "Today's task" might not be included if it was created outside the 1-day window
             # This depends on when the test runs vs when the task was created
             # The important thing is that the filtering logic works correctly
-            assert (
-                len(recent_tasks) >= 1
-            )  # At least the completed task should be included
+            assert len(recent_tasks) >= 1  # At least the completed task should be included
 
             # Test days=7 (past week)
             filtered_tasks = filter_tasks_by_date_range(all_tasks, days=7)
@@ -640,9 +600,7 @@ class TestFinsStandaloneCommand:
             # The "Today's task" might not be included if it was created outside the 30-day window
             # This depends on when the test runs vs when the task was created
             # The important thing is that the filtering logic works correctly
-            assert (
-                len(filtered_tasks) >= 2
-            )  # At least the completed tasks should be included
+            assert len(filtered_tasks) >= 2  # At least the completed tasks should be included
 
     def test_days_parameter_with_cli(self, temp_db_path, monkeypatch, test_dates):
         """Test --days parameter through CLI commands."""
@@ -658,8 +616,8 @@ class TestFinsStandaloneCommand:
         task2_id = task_manager.add_task("Yesterday's task", labels=["personal"])
 
         # Mark one as completed
-        import sqlite3
         from datetime import datetime, timedelta
+        import sqlite3
 
         # Use test_dates fixture for consistent dates
         yesterday = test_dates["yesterday"]

@@ -261,9 +261,7 @@ class TestListLabelsCommand:
         assert result.exit_code == 0
         assert "No labels found in any tasks" in result.output
 
-    def test_list_labels_command_with_labels(
-        self, cli_runner, temp_db_path, monkeypatch
-    ):
+    def test_list_labels_command_with_labels(self, cli_runner, temp_db_path, monkeypatch):
         """Test list-labels command when labels exist."""
         # Mock the database path
         monkeypatch.setattr(

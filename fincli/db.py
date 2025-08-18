@@ -5,8 +5,8 @@ Handles SQLite connection and schema management.
 """
 
 import os
-import sqlite3
 from pathlib import Path
+import sqlite3
 from typing import Optional
 
 
@@ -71,9 +71,7 @@ class DatabaseManager:
                 cursor.execute("ALTER TABLE tasks ADD COLUMN modified_at TIMESTAMP")
 
                 # Update existing tasks to have modified_at = created_at
-                cursor.execute(
-                    "UPDATE tasks SET modified_at = created_at WHERE modified_at IS NULL"
-                )
+                cursor.execute("UPDATE tasks SET modified_at = created_at WHERE modified_at IS NULL")
 
             # Check if due_date column exists, add it if it doesn't
             if "due_date" not in columns:

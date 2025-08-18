@@ -12,9 +12,7 @@ from ..db import DatabaseManager
 from ..tasks import TaskManager
 
 
-def import_csv_tasks(
-    file_path: str = None, db_manager: Optional[DatabaseManager] = None, **kwargs
-) -> Dict[str, Any]:
+def import_csv_tasks(file_path: str = None, db_manager: Optional[DatabaseManager] = None, **kwargs) -> Dict[str, Any]:
     """
     Import tasks from a CSV file.
 
@@ -68,11 +66,7 @@ def import_csv_tasks(
                     # Parse labels
                     labels = []
                     if labels_str:
-                        labels = [
-                            label.strip()
-                            for label in labels_str.split(",")
-                            if label.strip()
-                        ]
+                        labels = [label.strip() for label in labels_str.split(",") if label.strip()]
 
                     # Add source label
                     labels.append("source:csv")

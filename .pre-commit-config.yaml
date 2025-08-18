@@ -23,13 +23,15 @@ repos:
         name: flake8
         entry: flake8
         language: system
-        args: [fincli/, tests/]
+        types: [python]
+        args: [--config, .flake8, --max-line-length=999, fincli/, tests/]
         stages: [pre-commit]
         
       - id: black-check
         name: black
         entry: black
         language: system
+        types: [python]
         args: [--check, fincli/, tests/]
         stages: [pre-commit]
         
@@ -37,5 +39,6 @@ repos:
         name: isort
         entry: isort
         language: system
+        types: [python]
         args: [--check-only, fincli/, tests/]
         stages: [pre-commit] 

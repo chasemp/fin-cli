@@ -3,9 +3,9 @@ Safe tests for the editor functionality using example text files and transforms.
 These tests ensure the editor logic works correctly without opening actual editors.
 """
 
+from datetime import date, datetime, timedelta
 import os
 import tempfile
-from datetime import date, datetime, timedelta
 
 import pytest
 
@@ -47,18 +47,13 @@ class TestEditorSafe:
         lines = content.splitlines()
         assert lines[0] == "# Fin Tasks - Edit and save to update completion status"
         assert lines[1] == "# Changes tracked:"
-        assert (
-            lines[2] == "#   • Checkbox changes ([ ] ↔ [x]) - mark complete/incomplete"
-        )
+        assert lines[2] == "#   • Checkbox changes ([ ] ↔ [x]) - mark complete/incomplete"
         assert lines[3] == "#   • Content changes - reword tasks (keeps same task ID)"
         assert lines[4] == "#   • Due date changes - edit due:YYYY-MM-DD at end of line"
         assert lines[5] == "#   • New tasks - add lines without #ref:task_XXX"
         assert lines[6] == "#   • Task deletion - remove lines to delete tasks"
         assert lines[7] == "# Lines starting with # are ignored"
-        assert (
-            lines[8]
-            == "# DO NOT modify the #ref:task_XXX part - it's used to track changes"
-        )
+        assert lines[8] == "# DO NOT modify the #ref:task_XXX part - it's used to track changes"
         assert lines[9] == "#"
         assert lines[10] == "# Due date examples:"
         assert lines[11] == "#   • due:2025-06-17 (specific date)"
@@ -246,9 +241,7 @@ class TestEditorSafe:
 
         # Verify the new task was actually added to the database with timestamp
         all_tasks = task_manager.list_tasks(include_completed=True)
-        new_tasks = [
-            t for t in all_tasks if t["content"] == "New task without timestamp"
-        ]
+        new_tasks = [t for t in all_tasks if t["content"] == "New task without timestamp"]
         assert len(new_tasks) == 1
 
         # Verify the task has a timestamp (should be automatically added)
@@ -330,9 +323,7 @@ class TestEditorSafe:
 
         # Verify the new task was actually added to the database
         all_tasks = task_manager.list_tasks(include_completed=True)
-        new_tasks = [
-            t for t in all_tasks if t["content"] == "New task with space format"
-        ]
+        new_tasks = [t for t in all_tasks if t["content"] == "New task with space format"]
         assert len(new_tasks) == 1
 
         # Verify the task has a timestamp
@@ -355,9 +346,7 @@ class TestEditorSafe:
         assert result["is_completed"] is False
 
         # Test parsing new task with labels
-        result = editor_manager.parse_task_line(
-            "[] New task with labels  #work #urgent"
-        )
+        result = editor_manager.parse_task_line("[] New task with labels  #work #urgent")
         assert result is not None
         assert result["content"] == "New task with labels"
         assert result["status"] == "[ ]"  # Should be normalized
@@ -377,9 +366,7 @@ class TestEditorSafe:
         assert result["is_completed"] is False
 
         # Test that existing format still works
-        result = editor_manager.parse_task_line(
-            "[ ] 2024-01-01 10:00  Existing task  #ref:task_123"
-        )
+        result = editor_manager.parse_task_line("[ ] 2024-01-01 10:00  Existing task  #ref:task_123")
         assert result is not None
         assert result["content"] == "Existing task"
         assert result["status"] == "[ ]"
@@ -574,9 +561,7 @@ Invalid line without proper format
             new_tasks_count,
             content_modified_count,
             deleted_count,
-        ) = editor_manager.simulate_edit_with_content(
-            original_content, modified_content
-        )
+        ) = editor_manager.simulate_edit_with_content(original_content, modified_content)
 
         assert completed_count == 1
         assert reopened_count == 0
@@ -626,20 +611,14 @@ Invalid line without proper format
         # Test filtering by today's date - use the actual creation date of the task
         # Get the actual task to see its creation timestamp
         actual_task = task_manager.get_task(1)  # First task
-        actual_created_date = actual_task["created_at"].split(" ")[
-            0
-        ]  # Extract date part
+        actual_created_date = actual_task["created_at"].split(" ")[0]  # Extract date part
 
-        today_tasks = editor_manager.get_tasks_for_editing(
-            target_date=actual_created_date
-        )
+        today_tasks = editor_manager.get_tasks_for_editing(target_date=actual_created_date)
         assert len(today_tasks) == 1
         assert today_tasks[0]["content"] == "Today's task"
 
         # Test filtering by yesterday's date
-        yesterday_tasks = editor_manager.get_tasks_for_editing(
-            target_date=test_dates["yesterday"].strftime("%Y-%m-%d")
-        )
+        yesterday_tasks = editor_manager.get_tasks_for_editing(target_date=test_dates["yesterday"].strftime("%Y-%m-%d"))
         assert len(yesterday_tasks) == 1
         assert yesterday_tasks[0]["content"] == "Yesterday's task"
 
@@ -762,9 +741,7 @@ Invalid line without proper format
         original_content = editor_manager.create_edit_file_content(tasks)
 
         # Transform: [ ] my task => [ ] this is the same task but reworded
-        modified_content = original_content.replace(
-            "My task", "This is the same task but reworded"
-        )
+        modified_content = original_content.replace("My task", "This is the same task but reworded")
 
         # Parse the modified content
         (
@@ -821,9 +798,7 @@ Invalid line without proper format
             modified_lines.append(line)
 
         # Add new task
-        modified_content = (
-            "\n".join(modified_lines) + "\n[ ] 2024-01-01 10:00  New task  #work"
-        )
+        modified_content = "\n".join(modified_lines) + "\n[ ] 2024-01-01 10:00  New task  #work"
 
         # Parse the modified content
         (
@@ -993,9 +968,7 @@ Invalid line without proper format
             modified_lines.append(line)
 
         # Add new task
-        modified_content = (
-            "\n".join(modified_lines) + "\n[ ] 2024-01-01 10:00  New task  #work"
-        )
+        modified_content = "\n".join(modified_lines) + "\n[ ] 2024-01-01 10:00  New task  #work"
 
         # Parse the modified content
         (
@@ -1041,9 +1014,7 @@ Invalid line without proper format
         # Verify the summary data would be correct
         # Compare by task ID since objects are different instances
         original_completed_ids = {t["id"] for t in original_completed}
-        newly_completed = [
-            t for t in updated_completed if t["id"] not in original_completed_ids
-        ]
+        newly_completed = [t for t in updated_completed if t["id"] not in original_completed_ids]
         assert len(newly_completed) == 1
         assert newly_completed[0]["content"] == "Task to complete"
 
@@ -1087,9 +1058,7 @@ Invalid line without proper format
             new_tasks_count,
             content_modified_count,
             deleted_count,
-        ) = editor_manager.parse_edited_content(
-            modified_content, {task1_id, task2_id, task3_id}
-        )
+        ) = editor_manager.parse_edited_content(modified_content, {task1_id, task2_id, task3_id})
 
         # Verify the changes
         assert completed_count == 0

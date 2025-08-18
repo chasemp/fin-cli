@@ -11,9 +11,7 @@ from ..db import DatabaseManager
 from ..tasks import TaskManager
 
 
-def import_text_tasks(
-    file_path: str = None, db_manager: Optional[DatabaseManager] = None, **kwargs
-) -> Dict[str, Any]:
+def import_text_tasks(file_path: str = None, db_manager: Optional[DatabaseManager] = None, **kwargs) -> Dict[str, Any]:
     """
     Import tasks from a text file.
 
@@ -71,11 +69,7 @@ def import_text_tasks(
                         labels_str = parts[1].strip()
 
                         # Parse labels
-                        labels = [
-                            label.strip()
-                            for label in labels_str.split(",")
-                            if label.strip()
-                        ]
+                        labels = [label.strip() for label in labels_str.split(",") if label.strip()]
                     else:
                         # No labels, just task content
                         task_content = line

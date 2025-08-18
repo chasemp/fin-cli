@@ -2,9 +2,9 @@
 Pytest configuration and fixtures for Fin test suite
 """
 
+from datetime import timedelta
 import os
 import tempfile
-from datetime import timedelta
 
 import pytest
 

@@ -4,10 +4,10 @@ FinCLI - A lightweight task tracking system
 A modular, installable Python package for managing local tasks.
 """
 
+from datetime import date, datetime, timedelta
 import os
 import re
 import sys
-from datetime import date, datetime, timedelta
 from typing import List, Optional
 
 import click
@@ -21,9 +21,13 @@ from fincli.editor import EditorManager
 from fincli.intake import import_from_source
 from fincli.labels import LabelManager
 from fincli.tasks import TaskManager
-from fincli.utils import (DateParser, filter_tasks_by_date_range,
-                          format_task_for_display, is_important_task,
-                          is_today_task)
+from fincli.utils import (
+    DateParser,
+    filter_tasks_by_date_range,
+    format_task_for_display,
+    is_important_task,
+    is_today_task,
+)
 
 
 def _get_db_manager():
@@ -51,14 +55,10 @@ def add_task(content: str, labels: tuple, source: str = "cli", due_date: str = N
     reserved_words = {"and", "or", "ref", "due", "recur", "depends", "not"}
     invalid_labels = [label for label in labels_list if label.lower() in reserved_words]
     if invalid_labels:
-        click.echo(
-            f"❌ Error: Cannot use reserved words as labels: {', '.join(invalid_labels)}"
-        )
+        click.echo(f"❌ Error: Cannot use reserved words as labels: {', '.join(invalid_labels)}")
         click.echo(f"   Reserved words: {', '.join(sorted(reserved_words))}")
         click.echo("   Use complex filtering instead: fin list -l 'work and urgent'")
-        click.echo(
-            "   Use special patterns: #due:06/17, #due:2025-08-10, #recur:daily, #depends:task123"
-        )
+        click.echo("   Use special patterns: #due:06/17, #due:2025-08-10, #recur:daily, #depends:task123")
         sys.exit(1)
 
     # Check if this is an important task and auto-add today label if configured
@@ -86,9 +86,7 @@ def add_task(content: str, labels: tuple, source: str = "cli", due_date: str = N
         due_date_display = f" (due: {due_date})"
 
     if normalized_labels:
-        click.echo(
-            f'✅ Task added: "{content}" [{", ".join(normalized_labels)}]{due_date_display}'
-        )
+        click.echo(f'✅ Task added: "{content}" [{", ".join(normalized_labels)}]{due_date_display}')
     else:
         click.echo(f'✅ Task added: "{content}"{due_date_display}')
 
@@ -171,22 +169,16 @@ def handle_direct_task(args):
     # Extract hashtags from content and add them as labels
     # Exclude task reference patterns like #task23, #ref:task23, etc.
     # Also exclude special patterns like #due:, #recur:, #depends:
-    hashtags = re.findall(
-        r"#(?!task\d+|ref:task\d+|due:|recur:|depends:)(\w+)", content
-    )
+    hashtags = re.findall(r"#(?!task\d+|ref:task\d+|due:|recur:|depends:)(\w+)", content)
 
     # Validate hashtags for reserved words
     reserved_words = {"and", "or", "ref", "due", "recur", "depends", "not"}
     invalid_hashtags = [tag for tag in hashtags if tag.lower() in reserved_words]
     if invalid_hashtags:
-        click.echo(
-            f"❌ Error: Cannot use reserved words as labels: {', '.join(invalid_hashtags)}"
-        )
+        click.echo(f"❌ Error: Cannot use reserved words as labels: {', '.join(invalid_hashtags)}")
         click.echo(f"   Reserved words: {', '.join(sorted(reserved_words))}")
         click.echo("   Use complex filtering instead: fin list -l 'work and urgent'")
-        click.echo(
-            "   Use special patterns: #due:2025-08-10, #recur:daily, #depends:task123"
-        )
+        click.echo("   Use special patterns: #due:2025-08-10, #recur:daily, #depends:task123")
         sys.exit(1)
 
     for hashtag in hashtags:
@@ -287,9 +279,7 @@ def _list_tasks_impl(days, label, status, today=False, due=None, verbose=False):
         if today:
             click.echo("   • Today only (overrides days)")
         else:
-            click.echo(
-                f"   • Days: {days} (looking back {days} day{'s' if days != 1 else ''})"
-            )
+            click.echo(f"   • Days: {days} (looking back {days} day{'s' if days != 1 else ''})")
         click.echo(f"   • Status: {status}")
         if label:
             click.echo(f"   • Labels: {', '.join(label)}")
@@ -313,25 +303,19 @@ def _list_tasks_impl(days, label, status, today=False, due=None, verbose=False):
         for task in tasks:
             if task["completed_at"]:
                 # For completed tasks, check if completed today
-                completed_dt = datetime.fromisoformat(
-                    task["completed_at"].replace("Z", "+00:00")
-                )
+                completed_dt = datetime.fromisoformat(task["completed_at"].replace("Z", "+00:00"))
                 if completed_dt.date() == today_date:
                     filtered_tasks.append(task)
             else:
                 # For open tasks, check if created today
-                created_dt = datetime.fromisoformat(
-                    task["created_at"].replace("Z", "+00:00")
-                )
+                created_dt = datetime.fromisoformat(task["created_at"].replace("Z", "+00:00"))
                 if created_dt.date() == today_date:
                     filtered_tasks.append(task)
         tasks = filtered_tasks
     else:
         # Apply normal days filtering
         weekdays_only = config.get_weekdays_only_lookback()
-        tasks = filter_tasks_by_date_range(
-            tasks, days=days, weekdays_only=weekdays_only
-        )
+        tasks = filter_tasks_by_date_range(tasks, days=days, weekdays_only=weekdays_only)
 
     # Apply status filtering
     if status in ["open", "o"]:
@@ -346,9 +330,7 @@ def _list_tasks_impl(days, label, status, today=False, due=None, verbose=False):
         for task in tasks:
             if task.get("labels"):
                 # Clean up labels - remove empty strings and whitespace
-                task_labels = [
-                    label.strip().lower() for label in task["labels"] if label.strip()
-                ]
+                task_labels = [label.strip().lower() for label in task["labels"] if label.strip()]
 
                 # Check if task matches any of the label criteria
                 task_matches = False
@@ -358,23 +340,13 @@ def _list_tasks_impl(days, label, status, today=False, due=None, verbose=False):
                     # Handle complex label combinations
                     if " and " in label_criteria:
                         # All labels must be present
-                        required_labels = [
-                            label.strip().lower()
-                            for label in label_criteria.split(" and ")
-                        ]
-                        if all(
-                            req_label in task_labels for req_label in required_labels
-                        ):
+                        required_labels = [label.strip().lower() for label in label_criteria.split(" and ")]
+                        if all(req_label in task_labels for req_label in required_labels):
                             task_matches = True
                     elif " or " in label_criteria:
                         # Any label can be present
-                        optional_labels = [
-                            label.strip().lower()
-                            for label in label_criteria.split(" or ")
-                        ]
-                        if any(
-                            opt_label in task_labels for opt_label in optional_labels
-                        ):
+                        optional_labels = [label.strip().lower() for label in label_criteria.split(" or ")]
+                        if any(opt_label in task_labels for opt_label in optional_labels):
                             task_matches = True
                     else:
                         # Simple label match
@@ -433,9 +405,7 @@ def _list_tasks_impl(days, label, status, today=False, due=None, verbose=False):
     # Important tasks (with #i) go in Important section, regardless of #t
     important_tasks = [task for task in tasks if is_important_task(task)]
     # Today tasks (with #t but not #i) go in Today section
-    today_tasks = [
-        task for task in tasks if is_today_task(task) and not is_important_task(task)
-    ]
+    today_tasks = [task for task in tasks if is_today_task(task) and not is_important_task(task)]
 
     # Due date sections (only for open tasks)
 
@@ -444,9 +414,7 @@ def _list_tasks_impl(days, label, status, today=False, due=None, verbose=False):
     due_today_tasks = []
 
     for task in tasks:
-        if not task["completed_at"] and task.get(
-            "due_date"
-        ):  # Only open tasks with due dates
+        if not task["completed_at"] and task.get("due_date"):  # Only open tasks with due dates
             if DateParser.is_overdue(task["due_date"]):
                 overdue_tasks.append(task)
             elif task["due_date"] == date.today().strftime("%Y-%m-%d"):
@@ -455,25 +423,10 @@ def _list_tasks_impl(days, label, status, today=False, due=None, verbose=False):
                 due_soon_tasks.append(task)
 
     # Regular tasks (no #i or #t) go in Open section
-    open_tasks = [
-        task
-        for task in tasks
-        if not task["completed_at"]
-        and not is_important_task(task)
-        and not is_today_task(task)
-        and not task.get(
-            "due_date"
-        )  # Exclude tasks with due dates (they go in due date sections)
-    ]
+    open_tasks = [task for task in tasks if not task["completed_at"] and not is_important_task(task) and not is_today_task(task) and not task.get("due_date")]  # Exclude tasks with due dates (they go in due date sections)
 
     # Completed tasks go in Completed section
-    completed_tasks = [
-        task
-        for task in tasks
-        if task["completed_at"]
-        and not is_important_task(task)
-        and not is_today_task(task)
-    ]
+    completed_tasks = [task for task in tasks if task["completed_at"] and not is_important_task(task) and not is_today_task(task)]
 
     # Display Important section
     if important_tasks:
@@ -532,12 +485,8 @@ def _list_tasks_impl(days, label, status, today=False, due=None, verbose=False):
 
 
 @cli.command(name="list-tasks")
-@click.option(
-    "--days", "-d", default=1, help="Show tasks from the past N days (default: 1)"
-)
-@click.option(
-    "--today", "-t", is_flag=True, help="Show only today's tasks (overrides days)"
-)
+@click.option("--days", "-d", default=1, help="Show tasks from the past N days (default: 1)")
+@click.option("--today", "-t", is_flag=True, help="Show only today's tasks (overrides days)")
 @click.option("--label", "-l", multiple=True, help="Filter by labels")
 @click.option(
     "--status",
@@ -571,12 +520,8 @@ def list_tasks(days, label, today, status, due, verbose):
 
 
 @cli.command(name="list")
-@click.option(
-    "--days", "-d", default=1, help="Show tasks from the past N days (default: 1)"
-)
-@click.option(
-    "--today", "-t", is_flag=True, help="Show only today's tasks (overrides days)"
-)
+@click.option("--days", "-d", default=1, help="Show tasks from the past N days (default: 1)")
+@click.option("--today", "-t", is_flag=True, help="Show only today's tasks (overrides days)")
 @click.option("--label", "-l", multiple=True, help="Filter by labels")
 @click.option(
     "--status",
@@ -614,9 +559,7 @@ def list_tasks_alias(days, label, today, status, due, verbose):
 @click.option("--label", "-l", multiple=True, help="Filter by labels")
 @click.option("--date", help="Filter by date (YYYY-MM-DD)")
 @click.option("--all-tasks", is_flag=True, help="Show all tasks (including completed)")
-@click.option(
-    "--dry-run", is_flag=True, help="Show what would be edited without opening editor"
-)
+@click.option("--dry-run", is_flag=True, help="Show what would be edited without opening editor")
 def open_editor(label, date, all_tasks, dry_run):
     """Open tasks in your editor for editing completion status."""
 
@@ -625,9 +568,7 @@ def open_editor(label, date, all_tasks, dry_run):
 
     # Get tasks for editing (without opening editor)
     label_filter = label[0] if label else None
-    tasks = editor_manager.get_tasks_for_editing(
-        label=label_filter, target_date=date, all_tasks=all_tasks
-    )
+    tasks = editor_manager.get_tasks_for_editing(label=label_filter, target_date=date, all_tasks=all_tasks)
 
     if not tasks:
         click.echo("📝 No tasks found for editing.")
@@ -639,27 +580,19 @@ def open_editor(label, date, all_tasks, dry_run):
         for task in tasks:
             status = "✓" if task.get("completed_at") else "□"
             click.echo(f"  {status} {task['content']}")
-        click.echo(
-            "\nUse 'fin open-editor' (without --dry-run) to actually open the editor."
-        )
-        click.echo(
-            "💡 Tip: You can add new tasks by adding lines without #ref:task_XXX"
-        )
+        click.echo("\nUse 'fin open-editor' (without --dry-run) to actually open the editor.")
+        click.echo("💡 Tip: You can add new tasks by adding lines without #ref:task_XXX")
         return
 
     # Show what will be opened
     click.echo(f"📝 Opening {len(tasks)} tasks in editor...")
-    click.echo(
-        "⚠️  This will open your default editor. Close the editor to save changes."
-    )
+    click.echo("⚠️  This will open your default editor. Close the editor to save changes.")
     click.echo("💡 Tip: You can add new tasks by adding lines without #ref:task_XXX")
 
     # Only open editor at the very last moment when user explicitly requests it
     try:
         # Get the state before editing for comparison
-        original_tasks = editor_manager.get_tasks_for_editing(
-            label=label_filter, target_date=date, all_tasks=all_tasks
-        )
+        original_tasks = editor_manager.get_tasks_for_editing(label=label_filter, target_date=date, all_tasks=all_tasks)
         original_completed = [t for t in original_tasks if t.get("completed_at")]
 
         (
@@ -668,24 +601,14 @@ def open_editor(label, date, all_tasks, dry_run):
             new_tasks_count,
             content_modified_count,
             deleted_count,
-        ) = editor_manager.edit_tasks(
-            label=label_filter, target_date=date, all_tasks=all_tasks
-        )
+        ) = editor_manager.edit_tasks(label=label_filter, target_date=date, all_tasks=all_tasks)
 
         # Get the state after editing for detailed comparison
-        updated_tasks = editor_manager.get_tasks_for_editing(
-            label=label_filter, target_date=date, all_tasks=all_tasks
-        )
+        updated_tasks = editor_manager.get_tasks_for_editing(label=label_filter, target_date=date, all_tasks=all_tasks)
         updated_completed = [t for t in updated_tasks if t.get("completed_at")]
         updated_open = [t for t in updated_tasks if not t.get("completed_at")]
 
-        changes_made = (
-            completed_count > 0
-            or reopened_count > 0
-            or new_tasks_count > 0
-            or content_modified_count > 0
-            or deleted_count > 0
-        )
+        changes_made = completed_count > 0 or reopened_count > 0 or new_tasks_count > 0 or content_modified_count > 0 or deleted_count > 0
 
         if changes_made:
             click.echo("\n📊 Summary of Changes:")
@@ -695,11 +618,7 @@ def open_editor(label, date, all_tasks, dry_run):
             if completed_count > 0:
                 click.echo(f"✅ Completed ({completed_count}):")
                 original_completed_ids = {t["id"] for t in original_completed}
-                newly_completed = [
-                    t
-                    for t in updated_completed
-                    if t["id"] not in original_completed_ids
-                ]
+                newly_completed = [t for t in updated_completed if t["id"] not in original_completed_ids]
                 for task in newly_completed:
                     click.echo(f"  • {task['content']}")
                 click.echo()
@@ -707,9 +626,7 @@ def open_editor(label, date, all_tasks, dry_run):
             # Show reopened tasks
             if reopened_count > 0:
                 click.echo(f"🔄 Reopened ({reopened_count}):")
-                newly_reopened = [
-                    t for t in updated_open if t["id"] in original_completed_ids
-                ]
+                newly_reopened = [t for t in updated_open if t["id"] in original_completed_ids]
                 for task in newly_reopened:
                     click.echo(f"  • {task['content']}")
                 click.echo()
@@ -718,17 +635,13 @@ def open_editor(label, date, all_tasks, dry_run):
             if new_tasks_count > 0:
                 click.echo(f"📝 Added ({new_tasks_count}):")
                 # Get the most recent tasks that weren't in the original list
-                all_tasks = editor_manager.task_manager.list_tasks(
-                    include_completed=True
-                )
+                all_tasks = editor_manager.task_manager.list_tasks(include_completed=True)
                 original_ids = {t["id"] for t in original_tasks}
                 new_tasks = [t for t in all_tasks if t["id"] not in original_ids]
                 # Sort by creation time (newest first) and take the most recent ones
                 new_tasks.sort(key=lambda x: x["created_at"], reverse=True)
                 for task in new_tasks[:new_tasks_count]:
-                    labels_str = (
-                        f" [{', '.join(task['labels'])}]" if task["labels"] else ""
-                    )
+                    labels_str = f" [{', '.join(task['labels'])}]" if task["labels"] else ""
                     click.echo(f"  • {task['content']}{labels_str}")
                 click.echo()
 
@@ -739,9 +652,7 @@ def open_editor(label, date, all_tasks, dry_run):
                 click.echo()
 
             # Show overall summary
-            total_changes = (
-                completed_count + reopened_count + new_tasks_count + deleted_count
-            )
+            total_changes = completed_count + reopened_count + new_tasks_count + deleted_count
             click.echo(f"📈 Total changes: {total_changes}")
 
         else:
@@ -795,10 +706,7 @@ def fine_command():
     @click.option(
         "--status",
         "-s",
-        help=(
-            "Filter by status(es): open/o, completed, done/d, all/a, or "
-            "comma-separated list like 'done,open' (default: open)"
-        ),
+        help=("Filter by status(es): open/o, completed, done/d, all/a, or " "comma-separated list like 'done,open' (default: open)"),
     )
     @click.option(
         "--verbose",
@@ -850,9 +758,7 @@ def fine_command():
                 if days_int == 0:
                     click.echo("   • Days: all time (no date restriction)")
                 else:
-                    click.echo(
-                        f"   • Days: {days_int} (looking back {days_int} day{'s' if days_int != 1 else ''})"
-                    )
+                    click.echo(f"   • Days: {days_int} (looking back {days_int} day{'s' if days_int != 1 else ''})")
             else:
                 click.echo("   • Days: all open tasks (no date restriction)")
             click.echo(f"   • Status: {', '.join(status_list)}")
@@ -888,10 +794,7 @@ def fine_command():
 
             if "open" in normalized_status_list and task["completed_at"] is None:
                 filtered_tasks.append(task)
-            elif (
-                "completed" in normalized_status_list
-                and task["completed_at"] is not None
-            ):
+            elif "completed" in normalized_status_list and task["completed_at"] is not None:
                 filtered_tasks.append(task)
             elif "done" in normalized_status_list and task["completed_at"] is not None:
                 filtered_tasks.append(task)
@@ -906,16 +809,12 @@ def fine_command():
             for task in filtered_tasks:
                 if task["completed_at"]:
                     # For completed tasks, check if completed today
-                    completed_dt = datetime.fromisoformat(
-                        task["completed_at"].replace("Z", "+00:00")
-                    )
+                    completed_dt = datetime.fromisoformat(task["completed_at"].replace("Z", "+00:00"))
                     if completed_dt.date() == today_date:
                         today_filtered_tasks.append(task)
                 else:
                     # For open tasks, check if created today
-                    created_dt = datetime.fromisoformat(
-                        task["created_at"].replace("Z", "+00:00")
-                    )
+                    created_dt = datetime.fromisoformat(task["created_at"].replace("Z", "+00:00"))
                     if created_dt.date() == today_date:
                         today_filtered_tasks.append(task)
             filtered_tasks = today_filtered_tasks
@@ -923,18 +822,12 @@ def fine_command():
             # For date-based filtering, filter by date after status filtering
             from fincli.utils import filter_tasks_by_date_range
 
-            filtered_tasks = filter_tasks_by_date_range(
-                filtered_tasks, target_date=date
-            )
+            filtered_tasks = filter_tasks_by_date_range(filtered_tasks, target_date=date)
         elif label:
             # For label-based filtering, filter by label after status filtering
             label_filter = label[0] if label else None
             if label_filter:
-                filtered_tasks = [
-                    t
-                    for t in filtered_tasks
-                    if t.get("labels") and label_filter in t["labels"]
-                ]
+                filtered_tasks = [t for t in filtered_tasks if t.get("labels") and label_filter in t["labels"]]
         elif days is not None:
             # For days-based filtering, apply date filtering after status filtering
             from fincli.utils import filter_tasks_by_date_range
@@ -948,16 +841,12 @@ def fine_command():
 
             if days_int != 0:
                 # Apply date filtering (days > 0)
-                filtered_tasks = filter_tasks_by_date_range(
-                    filtered_tasks, days=days_int, weekdays_only=weekdays_only
-                )
+                filtered_tasks = filter_tasks_by_date_range(filtered_tasks, days=days_int, weekdays_only=weekdays_only)
 
         # Apply max limit
         if len(filtered_tasks) > max_limit:
             if verbose:
-                click.echo(
-                    f"⚠️  Warning: Found {len(filtered_tasks)} tasks, showing first {max_limit} due to max_limit"
-                )
+                click.echo(f"⚠️  Warning: Found {len(filtered_tasks)} tasks, showing first {max_limit} due to max_limit")
             filtered_tasks = filtered_tasks[:max_limit]
 
         tasks = filtered_tasks
@@ -973,19 +862,13 @@ def fine_command():
                 status = "✓" if task.get("completed_at") else "□"
                 click.echo(f"  {status} {task['content']}")
             click.echo("\nUse 'fine' (without --dry-run) to actually open the editor.")
-            click.echo(
-                "💡 Tip: You can add new tasks by adding lines without #ref:task_XXX"
-            )
+            click.echo("💡 Tip: You can add new tasks by adding lines without #ref:task_XXX")
             return
 
         # Show what will be opened
         click.echo(f"📝 Opening {len(tasks)} tasks in editor...")
-        click.echo(
-            "⚠️  This will open your default editor. Close the editor to save changes."
-        )
-        click.echo(
-            "💡 Tip: You can add new tasks by adding lines without #ref:task_XXX"
-        )
+        click.echo("⚠️  This will open your default editor. Close the editor to save changes.")
+        click.echo("💡 Tip: You can add new tasks by adding lines without #ref:task_XXX")
 
         # Only open editor at the very last moment when user explicitly requests it
         # NOTE: Tests should NEVER reach this point - they should use dry-run or test
@@ -1010,13 +893,7 @@ def fine_command():
             updated_completed = [t for t in updated_tasks if t.get("completed_at")]
             updated_open = [t for t in updated_tasks if not t.get("completed_at")]
 
-            changes_made = (
-                completed_count > 0
-                or reopened_count > 0
-                or new_tasks_count > 0
-                or content_modified_count > 0
-                or deleted_count > 0
-            )
+            changes_made = completed_count > 0 or reopened_count > 0 or new_tasks_count > 0 or content_modified_count > 0 or deleted_count > 0
 
             if changes_made:
                 click.echo("\n📊 Summary of Changes:")
@@ -1026,11 +903,7 @@ def fine_command():
                 if completed_count > 0:
                     click.echo(f"✅ Completed ({completed_count}):")
                     original_completed_ids = {t["id"] for t in original_completed}
-                    newly_completed = [
-                        t
-                        for t in updated_completed
-                        if t["id"] not in original_completed_ids
-                    ]
+                    newly_completed = [t for t in updated_completed if t["id"] not in original_completed_ids]
                     for task in newly_completed:
                         click.echo(f"  • {task['content']}")
                     click.echo()
@@ -1038,9 +911,7 @@ def fine_command():
                 # Show reopened tasks
                 if reopened_count > 0:
                     click.echo(f"🔄 Reopened ({reopened_count}):")
-                    newly_reopened = [
-                        t for t in updated_open if t["id"] in original_completed_ids
-                    ]
+                    newly_reopened = [t for t in updated_open if t["id"] in original_completed_ids]
                     for task in newly_reopened:
                         click.echo(f"  • {task['content']}")
                     click.echo()
@@ -1048,26 +919,20 @@ def fine_command():
                 # Show content modifications
                 if content_modified_count > 0:
                     click.echo(f"✏️  Content Modified ({content_modified_count}):")
-                    click.echo(
-                        f"  • {content_modified_count} tasks had their content updated"
-                    )
+                    click.echo(f"  • {content_modified_count} tasks had their content updated")
                     click.echo()
 
                 # Show new tasks
                 if new_tasks_count > 0:
                     click.echo(f"📝 Added ({new_tasks_count}):")
                     # Get the most recent tasks that weren't in the original list
-                    all_tasks = editor_manager.task_manager.list_tasks(
-                        include_completed=True
-                    )
+                    all_tasks = editor_manager.task_manager.list_tasks(include_completed=True)
                     original_ids = {t["id"] for t in original_tasks}
                     new_tasks = [t for t in all_tasks if t["id"] not in original_ids]
                     # Sort by creation time (newest first) and take the most recent ones
                     new_tasks.sort(key=lambda x: x["created_at"], reverse=True)
                     for task in new_tasks[:new_tasks_count]:
-                        labels_str = (
-                            f" [{', '.join(task['labels'])}]" if task["labels"] else ""
-                        )
+                        labels_str = f" [{', '.join(task['labels'])}]" if task["labels"] else ""
                         click.echo(f"  • {task['content']}{labels_str}")
                     click.echo()
 
@@ -1078,13 +943,7 @@ def fine_command():
                     click.echo()
 
                 # Show overall summary
-                total_changes = (
-                    completed_count
-                    + reopened_count
-                    + new_tasks_count
-                    + content_modified_count
-                    + deleted_count
-                )
+                total_changes = completed_count + reopened_count + new_tasks_count + content_modified_count + deleted_count
                 click.echo(f"📈 Total changes: {total_changes}")
 
             else:
@@ -1133,10 +992,7 @@ def fins_command():
     @click.option(
         "--status",
         "-s",
-        help=(
-            "Filter by status(es): open/o, completed, done/d, all/a, or "
-            "comma-separated list like 'done,open' (default: completed)"
-        ),
+        help=("Filter by status(es): open/o, completed, done/d, all/a, or " "comma-separated list like 'done,open' (default: completed)"),
     )
     @click.option(
         "--due",
@@ -1178,9 +1034,7 @@ def fins_command():
             # Show success message with labels
             if label:
                 labels_str = ", ".join(label)
-                click.echo(
-                    f"✅ Task added and marked as completed: {task_content} [{labels_str}]"
-                )
+                click.echo(f"✅ Task added and marked as completed: {task_content} [{labels_str}]")
             else:
                 click.echo(f"✅ Task added and marked as completed: {task_content}")
             return
@@ -1199,9 +1053,7 @@ def fins_command():
                 if days_int == 0:
                     click.echo("   • Days: all time (no date restriction)")
                 else:
-                    click.echo(
-                        f"   • Days: {days_int} (looking back {days_int} day{'s' if days_int != 1 else ''})"
-                    )
+                    click.echo(f"   • Days: {days_int} (looking back {days_int} day{'s' if days_int != 1 else ''})")
             else:
                 click.echo("   • Days: 2 (default: today and yesterday)")
             click.echo(f"   • Status: {', '.join(status_list)}")
@@ -1232,16 +1084,12 @@ def fins_command():
             for task in tasks:
                 if task["completed_at"]:
                     # For completed tasks, check if completed today
-                    completed_dt = datetime.fromisoformat(
-                        task["completed_at"].replace("Z", "+00:00")
-                    )
+                    completed_dt = datetime.fromisoformat(task["completed_at"].replace("Z", "+00:00"))
                     if completed_dt.date() == today_date:
                         filtered_tasks.append(task)
                 else:
                     # For open tasks, check if created today
-                    created_dt = datetime.fromisoformat(
-                        task["created_at"].replace("Z", "+00:00")
-                    )
+                    created_dt = datetime.fromisoformat(task["created_at"].replace("Z", "+00:00"))
                     if created_dt.date() == today_date:
                         filtered_tasks.append(task)
             tasks = filtered_tasks
@@ -1256,16 +1104,12 @@ def fins_command():
                 pass  # Keep all tasks
             else:
                 # Apply date filtering
-                tasks = filter_tasks_by_date_range(
-                    tasks, days=days_int, weekdays_only=weekdays_only
-                )
+                tasks = filter_tasks_by_date_range(tasks, days=days_int, weekdays_only=weekdays_only)
         else:
             # Default: show tasks from past 2 days
             config = Config()
             weekdays_only = config.get_weekdays_only_lookback()
-            tasks = filter_tasks_by_date_range(
-                tasks, days=2, weekdays_only=weekdays_only
-            )
+            tasks = filter_tasks_by_date_range(tasks, days=2, weekdays_only=weekdays_only)
 
         # Apply status filtering
         filtered_tasks = []
@@ -1286,10 +1130,7 @@ def fins_command():
 
             if "open" in normalized_status_list and task["completed_at"] is None:
                 filtered_tasks.append(task)
-            elif (
-                "completed" in normalized_status_list
-                and task["completed_at"] is not None
-            ):
+            elif "completed" in normalized_status_list and task["completed_at"] is not None:
                 filtered_tasks.append(task)
             elif "done" in normalized_status_list and task["completed_at"] is not None:
                 filtered_tasks.append(task)
@@ -1300,9 +1141,7 @@ def fins_command():
         total_tasks = len(filtered_tasks)
         if total_tasks > max_limit:
             if verbose:
-                click.echo(
-                    f"⚠️  Warning: Found {total_tasks} tasks, showing first {max_limit} due to max_limit"
-                )
+                click.echo(f"⚠️  Warning: Found {total_tasks} tasks, showing first {max_limit} due to max_limit")
             filtered_tasks = filtered_tasks[:max_limit]
 
         # Apply label filtering if requested
@@ -1373,9 +1212,7 @@ def fins_command():
                 date_display = ""
                 if task.get("completed_at"):
                     try:
-                        completed_dt = datetime.fromisoformat(
-                            task["completed_at"].replace("Z", "+00:00")
-                        )
+                        completed_dt = datetime.fromisoformat(task["completed_at"].replace("Z", "+00:00"))
                         date_display = f" {completed_dt.strftime('%Y-%m-%d')}"
                     except (ValueError, TypeError):
                         # Fallback if date parsing fails
@@ -1427,27 +1264,18 @@ def complete_task(task_identifier, verbose):
                     click.echo(f"⚠️  Task {task_id} is already completed")
                 else:
                     task_manager.update_task_completion(task_id, True)
-                    click.echo(
-                        f"✅ Marked task {task_id} as completed: {task['content']}"
-                    )
+                    click.echo(f"✅ Marked task {task_id} as completed: {task['content']}")
                     completed_count += 1
             else:
                 click.echo(f"❌ Task {task_id} not found")
         except ValueError:
             # Treat as content pattern
-            matching_tasks = [
-                task
-                for task in all_tasks
-                if identifier.lower() in task["content"].lower()
-                and not task["completed_at"]
-            ]
+            matching_tasks = [task for task in all_tasks if identifier.lower() in task["content"].lower() and not task["completed_at"]]
             if matching_tasks:
                 # Take the first matching task
                 task = matching_tasks[0]
                 task_manager.update_task_completion(task["id"], True)
-                click.echo(
-                    f"✅ Marked task {task['id']} as completed: {task['content']}"
-                )
+                click.echo(f"✅ Marked task {task['id']} as completed: {task['content']}")
                 completed_count += 1
             else:
                 click.echo(f"❌ No open tasks found containing '{identifier}'")
@@ -1492,27 +1320,18 @@ def done_task(task_identifier, verbose):
                     click.echo(f"⚠️  Task {task_id} is already completed")
                 else:
                     task_manager.update_task_completion(task_id, True)
-                    click.echo(
-                        f"✅ Marked task {task_id} as completed: {task['content']}"
-                    )
+                    click.echo(f"✅ Marked task {task_id} as completed: {task['content']}")
                     completed_count += 1
             else:
                 click.echo(f"❌ Task {task_id} not found")
         except ValueError:
             # Treat as content pattern
-            matching_tasks = [
-                task
-                for task in all_tasks
-                if identifier.lower() in task["content"].lower()
-                and not task["completed_at"]
-            ]
+            matching_tasks = [task for task in all_tasks if identifier.lower() in task["content"].lower() and not task["completed_at"]]
             if matching_tasks:
                 # Take the first matching task
                 task = matching_tasks[0]
                 task_manager.update_task_completion(task["id"], True)
-                click.echo(
-                    f"✅ Marked task {task['id']} as completed: {task['content']}"
-                )
+                click.echo(f"✅ Marked task {task['id']} as completed: {task['content']}")
                 completed_count += 1
             else:
                 click.echo(f"❌ No open tasks found containing '{identifier}'")
@@ -1563,12 +1382,7 @@ def reopen_task(task_identifier, verbose):
                 click.echo(f"❌ Task {task_id} not found")
         except ValueError:
             # Treat as content pattern
-            matching_tasks = [
-                task
-                for task in all_tasks
-                if identifier.lower() in task["content"].lower()
-                and task["completed_at"]
-            ]
+            matching_tasks = [task for task in all_tasks if identifier.lower() in task["content"].lower() and task["completed_at"]]
             if matching_tasks:
                 # Take the first matching task
                 task = matching_tasks[0]
@@ -1617,28 +1431,20 @@ def toggle_task(task_identifier, verbose):
                 new_status = not task["completed_at"]
                 task_manager.update_task_completion(task_id, new_status)
                 status_text = "completed" if new_status else "reopened"
-                click.echo(
-                    f"✅ {status_text.title()} task {task_id}: {task['content']}"
-                )
+                click.echo(f"✅ {status_text.title()} task {task_id}: {task['content']}")
                 toggled_count += 1
             else:
                 click.echo(f"❌ Task {task_id} not found")
         except ValueError:
             # Treat as content pattern
-            matching_tasks = [
-                task
-                for task in all_tasks
-                if identifier.lower() in task["content"].lower()
-            ]
+            matching_tasks = [task for task in all_tasks if identifier.lower() in task["content"].lower()]
             if matching_tasks:
                 # Take the first matching task
                 task = matching_tasks[0]
                 new_status = not task["completed_at"]
                 task_manager.update_task_completion(task["id"], new_status)
                 status_text = "completed" if new_status else "reopened"
-                click.echo(
-                    f"✅ {status_text.title()} task {task['id']}: {task['content']}"
-                )
+                click.echo(f"✅ {status_text.title()} task {task['id']}: {task['content']}")
                 toggled_count += 1
             else:
                 click.echo(f"❌ No tasks found containing '{identifier}'")
@@ -1694,9 +1500,7 @@ def list_backups():
     click.echo("Available backups:")
     for backup in backups:
         timestamp = backup["timestamp"][:19]  # Truncate to seconds
-        click.echo(
-            f"  backup_{backup['backup_id']:03d}: {timestamp} ({backup['task_count']} tasks)"
-        )
+        click.echo(f"  backup_{backup['backup_id']:03d}: {timestamp} ({backup['task_count']} tasks)")
         if backup.get("description"):
             click.echo(f"    Description: {backup['description']}")
 
@@ -1704,9 +1508,7 @@ def list_backups():
 @cli.command(name="restore")
 @click.argument("backup_id", type=int)
 @click.option("--force", is_flag=True, help="Skip confirmation prompt")
-@click.option(
-    "--yes", "-y", is_flag=True, help="Skip confirmation prompt (alias for --force)"
-)
+@click.option("--yes", "-y", is_flag=True, help="Skip confirmation prompt (alias for --force)")
 def restore_backup(backup_id, force, yes):
     """Restore database from a backup."""
     db_manager = DatabaseManager()
@@ -1715,9 +1517,7 @@ def restore_backup(backup_id, force, yes):
     skip_confirmation = force or yes
 
     if not skip_confirmation:
-        click.echo(
-            f"⚠️  This will overwrite your current database with backup_{backup_id:03d}"
-        )
+        click.echo(f"⚠️  This will overwrite your current database with backup_{backup_id:03d}")
         click.echo("💡 Use --force or --yes to skip this confirmation")
         if not click.confirm("Proceed with restore?"):
             click.echo("Restore cancelled.")
@@ -1731,9 +1531,7 @@ def restore_backup(backup_id, force, yes):
 
 @cli.command(name="restore-latest")
 @click.option("--force", is_flag=True, help="Skip confirmation prompt")
-@click.option(
-    "--yes", "-y", is_flag=True, help="Skip confirmation prompt (alias for --force)"
-)
+@click.option("--yes", "-y", is_flag=True, help="Skip confirmation prompt (alias for --force)")
 def restore_latest_backup(force, yes):
     """Restore database from the latest backup."""
     db_manager = DatabaseManager()
@@ -1747,9 +1545,7 @@ def restore_latest_backup(force, yes):
     skip_confirmation = force or yes
 
     if not skip_confirmation:
-        click.echo(
-            f"⚠️  This will overwrite your current database with backup_{latest_id:03d}"
-        )
+        click.echo(f"⚠️  This will overwrite your current database with backup_{latest_id:03d}")
         click.echo("💡 Use --force or --yes to skip this confirmation")
         if not click.confirm("Proceed with restore?"):
             click.echo("Restore cancelled.")
@@ -1885,13 +1681,9 @@ def _export_txt(tasks, file_path):
     help="Import format (auto-detected if not specified)",
 )
 @click.option("--label", "-l", multiple=True, help="Add labels to imported tasks")
-@click.option(
-    "--clear-existing", is_flag=True, help="Clear existing tasks before import"
-)
+@click.option("--clear-existing", is_flag=True, help="Clear existing tasks before import")
 @click.option("--force", is_flag=True, help="Skip confirmation prompt")
-@click.option(
-    "--yes", "-y", is_flag=True, help="Skip confirmation prompt (alias for --force)"
-)
+@click.option("--yes", "-y", is_flag=True, help="Skip confirmation prompt (alias for --force)")
 def import_tasks_from_file(file_path, format, label, clear_existing, force, yes):
     """Import tasks from a flat file."""
     db_manager = DatabaseManager()
@@ -1956,9 +1748,7 @@ def _get_import_preview(file_path, format, additional_labels, clear_existing):
     preview_lines = []
     preview_lines.append(f"📋 Import Preview for {file_path}")
     preview_lines.append(f"📁 Format: {format}")
-    preview_lines.append(
-        f"🏷️  Additional labels: {', '.join(additional_labels) if additional_labels else 'none'}"
-    )
+    preview_lines.append(f"🏷️  Additional labels: {', '.join(additional_labels) if additional_labels else 'none'}")
     preview_lines.append(f"🗑️  Clear existing: {'Yes' if clear_existing else 'No'}")
     preview_lines.append("")
 
@@ -2007,9 +1797,7 @@ def _get_import_preview(file_path, format, additional_labels, clear_existing):
                         if task_info["is_completed"]:
                             completed_count += 1
 
-        preview_lines.append(
-            f"📊 File contains: {task_count} tasks ({completed_count} completed)"
-        )
+        preview_lines.append(f"📊 File contains: {task_count} tasks ({completed_count} completed)")
 
         # Show current database stats
         db_manager = DatabaseManager()
@@ -2018,9 +1806,7 @@ def _get_import_preview(file_path, format, additional_labels, clear_existing):
         current_count = len(current_tasks)
         current_completed = len([t for t in current_tasks if t["completed_at"]])
 
-        preview_lines.append(
-            f"📊 Current database: {current_count} tasks ({current_completed} completed)"
-        )
+        preview_lines.append(f"📊 Current database: {current_count} tasks ({current_completed} completed)")
 
         if clear_existing:
             preview_lines.append("⚠️  WARNING: All existing tasks will be deleted!")
@@ -2050,13 +1836,7 @@ def _import_csv(task_manager, file_path, additional_labels):
             # Parse labels
             labels = []
             if row.get("Labels"):
-                labels.extend(
-                    [
-                        label.strip()
-                        for label in row["Labels"].split(",")
-                        if label.strip()
-                    ]
-                )
+                labels.extend([label.strip() for label in row["Labels"].split(",") if label.strip()])
 
             # Add additional labels
             labels.extend(additional_labels)
@@ -2128,9 +1908,7 @@ def _import_txt(task_manager, file_path, additional_labels):
             labels.extend(additional_labels)
 
             # Add task
-            task_id = task_manager.add_task(
-                task_info["content"], labels, source="txt-import"
-            )
+            task_id = task_manager.add_task(task_info["content"], labels, source="txt-import")
             imported_count += 1
 
             # Mark as completed if it was completed in the export
@@ -2199,9 +1977,7 @@ def report(output_format, period, output, overdue):
 
 @cli.command(name="config")
 @click.option("--auto-today", type=bool, help="Auto-add today label to important tasks")
-@click.option(
-    "--show-sections", type=bool, help="Show organized sections in task lists"
-)
+@click.option("--show-sections", type=bool, help="Show organized sections in task lists")
 @click.option("--default-days", type=int, help="Default number of days for task lists")
 @click.option("--default-editor", help="Default editor for task editing")
 @click.option(
@@ -2262,17 +2038,11 @@ def config_command(
         ]
     ):
         click.echo("📋 Current Configuration:")
-        click.echo(
-            f"  Auto-today for important tasks: {config.get_auto_today_for_important()}"
-        )
+        click.echo(f"  Auto-today for important tasks: {config.get_auto_today_for_important()}")
         click.echo(f"  Show organized sections: {config.get_show_sections()}")
         click.echo(f"  Default days: {config.get_default_days()}")
-        click.echo(
-            f"  Default editor: {config.get_default_editor() or 'system default'}"
-        )
-        click.echo(
-            f"  Show all open tasks by default: {config.get_show_all_open_by_default()}"
-        )
+        click.echo(f"  Default editor: {config.get_default_editor() or 'system default'}")
+        click.echo(f"  Show all open tasks by default: {config.get_show_all_open_by_default()}")
         click.echo(f"  Weekdays only lookback: {config.get_weekdays_only_lookback()}")
         click.echo(f"  Config file: {config.config_file}")
 
@@ -2329,9 +2099,7 @@ def main():
             # Apply max limit and show warning if needed
             total_tasks = len(tasks)
             if total_tasks > max_limit:
-                click.echo(
-                    f"⚠️  Warning: Found {total_tasks} open tasks, showing first {max_limit} due to max_limit"
-                )
+                click.echo(f"⚠️  Warning: Found {total_tasks} open tasks, showing first {max_limit} due to max_limit")
                 tasks = tasks[:max_limit]
 
             if verbose:
@@ -2346,21 +2114,15 @@ def main():
             days = days_arg if days_arg is not None else config.get_default_days()
             weekdays_only = config.get_weekdays_only_lookback()
             tasks = task_manager.list_tasks(include_completed=True)
-            tasks = filter_tasks_by_date_range(
-                tasks, days=days, weekdays_only=weekdays_only
-            )
+            tasks = filter_tasks_by_date_range(tasks, days=days, weekdays_only=weekdays_only)
             tasks = [task for task in tasks if task["completed_at"] is None]
 
             if verbose:
                 click.echo("🔍 Default filtering criteria:")
                 if days_arg is not None:
-                    click.echo(
-                        f"   • Days: {days} (looking back {days} day{'s' if days != 1 else ''})"
-                    )
+                    click.echo(f"   • Days: {days} (looking back {days} day{'s' if days != 1 else ''})")
                 else:
-                    click.echo(
-                        f"   • Days: {days} (looking back {days} day{'s' if days != 1 else ''})"
-                    )
+                    click.echo(f"   • Days: {days} (looking back {days} day{'s' if days != 1 else ''})")
                 click.echo("   • Status: open")
                 if weekdays_only:
                     click.echo("   • Weekdays only: True (Mon-Fri)")
@@ -2373,25 +2135,15 @@ def main():
                 click.echo("📝 No open tasks found.")
             else:
                 days = days_arg if days_arg is not None else config.get_default_days()
-                click.echo(
-                    f"📝 No open tasks found for the past {days} day{'s' if days != 1 else ''}."
-                )
+                click.echo(f"📝 No open tasks found for the past {days} day{'s' if days != 1 else ''}.")
             click.echo("💡 Try adding a task: fin 'your task here'")
             click.echo("💡 Or see all commands: fin --help")
             return
         else:
             # Organize tasks into sections
             important_tasks = [task for task in tasks if is_important_task(task)]
-            today_tasks = [
-                task
-                for task in tasks
-                if is_today_task(task) and not is_important_task(task)
-            ]
-            open_tasks = [
-                task
-                for task in tasks
-                if not is_important_task(task) and not is_today_task(task)
-            ]
+            today_tasks = [task for task in tasks if is_today_task(task) and not is_important_task(task)]
+            open_tasks = [task for task in tasks if not is_important_task(task) and not is_today_task(task)]
 
             # Display Important section
             if important_tasks:

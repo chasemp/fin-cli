@@ -124,9 +124,7 @@ class TestTodayWithOtherFilters:
 
     def test_list_today_with_status_filter(self, cli_runner):
         """Test that fin list --today works with --status filter."""
-        result = cli_runner.invoke(
-            cli, ["list", "--today", "--status", "all", "--verbose"]
-        )
+        result = cli_runner.invoke(cli, ["list", "--today", "--status", "all", "--verbose"])
         assert result.exit_code == 0
         assert "❌ Error:" not in result.output
         assert "Today only (overrides days)" in result.output
@@ -134,9 +132,7 @@ class TestTodayWithOtherFilters:
 
     def test_list_today_with_label_filter(self, cli_runner):
         """Test that fin list --today works with --label filter."""
-        result = cli_runner.invoke(
-            cli, ["list", "--today", "--label", "urgent", "--verbose"]
-        )
+        result = cli_runner.invoke(cli, ["list", "--today", "--label", "urgent", "--verbose"])
         assert result.exit_code == 0
         assert "❌ Error:" not in result.output
         assert "Today only (overrides days)" in result.output
@@ -178,9 +174,7 @@ class TestTodayFilteringLogic:
         from fincli.cli import _list_tasks_impl
 
         with patch("click.echo"):  # Suppress output
-            _list_tasks_impl(
-                days=1, label=(), status="completed", today=True, verbose=False
-            )
+            _list_tasks_impl(days=1, label=(), status="completed", today=True, verbose=False)
 
         # Verify the task was added and completed
         tasks = task_manager.list_tasks(include_completed=True)
@@ -188,8 +182,7 @@ class TestTodayFilteringLogic:
             t
             for t in tasks
             if t["completed_at"]
-            and datetime.fromisoformat(t["completed_at"].replace("Z", "+00:00")).date()
-            == test_dates["today"]
+            and datetime.fromisoformat(t["completed_at"].replace("Z", "+00:00")).date() == test_dates["today"]
         ]
         assert len(today_tasks) == 1
         assert today_tasks[0]["content"] == "Task completed today"
@@ -225,15 +218,12 @@ class TestTodayFilteringLogic:
         tasks = task_manager.list_tasks(include_completed=False)
         # Get the actual task to see its creation timestamp
         actual_task = task_manager.get_task(task_id)  # First task
-        actual_created_date = datetime.fromisoformat(
-            actual_task["created_at"].replace("Z", "+00:00")
-        ).date()
+        actual_created_date = datetime.fromisoformat(actual_task["created_at"].replace("Z", "+00:00")).date()
 
         today_tasks = [
             t
             for t in tasks
-            if datetime.fromisoformat(t["created_at"].replace("Z", "+00:00")).date()
-            == actual_created_date
+            if datetime.fromisoformat(t["created_at"].replace("Z", "+00:00")).date() == actual_created_date
         ]
         assert len(today_tasks) == 1
         assert today_tasks[0]["content"] == "Task created today"

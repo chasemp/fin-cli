@@ -53,9 +53,7 @@ class TestDateParser:
     def test_validate_due_date(self):
         """Test due date validation."""
         assert DateParser.validate_due_date("2025-06-17") is True
-        assert (
-            DateParser.validate_due_date("2025-02-29") is False
-        )  # 2025 is not a leap year
+        assert DateParser.validate_due_date("2025-02-29") is False  # 2025 is not a leap year
         assert DateParser.validate_due_date("2024-02-29") is True  # 2024 is a leap year
         assert DateParser.validate_due_date("invalid") is False
         assert DateParser.validate_due_date("2025-13-01") is False  # Invalid month
@@ -81,12 +79,8 @@ class TestDateParser:
         from unittest.mock import patch
 
         today = test_dates["today"].strftime("%Y-%m-%d")
-        tomorrow = test_dates["future"].strftime(
-            "%Y-%m-%d"
-        )  # 7 days away, not due soon within 3 days
-        next_week = test_dates["far_future"].strftime(
-            "%Y-%m-%d"
-        )  # 30+ days away, not due soon
+        tomorrow = test_dates["future"].strftime("%Y-%m-%d")  # 7 days away, not due soon within 3 days
+        next_week = test_dates["far_future"].strftime("%Y-%m-%d")  # 30+ days away, not due soon
 
         # Mock date.today() to return the fixture date for consistent testing
         with patch("fincli.utils.date") as mock_date:
@@ -142,9 +136,7 @@ class TestTaskManagerDueDates:
         db_manager = DatabaseManager(temp_db_path)
         task_manager = TaskManager(db_manager)
 
-        task_id = task_manager.add_task(
-            "Test task with due date", labels=["test"], due_date="2025-06-17"
-        )
+        task_id = task_manager.add_task("Test task with due date", labels=["test"], due_date="2025-06-17")
 
         assert task_id == 1
 
@@ -234,9 +226,7 @@ class TestDisplayFormatting:
         db_manager = DatabaseManager(temp_db_path)
         task_manager = TaskManager(db_manager)
 
-        task_id = task_manager.add_task(
-            "Test task with due date", labels=["test"], due_date="2025-06-17"
-        )
+        task_id = task_manager.add_task("Test task with due date", labels=["test"], due_date="2025-06-17")
 
         task = task_manager.get_task(task_id)
         formatted = format_task_for_display(task)
@@ -264,9 +254,7 @@ class TestDisplayFormatting:
         db_manager = DatabaseManager(temp_db_path)
         task_manager = TaskManager(db_manager)
 
-        task_id = task_manager.add_task(
-            "Test task", labels=["work", "urgent"], due_date="2025-06-17"
-        )
+        task_id = task_manager.add_task("Test task", labels=["work", "urgent"], due_date="2025-06-17")
 
         task = task_manager.get_task(task_id)
         formatted = format_task_for_display(task)
@@ -312,9 +300,7 @@ class TestEditorIntegration:
         editor_manager = EditorManager(db_manager)
 
         # Add a task with due date
-        task_manager.add_task(
-            "Test task with due date", labels=["test"], due_date="2025-06-17"
-        )
+        task_manager.add_task("Test task with due date", labels=["test"], due_date="2025-06-17")
 
         # Get tasks for editing
         tasks = editor_manager.get_tasks_for_editing()
@@ -361,9 +347,7 @@ class TestEditorIntegration:
             new_tasks_count,
             content_modified_count,
             deleted_count,
-        ) = editor_manager.parse_edited_content(
-            modified_content, original_tasks=[original_task]
-        )
+        ) = editor_manager.parse_edited_content(modified_content, original_tasks=[original_task])
 
         # Should detect due date change
         assert content_modified_count == 1
@@ -407,9 +391,7 @@ class TestEditorIntegration:
             new_tasks_count,
             content_modified_count,
             deleted_count,
-        ) = editor_manager.parse_edited_content(
-            modified_content, original_tasks=[original_task]
-        )
+        ) = editor_manager.parse_edited_content(modified_content, original_tasks=[original_task])
 
         # Should detect due date change
         assert content_modified_count == 1

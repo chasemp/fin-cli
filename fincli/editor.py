@@ -5,20 +5,19 @@ Handles the fine command functionality for editing tasks in an external editor.
 This module is designed to be safe and only trigger editor opening when explicitly requested.
 """
 
+from datetime import datetime
 import hashlib
 import os
 import re
 import subprocess
 import tempfile
-from datetime import datetime
 from typing import Any, Dict, List, Optional, Set
 
 from .backup import DatabaseBackup
 from .db import DatabaseManager
 from .labels import LabelManager
 from .tasks import TaskManager
-from .utils import (filter_tasks_by_date_range, format_task_for_display,
-                    get_editor)
+from .utils import filter_tasks_by_date_range, format_task_for_display, get_editor
 
 
 class EditorManager:
@@ -81,8 +80,7 @@ class EditorManager:
         # Format: 1 [ ] 2024-01-01 10:00  Task content  #labels  due:YYYY-MM-DD  #ref:task_123
         # First, try to match with reference and task_id
         pattern_with_ref_and_id = (
-            r"^(\d+) (\[ \]|\[x\]) (\d{4}-\d{2}-\d{2} \d{2}:\d{2})  (.+?)"
-            r"(  #.+)?(  due:[^ ]+)?  #ref:([^ ]+)$"
+            r"^(\d+) (\[ \]|\[x\]) (\d{4}-\d{2}-\d{2} \d{2}:\d{2})  (.+?)" r"(  #.+)?(  due:[^ ]+)?  #ref:([^ ]+)$"
         )
         match = re.match(pattern_with_ref_and_id, line.strip())
 
@@ -98,8 +96,7 @@ class EditorManager:
         else:
             # Try to match with task_id but without reference
             pattern_with_id_no_ref = (
-                r"^(\d+) (\[ \]|\[x\]) (\d{4}-\d{2}-\d{2} \d{2}:\d{2})  (.+?)"
-                r"(  #.+)?(  due:[^ ]+)?$"
+                r"^(\d+) (\[ \]|\[x\]) (\d{4}-\d{2}-\d{2} \d{2}:\d{2})  (.+?)" r"(  #.+)?(  due:[^ ]+)?$"
             )
             match = re.match(pattern_with_id_no_ref, line.strip())
 
@@ -115,8 +112,7 @@ class EditorManager:
             else:
                 # Try to match old format without task_id (for backward compatibility)
                 pattern_old_format_with_ref = (
-                    r"^(\[ \]|\[x\]) (\d{4}-\d{2}-\d{2} \d{2}:\d{2})  (.+?)"
-                    r"(  #.+)?(  due:[^ ]+)?  #ref:([^ ]+)$"
+                    r"^(\[ \]|\[x\]) (\d{4}-\d{2}-\d{2} \d{2}:\d{2})  (.+?)" r"(  #.+)?(  due:[^ ]+)?  #ref:([^ ]+)$"
                 )
                 match = re.match(pattern_old_format_with_ref, line.strip())
 
@@ -132,8 +128,7 @@ class EditorManager:
                 else:
                     # Try to match old format without reference
                     pattern_old_format_no_ref = (
-                        r"^(\[ \]|\[x\]) (\d{4}-\d{2}-\d{2} \d{2}:\d{2})  (.+?)"
-                        r"(  #.+)?(  due:[^ ]+)?$"
+                        r"^(\[ \]|\[x\]) (\d{4}-\d{2}-\d{2} \d{2}:\d{2})  (.+?)" r"(  #.+)?(  due:[^ ]+)?$"
                     )
                     match = re.match(pattern_old_format_no_ref, line.strip())
 
@@ -246,9 +241,7 @@ class EditorManager:
             # Filter by label - include completed tasks when filtering by label
             # This allows editing of completed tasks (e.g., to reopen them)
             label_str = label[0] if isinstance(label, (tuple, list)) else label
-            return self.label_manager.filter_tasks_by_label(
-                label_str, include_completed=True
-            )
+            return self.label_manager.filter_tasks_by_label(label_str, include_completed=True)
         # Apply date filtering if no specific date is provided
         if not target_date:
             # Only get open tasks by default (not completed ones)
@@ -264,15 +257,11 @@ class EditorManager:
 
                 if task["completed_at"]:
                     # For completed tasks, use completion date
-                    completed_dt = datetime.fromisoformat(
-                        task["completed_at"].replace("Z", "+00:00")
-                    )
+                    completed_dt = datetime.fromisoformat(task["completed_at"].replace("Z", "+00:00"))
                     task_date = completed_dt.date()
                 else:
                     # For open tasks, use creation date
-                    created_dt = datetime.fromisoformat(
-                        task["created_at"].replace("Z", "+00:00")
-                    )
+                    created_dt = datetime.fromisoformat(task["created_at"].replace("Z", "+00:00"))
                     task_date = created_dt.date()
 
                 try:
@@ -369,9 +358,7 @@ class EditorManager:
         # Create a mapping of task_id to original content for comparison
         original_content_map = {}
         if original_tasks:
-            original_content_map = {
-                task["id"]: task["content"] for task in original_tasks
-            }
+            original_content_map = {task["id"]: task["content"] for task in original_tasks}
 
         for line in content.splitlines():
             # Skip header lines and empty lines
@@ -422,29 +409,19 @@ class EditorManager:
                 original_content = original_content_map[task_id]
                 if task_info["content"] != original_content:
                     # Content was modified
-                    if self.task_manager.update_task_content(
-                        task_id, task_info["content"]
-                    ):
+                    if self.task_manager.update_task_content(task_id, task_info["content"]):
                         content_modified_count += 1
 
             # Check for due date changes
             if original_tasks:
-                original_task = next(
-                    (t for t in original_tasks if t["id"] == task_id), None
-                )
-                if original_task and task_info.get("due_date") != original_task.get(
-                    "due_date"
-                ):
+                original_task = next((t for t in original_tasks if t["id"] == task_id), None)
+                if original_task and task_info.get("due_date") != original_task.get("due_date"):
                     # Due date was modified
-                    if self.task_manager.update_task_due_date(
-                        task_id, task_info.get("due_date")
-                    ):
+                    if self.task_manager.update_task_due_date(task_id, task_info.get("due_date")):
                         content_modified_count += 1
 
             # Update completion status if changed
-            if self.task_manager.update_task_completion(
-                task_id, task_info["is_completed"]
-            ):
+            if self.task_manager.update_task_completion(task_id, task_info["is_completed"]):
                 if task_info["is_completed"]:
                     completed_count += 1
                 else:
@@ -498,9 +475,7 @@ class EditorManager:
         original_task_ids = {task["id"] for task in tasks}
 
         # Create temporary file
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".txt", delete=False
-        ) as temp_file:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as temp_file:
             # Write header and tasks
             file_content = self.create_edit_file_content(tasks)
             temp_file.write(file_content)
@@ -546,9 +521,7 @@ class EditorManager:
 
             # Only create backup if there were actual changes
             if any(task_changes.values()):
-                self.backup_manager.create_backup(
-                    "Auto-backup after editor session with changes", task_changes
-                )
+                self.backup_manager.create_backup("Auto-backup after editor session with changes", task_changes)
 
             # Clean up temporary file
             os.unlink(temp_file_path)
@@ -610,9 +583,7 @@ class EditorManager:
         original_task_ids = {task["id"] for task in tasks}
 
         # Create temporary file
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".txt", delete=False
-        ) as temp_file:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as temp_file:
             # Write header and tasks
             file_content = self.create_edit_file_content(tasks)
             temp_file.write(file_content)
@@ -658,9 +629,7 @@ class EditorManager:
 
             # Only create backup if there were actual changes
             if any(task_changes.values()):
-                self.backup_manager.create_backup(
-                    "Auto-backup after editor session with changes", task_changes
-                )
+                self.backup_manager.create_backup("Auto-backup after editor session with changes", task_changes)
 
             # Clean up temporary file
             os.unlink(temp_file_path)
@@ -683,9 +652,7 @@ class EditorManager:
 
             raise e
 
-    def simulate_edit_with_content(
-        self, original_content: str, modified_content: str
-    ) -> tuple:
+    def simulate_edit_with_content(self, original_content: str, modified_content: str) -> tuple:
         """
         Simulate editing tasks with provided content for testing purposes.
         This method does NOT open any external editor.

@@ -60,40 +60,28 @@ def format_task_for_display(task: Dict[str, Any]) -> str:
     # Format primary timestamp
     if task["completed_at"]:
         # Use completed_at for completed tasks
-        primary_timestamp = datetime.fromisoformat(
-            task["completed_at"].replace("Z", "+00:00")
-        )
+        primary_timestamp = datetime.fromisoformat(task["completed_at"].replace("Z", "+00:00"))
         primary_time_str = primary_timestamp.strftime("%Y-%m-%d %H:%M")
     else:
         # Use created_at for open tasks
-        primary_timestamp = datetime.fromisoformat(
-            task["created_at"].replace("Z", "+00:00")
-        )
+        primary_timestamp = datetime.fromisoformat(task["created_at"].replace("Z", "+00:00"))
         primary_time_str = primary_timestamp.strftime("%Y-%m-%d %H:%M")
 
     # Check if task was modified after creation/completion
     modification_indicator = ""
 
     if task.get("modified_at"):
-        modified_timestamp = datetime.fromisoformat(
-            task["modified_at"].replace("Z", "+00:00")
-        )
+        modified_timestamp = datetime.fromisoformat(task["modified_at"].replace("Z", "+00:00"))
 
         if task["completed_at"]:
             # For completed tasks, check if modified after completion
-            completed_timestamp = datetime.fromisoformat(
-                task["completed_at"].replace("Z", "+00:00")
-            )
+            completed_timestamp = datetime.fromisoformat(task["completed_at"].replace("Z", "+00:00"))
             if modified_timestamp > completed_timestamp:
-                modification_indicator = (
-                    f" (mod: {modified_timestamp.strftime('%Y-%m-%d %H:%M')})"
-                )
+                modification_indicator = f" (mod: {modified_timestamp.strftime('%Y-%m-%d %H:%M')})"
         else:
             # For open tasks, check if modified after creation
             if modified_timestamp > primary_timestamp:
-                modification_indicator = (
-                    f" (mod: {modified_timestamp.strftime('%Y-%m-%d %H:%M')})"
-                )
+                modification_indicator = f" (mod: {modified_timestamp.strftime('%Y-%m-%d %H:%M')})"
 
     # Format labels as hashtags
     labels_display = ""
@@ -178,15 +166,11 @@ def filter_tasks_by_date_range(
             # Determine the relevant date for filtering
             if task["completed_at"]:
                 # For completed tasks, use completion date
-                completed_dt = datetime.fromisoformat(
-                    task["completed_at"].replace("Z", "+00:00")
-                )
+                completed_dt = datetime.fromisoformat(task["completed_at"].replace("Z", "+00:00"))
                 task_date = completed_dt.date()
             else:
                 # For open tasks, use creation date
-                created_dt = datetime.fromisoformat(
-                    task["created_at"].replace("Z", "+00:00")
-                )
+                created_dt = datetime.fromisoformat(task["created_at"].replace("Z", "+00:00"))
                 task_date = created_dt.date()
 
             # Include tasks from the lookback period
@@ -263,9 +247,7 @@ class DateParser:
             parsed_date = datetime.strptime(f"{current_year}-{date_str}", "%Y-%m/%d")
             # Check if this date has already passed this year, if so use next year
             if parsed_date.date() < date.today():
-                parsed_date = datetime.strptime(
-                    f"{current_year + 1}-{date_str}", "%Y-%m/%d"
-                )
+                parsed_date = datetime.strptime(f"{current_year + 1}-{date_str}", "%Y-%m/%d")
             return parsed_date.strftime("%Y-%m-%d")
         except ValueError:
             pass
@@ -282,9 +264,7 @@ class DateParser:
             parsed_date = datetime.strptime(f"{current_year}-{date_str}", "%Y-%m-%d")
             # Check if this date has already passed this year, if so use next year
             if parsed_date.date() < date.today():
-                parsed_date = datetime.strptime(
-                    f"{current_year + 1}-{date_str}", "%Y-%m-%d"
-                )
+                parsed_date = datetime.strptime(f"{current_year + 1}-{date_str}", "%Y-%m-%d")
             return parsed_date.strftime("%Y-%m-%d")
         except ValueError:
             pass

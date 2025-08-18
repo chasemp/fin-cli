@@ -65,9 +65,7 @@ class TestCLI:
             lambda self, db_path=None: self._init_mock_db(temp_db_path),
         )
 
-        result = cli_runner.invoke(
-            cli, ["add-task", "Test task with source", "--source", "test"]
-        )
+        result = cli_runner.invoke(cli, ["add-task", "Test task with source", "--source", "test"])
 
         assert result.exit_code == 0
         assert '✅ Task added: "Test task with source"' in result.output
@@ -94,9 +92,7 @@ class TestCLI:
             lambda self, db_path=None: self._init_mock_db(temp_db_path),
         )
 
-        special_content = (
-            "Task with 'quotes', \"double quotes\", and special chars: @#$%^&*()"
-        )
+        special_content = "Task with 'quotes', \"double quotes\", and special chars: @#$%^&*()"
         result = cli_runner.invoke(cli, ["add-task", special_content])
 
         assert result.exit_code == 0
@@ -150,10 +146,7 @@ class TestCLI:
         )
 
         assert result.exit_code == 0
-        assert (
-            '✅ Task added: "Task with mixed case labels" [test, urgent, work]'
-            in result.output
-        )
+        assert '✅ Task added: "Task with mixed case labels" [test, urgent, work]' in result.output
 
     def test_cli_empty_labels(self, cli_runner, temp_db_path, monkeypatch):
         """Test CLI with empty labels."""
@@ -194,8 +187,8 @@ class TestCLI:
         sys.argv = ["fin", "Test task #and"]
 
         try:
-            import io
             from contextlib import redirect_stdout
+            import io
 
             from fincli.cli import main
 
@@ -236,8 +229,8 @@ class TestCLI:
         sys.argv = ["fin", "Test task #or"]
 
         try:
-            import io
             from contextlib import redirect_stdout
+            import io
 
             from fincli.cli import main
 
@@ -262,9 +255,7 @@ class TestCLI:
         finally:
             sys.argv = original_argv
 
-    def test_cli_reserved_word_validation_case_insensitive(
-        self, temp_db_path, monkeypatch
-    ):
+    def test_cli_reserved_word_validation_case_insensitive(self, temp_db_path, monkeypatch):
         """Test that reserved word validation is case insensitive."""
         # Mock the database path and set environment variable
         monkeypatch.setattr(
@@ -280,8 +271,8 @@ class TestCLI:
         sys.argv = ["fin", "Test task #AND"]
 
         try:
-            import io
             from contextlib import redirect_stdout
+            import io
 
             from fincli.cli import main
 
@@ -314,8 +305,8 @@ class TestCLI:
         sys.argv = ["fin", "Test task #work"]
 
         try:
-            import io
             from contextlib import redirect_stdout
+            import io
 
             from fincli.cli import main
 
@@ -345,8 +336,8 @@ class TestCLI:
         sys.argv = ["fin", "Test task #ref"]
 
         try:
-            import io
             from contextlib import redirect_stdout
+            import io
 
             from fincli.cli import main
 
@@ -380,8 +371,8 @@ class TestCLI:
         sys.argv = ["fin", "Test task #due"]
 
         try:
-            import io
             from contextlib import redirect_stdout
+            import io
 
             from fincli.cli import main
 
@@ -415,8 +406,8 @@ class TestCLI:
         sys.argv = ["fin", "Test task #not"]
 
         try:
-            import io
             from contextlib import redirect_stdout
+            import io
 
             from fincli.cli import main
 
@@ -450,8 +441,8 @@ class TestCLI:
         sys.argv = ["fin", "Project deadline #due:2025-08-10"]
 
         try:
-            import io
             from contextlib import redirect_stdout
+            import io
 
             from fincli.cli import main
 
@@ -481,8 +472,8 @@ class TestCLI:
         sys.argv = ["fin", "Daily standup #recur:daily"]
 
         try:
-            import io
             from contextlib import redirect_stdout
+            import io
 
             from fincli.cli import main
 
@@ -512,8 +503,8 @@ class TestCLI:
         sys.argv = ["fin", "Implement feature #depends:task123"]
 
         try:
-            import io
             from contextlib import redirect_stdout
+            import io
 
             from fincli.cli import main
 
@@ -549,8 +540,8 @@ class TestCLI:
         ]
 
         try:
-            import io
             from contextlib import redirect_stdout
+            import io
 
             from click.exceptions import Exit
 
@@ -577,9 +568,7 @@ class TestCLI:
 
             output = f.getvalue()
             assert "Urgent work task" in output
-            assert (
-                "Work task" not in output
-            )  # Should not appear (only has work, not urgent)
+            assert "Work task" not in output  # Should not appear (only has work, not urgent)
             assert "Personal task" not in output  # Should not appear (has neither)
         finally:
             sys.argv = original_argv
@@ -606,8 +595,8 @@ class TestCLI:
         ]
 
         try:
-            import io
             from contextlib import redirect_stdout
+            import io
 
             from click.exceptions import Exit
 
@@ -661,8 +650,8 @@ class TestCLI:
         ]
 
         try:
-            import io
             from contextlib import redirect_stdout
+            import io
 
             from click.exceptions import Exit
 
@@ -798,9 +787,7 @@ class TestCLIOutput:
             lambda self, db_path=None: self._init_mock_db(temp_db_path),
         )
 
-        result = cli_runner.invoke(
-            cli, ["add-task", "Task with labels", "--label", "work"]
-        )
+        result = cli_runner.invoke(cli, ["add-task", "Task with labels", "--label", "work"])
 
         assert result.exit_code == 0
         assert '✅ Task added: "Task with labels" [work]' in result.output
@@ -828,10 +815,7 @@ class TestCLIOutput:
         )
 
         assert result.exit_code == 0
-        assert (
-            '✅ Task added: "Task with multiple labels" [personal, urgent, work]'
-            in result.output
-        )
+        assert '✅ Task added: "Task with multiple labels" [personal, urgent, work]' in result.output
 
 
 class TestCLIBackup:
