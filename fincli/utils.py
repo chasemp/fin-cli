@@ -40,12 +40,119 @@ def is_today_task(task: Dict[str, Any]) -> bool:
     return "t" in task["labels"]
 
 
-def format_task_for_display(task: Dict[str, Any]) -> str:
+def format_date_by_format(date_obj: datetime, format_str: str) -> str:
+    """
+    Format a date according to a custom format string.
+
+    Supported format tokens:
+    - M: Month without leading zero (1-12)
+    - MM: Month with leading zero (01-12)
+    - D: Day without leading zero (1-31)
+    - DD: Day with leading zero (01-31)
+    - YYYY: Full year (2025)
+    - YY: Short year (25)
+    - H: Hour without leading zero (0-23)
+    - HH: Hour with leading zero (00-23)
+    - m: Minute without leading zero (0-59)
+    - mm: Minute with leading zero (00-59)
+
+    Args:
+        date_obj: datetime object to format
+        format_str: Format string (e.g., "M/D", "MM/DD", "M-D")
+
+    Returns:
+        Formatted date string
+    """
+    if not date_obj or not format_str:
+        return date_obj.strftime("%Y-%m-%d %H:%M") if date_obj else ""
+
+    result = format_str
+
+    # Replace format tokens with actual values (longer tokens first to avoid conflicts)
+    replacements = [
+        ("YYYY", str(date_obj.year)),
+        ("YY", str(date_obj.year)[-2:]),
+        ("MM", f"{date_obj.month:02d}"),
+        ("DD", f"{date_obj.day:02d}"),
+        ("HH", f"{date_obj.hour:02d}"),
+        ("mm", f"{date_obj.minute:02d}"),
+        ("M", str(date_obj.month)),
+        ("D", str(date_obj.day)),
+        ("H", str(date_obj.hour)),
+        ("m", str(date_obj.minute)),
+    ]
+
+    for token, value in replacements:
+        result = result.replace(token, value)
+
+    return result
+
+
+def wrap_text(text: str, max_width: int, prefix: str = "") -> str:
+    """
+    Wrap text to fit within a specified width, respecting word boundaries.
+
+    Args:
+        text: Text to wrap
+        max_width: Maximum width for each line
+        prefix: Prefix to add to continuation lines (e.g., indentation)
+
+    Returns:
+        Wrapped text with newlines
+    """
+    if not text or max_width <= 0:
+        return text
+
+    # Calculate available width for content (accounting for prefix)
+    available_width = max_width - len(prefix)
+    if available_width <= 0:
+        return text
+
+    words = text.split()
+    if not words:
+        return text
+
+    lines = []
+    current_line = []
+    current_length = 0
+
+    for word in words:
+        # Check if adding this word would exceed the line width
+        word_length = len(word)
+        if current_line and current_length + 1 + word_length > available_width:
+            # Line is full, start a new one
+            lines.append(" ".join(current_line))
+            current_line = [word]
+            current_length = word_length
+        else:
+            # Add word to current line
+            if current_line:
+                current_length += 1 + word_length  # +1 for space
+            else:
+                current_length = word_length
+            current_line.append(word)
+
+    # Add the last line
+    if current_line:
+        lines.append(" ".join(current_line))
+
+    # Join lines with newlines and add prefix to continuation lines
+    if len(lines) == 1:
+        return lines[0]
+    else:
+        result = [lines[0]]
+        for line in lines[1:]:
+            result.append(f"{prefix}{line}")
+        return "\n".join(result)
+
+
+def format_task_for_display(task: Dict[str, Any], config=None) -> str:
     """
     Format a task for display in syslog-like Markdown format.
 
     Args:
         task: Task dictionary from database
+        config: Optional Config instance for wrapping settings
 
     Returns:
         Formatted string: 1 [ ] 2025-07-30 09:15  Task content  #label1,label2
@@ -61,11 +168,17 @@ def format_task_for_display(task: Dict[str, Any]) -> str:
     if task["completed_at"]:
         # Use completed_at for completed tasks
         primary_timestamp = datetime.fromisoformat(task["completed_at"].replace("Z", "+00:00"))
-        primary_time_str = primary_timestamp.strftime("%Y-%m-%d %H:%M")
+        if config and hasattr(config, "get_task_date_format"):
+            primary_time_str = format_date_by_format(primary_timestamp, config.get_task_date_format())
+        else:
+            primary_time_str = primary_timestamp.strftime("%Y-%m-%d %H:%M")
     else:
         # Use created_at for open tasks
         primary_timestamp = datetime.fromisoformat(task["created_at"].replace("Z", "+00:00"))
-        primary_time_str = primary_timestamp.strftime("%Y-%m-%d %H:%M")
+        if config and hasattr(config, "get_task_date_format"):
+            primary_time_str = format_date_by_format(primary_timestamp, config.get_task_date_format())
+        else:
+            primary_time_str = primary_timestamp.strftime("%Y-%m-%d %H:%M")
 
     # Check if task was modified after creation/completion
     modification_indicator = ""
@@ -77,11 +190,19 @@ def format_task_for_display(task: Dict[str, Any]) -> str:
             # For completed tasks, check if modified after completion
             completed_timestamp = datetime.fromisoformat(task["completed_at"].replace("Z", "+00:00"))
             if modified_timestamp > completed_timestamp:
-                modification_indicator = f" (mod: {modified_timestamp.strftime('%Y-%m-%d %H:%M')})"
+                if config and hasattr(config, "get_task_date_format"):
+                    mod_time_str = format_date_by_format(modified_timestamp, config.get_task_date_format())
+                else:
+                    mod_time_str = modified_timestamp.strftime("%Y-%m-%d %H:%M")
+                modification_indicator = f" (mod: {mod_time_str})"
         else:
             # For open tasks, check if modified after creation
             if modified_timestamp > primary_timestamp:
-                modification_indicator = f" (mod: {modified_timestamp.strftime('%Y-%m-%d %H:%M')})"
+                if config and hasattr(config, "get_task_date_format"):
+                    mod_time_str = format_date_by_format(modified_timestamp, config.get_task_date_format())
+                else:
+                    mod_time_str = modified_timestamp.strftime("%Y-%m-%d %H:%M")
+                modification_indicator = f" (mod: {mod_time_str})"
 
     # Format labels as hashtags
     labels_display = ""
@@ -94,7 +215,17 @@ def format_task_for_display(task: Dict[str, Any]) -> str:
     if task.get("due_date"):
         due_date_display = f"  due:{task['due_date']}"
 
-    return f"{task_id} {status} {primary_time_str}{modification_indicator}  " f"{task['content']}{labels_display}{due_date_display}"
+    # Build the base line without content
+    base_line = f"{task_id} {status} {primary_time_str}{modification_indicator}  "
+
+    # Get the content and apply wrapping if config is provided
+    content = task["content"]
+    if config and hasattr(config, "get_task_title_wrap_width"):
+        wrap_width = config.get_task_title_wrap_width()
+        if wrap_width > 0:
+            content = wrap_text(content, wrap_width, base_line)
+
+    return f"{base_line}{content}{labels_display}{due_date_display}"
 
 
 def get_date_range(days: int = 1, weekdays_only: bool = True) -> tuple:

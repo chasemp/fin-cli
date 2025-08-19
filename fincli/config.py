@@ -41,6 +41,8 @@ class Config:
                 "show_sections": True,
                 "show_all_open_by_default": True,
                 "weekdays_only_lookback": True,
+                "task_title_wrap_width": 120,
+                "task_date_format": "M/D",
             }
             self._save_config(default_config)
             return default_config
@@ -57,6 +59,8 @@ class Config:
                 "show_sections": True,
                 "show_all_open_by_default": True,
                 "weekdays_only_lookback": True,
+                "task_title_wrap_width": 120,
+                "task_date_format": "M/D",
             }
             self._save_config(default_config)
             return default_config
@@ -141,3 +145,19 @@ class Config:
     def set_weekdays_only_lookback(self, enabled: bool) -> None:
         """Set whether date lookback should consider only weekdays."""
         self.set("weekdays_only_lookback", enabled)
+
+    def get_task_title_wrap_width(self) -> int:
+        """Get the width for wrapping task titles."""
+        return self.get("task_title_wrap_width", 120)
+
+    def set_task_title_wrap_width(self, width: int) -> None:
+        """Set the width for wrapping task titles."""
+        self.set("task_title_wrap_width", width)
+
+    def get_task_date_format(self) -> str:
+        """Get the date format for task titles."""
+        return self.get("task_date_format", "M/D")
+
+    def set_task_date_format(self, date_format: str) -> None:
+        """Set the date format for task titles."""
+        self.set("task_date_format", date_format)
