@@ -88,7 +88,7 @@ def format_date_by_format(date_obj: datetime, format_str: str) -> str:
     return result
 
 
-def wrap_text(text: str, max_width: int, prefix: str = "") -> str:
+def wrap_text(text: str, max_width: int, prefix: str = "", is_task_wrapping: bool = False) -> str:
     """
     Wrap text to fit within a specified width, respecting word boundaries.
 
@@ -96,6 +96,7 @@ def wrap_text(text: str, max_width: int, prefix: str = "") -> str:
         text: Text to wrap
         max_width: Maximum width for each line
         prefix: Prefix to add to continuation lines (e.g., indentation)
+        is_task_wrapping: If True, only add indentation to continuation lines
 
     Returns:
         Wrapped text with newlines
@@ -141,8 +142,16 @@ def wrap_text(text: str, max_width: int, prefix: str = "") -> str:
         return lines[0]
     else:
         result = [lines[0]]
-        for line in lines[1:]:
-            result.append(f"{prefix}{line}")
+        if is_task_wrapping:
+            # For task wrapping, only add indentation (spaces) to continuation lines
+            # Calculate indentation based on the prefix length
+            indentation = " " * len(prefix)
+            for line in lines[1:]:
+                result.append(f"{indentation}{line}")
+        else:
+            # For general wrapping, add the full prefix
+            for line in lines[1:]:
+                result.append(f"{prefix}{line}")
         return "\n".join(result)
 
 
@@ -223,7 +232,7 @@ def format_task_for_display(task: Dict[str, Any], config=None) -> str:
     if config and hasattr(config, "get_task_title_wrap_width"):
         wrap_width = config.get_task_title_wrap_width()
         if wrap_width > 0:
-            content = wrap_text(content, wrap_width, base_line)
+            content = wrap_text(content, wrap_width, base_line, is_task_wrapping=True)
 
     return f"{base_line}{content}{labels_display}{due_date_display}"
 
