@@ -3,7 +3,7 @@ Tests for the intake module.
 """
 
 import tempfile
-from unittest.mock import mock_open, patch
+from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 
@@ -30,15 +30,18 @@ class TestIntakeModule:
             mock_sources.__contains__.return_value = True
             mock_sources.__getitem__.return_value = mock_importer
 
-            result = import_from_source("csv", file_path="test.csv")
+            # Create a mock db_manager for testing
+            mock_db_manager = MagicMock()
+            result = import_from_source("csv", mock_db_manager, file_path="test.csv")
 
             assert result == {"imported": 5, "errors": []}
             mock_sources.__getitem__.assert_called_once_with("csv")
 
     def test_import_from_source_invalid_source(self):
         """Test importing from an invalid source."""
+        mock_db_manager = MagicMock()
         with pytest.raises(ValueError, match="Unknown source: invalid"):
-            import_from_source("invalid", file_path="test.txt")
+            import_from_source("invalid", mock_db_manager, file_path="test.txt")
 
     def test_import_from_source_passes_kwargs(self):
         """Test that kwargs are passed to the importer function."""
@@ -50,7 +53,8 @@ class TestIntakeModule:
             mock_sources.__contains__.return_value = True
             mock_sources.__getitem__.return_value = mock_importer
 
-            result = import_from_source("json", file_path="test.json", encoding="utf-8")
+            mock_db_manager = MagicMock()
+            result = import_from_source("json", mock_db_manager, file_path="test.json", encoding="utf-8")
 
             assert result["file_path"] == "test.json"
             assert result["encoding"] == "utf-8"
@@ -68,11 +72,12 @@ class TestCSVImporter:
                 mock_sources.__contains__.return_value = True
                 mock_sources.__getitem__.return_value = mock_csv_import
 
-                result = import_from_source("csv", file_path="test.csv")
+                mock_db_manager = MagicMock()
+                result = import_from_source("csv", mock_db_manager, file_path="test.csv")
 
                 assert result["imported"] == 3
                 assert result["errors"] == []
-                mock_csv_import.assert_called_once_with(file_path="test.csv")
+                mock_csv_import.assert_called_once_with(db_manager=mock_db_manager, file_path="test.csv")
 
 
 class TestJSONImporter:
@@ -87,11 +92,12 @@ class TestJSONImporter:
                 mock_sources.__contains__.return_value = True
                 mock_sources.__getitem__.return_value = mock_json_import
 
-                result = import_from_source("json", file_path="test.json")
+                mock_db_manager = MagicMock()
+                result = import_from_source("json", mock_db_manager, file_path="test.json")
 
                 assert result["imported"] == 2
                 assert result["errors"] == []
-                mock_json_import.assert_called_once_with(file_path="test.json")
+                mock_json_import.assert_called_once_with(db_manager=mock_db_manager, file_path="test.json")
 
 
 class TestTextImporter:
@@ -106,11 +112,12 @@ class TestTextImporter:
                 mock_sources.__contains__.return_value = True
                 mock_sources.__getitem__.return_value = mock_text_import
 
-                result = import_from_source("text", file_path="test.txt")
+                mock_db_manager = MagicMock()
+                result = import_from_source("text", mock_db_manager, file_path="test.txt")
 
                 assert result["imported"] == 4
                 assert result["errors"] == []
-                mock_text_import.assert_called_once_with(file_path="test.txt")
+                mock_text_import.assert_called_once_with(db_manager=mock_db_manager, file_path="test.txt")
 
 
 class TestSheetsImporter:
@@ -125,11 +132,12 @@ class TestSheetsImporter:
                 mock_sources.__contains__.return_value = True
                 mock_sources.__getitem__.return_value = mock_sheets_import
 
-                result = import_from_source("sheets", sheet_id="test_sheet_id")
+                mock_db_manager = MagicMock()
+                result = import_from_source("sheets", mock_db_manager, sheet_id="test_sheet_id")
 
                 assert result["imported"] == 1
                 assert result["errors"] == []
-                mock_sheets_import.assert_called_once_with(sheet_id="test_sheet_id")
+                mock_sheets_import.assert_called_once_with(db_manager=mock_db_manager, sheet_id="test_sheet_id")
 
 
 class TestExcelImporter:
@@ -144,11 +152,12 @@ class TestExcelImporter:
                 mock_sources.__contains__.return_value = True
                 mock_sources.__getitem__.return_value = mock_excel_import
 
-                result = import_from_source("excel", file_path="test.xlsx")
+                mock_db_manager = MagicMock()
+                result = import_from_source("excel", mock_db_manager, file_path="test.xlsx")
 
                 assert result["imported"] == 6
                 assert result["errors"] == []
-                mock_excel_import.assert_called_once_with(file_path="test.xlsx")
+                mock_excel_import.assert_called_once_with(db_manager=mock_db_manager, file_path="test.xlsx")
 
 
 class TestImportErrorHandling:
@@ -164,7 +173,8 @@ class TestImportErrorHandling:
             mock_sources.__contains__.return_value = True
             mock_sources.__getitem__.return_value = mock_importer
 
-            result = import_from_source("csv", file_path="nonexistent.csv")
+            mock_db_manager = MagicMock()
+            result = import_from_source("csv", mock_db_manager, file_path="nonexistent.csv")
 
             assert result["imported"] == 0
             assert result["errors"] == ["File not found"]
@@ -179,8 +189,9 @@ class TestImportErrorHandling:
             mock_sources.__contains__.return_value = True
             mock_sources.__getitem__.return_value = mock_importer
 
+            mock_db_manager = MagicMock()
             with pytest.raises(FileNotFoundError):
-                import_from_source("csv", file_path="nonexistent.csv")
+                import_from_source("csv", mock_db_manager, file_path="nonexistent.csv")
 
 
 class TestImportSourceValidation:

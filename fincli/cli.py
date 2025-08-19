@@ -16,6 +16,7 @@ from fincli import __version__
 from fincli.analytics import AnalyticsManager
 from fincli.backup import DatabaseBackup
 from fincli.config import Config
+from fincli.contexts import ContextManager
 from fincli.db import DatabaseManager
 from fincli.editor import EditorManager
 from fincli.intake import import_from_source
@@ -68,8 +69,6 @@ def add_task(content: str, labels: tuple, source: str = "cli", due_date: str = N
     #         labels_list.append("t")
 
     # Get current context
-    from fincli.contexts import ContextManager
-
     current_context = ContextManager.get_current_context()
 
     # Add the task with due date, labels, and context (TaskManager handles normalization)
@@ -229,8 +228,6 @@ def cli(context):
     """
     # Set context if provided
     if context:
-        from fincli.contexts import ContextManager
-
         try:
             ContextManager.set_context(context)
             click.echo(f"🔧 Context set to: {context}")
@@ -309,15 +306,11 @@ def _list_tasks_impl(days, label, status, today=False, due=None, verbose=False):
             click.echo("   • Weekdays only: False (all days)")
 
         # Show current context
-        from fincli.contexts import ContextManager
-
         current_context = ContextManager.get_current_context()
         click.echo(f"   • Context: {current_context}")
         click.echo()
 
     # Get current context
-    from fincli.contexts import ContextManager
-
     current_context = ContextManager.get_current_context()
 
     # Get tasks (include completed tasks for status filtering, filtered by context)
@@ -2010,8 +2003,6 @@ def report(output_format, period, output, overdue):
 @click.option("--force", is_flag=True, help="Force deletion of context with tasks")
 def context_command(action, name, description, force):
     """Manage task contexts."""
-    from fincli.contexts import ContextManager
-
     db_manager = DatabaseManager()
 
     if action == "list":
