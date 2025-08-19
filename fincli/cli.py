@@ -452,17 +452,17 @@ def _list_tasks_impl(days, label, status, today=False, due=None, verbose=False):
     # Display Important section
     if important_tasks:
         click.echo("Important")
-        for task in important_tasks:
+        for i, task in enumerate(important_tasks, 1):
             formatted_task = format_task_for_display(task, config)
-            click.echo(formatted_task)
+            click.echo(f"{formatted_task}")
         click.echo()
 
     # Display Today section
     if today_tasks:
         click.echo("Today")
-        for task in today_tasks:
+        for i, task in enumerate(today_tasks, 1):
             formatted_task = format_task_for_display(task, config)
-            click.echo(formatted_task)
+            click.echo(f"{formatted_task}")
         click.echo()
 
     # Display Overdue section
@@ -492,9 +492,9 @@ def _list_tasks_impl(days, label, status, today=False, due=None, verbose=False):
     # Display Open section
     if open_tasks:
         click.echo("Open")
-        for task in open_tasks:
+        for i, task in enumerate(open_tasks, 1):
             formatted_task = format_task_for_display(task, config)
-            click.echo(formatted_task)
+            click.echo(f"{formatted_task}")
         click.echo()
 
     # Display Completed section
@@ -2285,7 +2285,6 @@ def main():
                 click.echo("Important")
                 for i, task in enumerate(important_tasks, 1):
                     formatted_task = format_task_for_display(task, config)
-                    click.echo(f"{i}")
                     click.echo(f"{formatted_task}")
                 click.echo()
 
@@ -2294,7 +2293,6 @@ def main():
                 click.echo("Today")
                 for i, task in enumerate(today_tasks, 1):
                     formatted_task = format_task_for_display(task, config)
-                    click.echo(f"{i}")
                     click.echo(f"{formatted_task}")
                 click.echo()
 
@@ -2303,7 +2301,6 @@ def main():
                 click.echo("Open")
                 for i, task in enumerate(open_tasks, 1):
                     formatted_task = format_task_for_display(task, config)
-                    click.echo(f"{i}")
                     click.echo(f"{formatted_task}")
             return
 
