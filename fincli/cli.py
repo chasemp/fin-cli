@@ -453,7 +453,7 @@ def _list_tasks_impl(days, label, status, today=False, due=None, verbose=False):
     if important_tasks:
         click.echo("Important")
         for task in important_tasks:
-            formatted_task = format_task_for_display(task)
+            formatted_task = format_task_for_display(task, config)
             click.echo(formatted_task)
         click.echo()
 
@@ -461,7 +461,7 @@ def _list_tasks_impl(days, label, status, today=False, due=None, verbose=False):
     if today_tasks:
         click.echo("Today")
         for task in today_tasks:
-            formatted_task = format_task_for_display(task)
+            formatted_task = format_task_for_display(task, config)
             click.echo(formatted_task)
         click.echo()
 
@@ -469,7 +469,7 @@ def _list_tasks_impl(days, label, status, today=False, due=None, verbose=False):
     if overdue_tasks:
         click.echo("🚨 Overdue")
         for task in overdue_tasks:
-            formatted_task = format_task_for_display(task)
+            formatted_task = format_task_for_display(task, config)
             click.echo(formatted_task)
         click.echo()
 
@@ -477,7 +477,7 @@ def _list_tasks_impl(days, label, status, today=False, due=None, verbose=False):
     if due_soon_tasks:
         click.echo("⏰ Due Soon")
         for task in due_soon_tasks:
-            formatted_task = format_task_for_display(task)
+            formatted_task = format_task_for_display(task, config)
             click.echo(formatted_task)
         click.echo()
 
@@ -485,7 +485,7 @@ def _list_tasks_impl(days, label, status, today=False, due=None, verbose=False):
     if due_today_tasks:
         click.echo("📅 Due Today")
         for task in due_today_tasks:
-            formatted_task = format_task_for_display(task)
+            formatted_task = format_task_for_display(task, config)
             click.echo(formatted_task)
         click.echo()
 
@@ -493,7 +493,7 @@ def _list_tasks_impl(days, label, status, today=False, due=None, verbose=False):
     if open_tasks:
         click.echo("Open")
         for task in open_tasks:
-            formatted_task = format_task_for_display(task)
+            formatted_task = format_task_for_display(task, config)
             click.echo(formatted_task)
         click.echo()
 
@@ -501,7 +501,7 @@ def _list_tasks_impl(days, label, status, today=False, due=None, verbose=False):
     if completed_tasks:
         click.echo("Completed")
         for task in completed_tasks:
-            formatted_task = format_task_for_display(task)
+            formatted_task = format_task_for_display(task, config)
             click.echo(formatted_task)
 
 
@@ -2087,6 +2087,15 @@ def context_command(action, name, description, force):
     type=bool,
     help="Count only weekdays (Monday-Friday) for date lookback",
 )
+@click.option(
+    "--task-title-wrap-width",
+    type=int,
+    help="Width for wrapping long task titles (0 to disable)",
+)
+@click.option(
+    "--task-date-format",
+    help="Date format for task display (e.g., M/D, MM/DD, MM-DD)",
+)
 def config_command(
     auto_today,
     show_sections,
@@ -2094,6 +2103,8 @@ def config_command(
     default_editor,
     show_all_open,
     weekdays_only,
+    task_title_wrap_width,
+    task_date_format,
 ):
     """Manage FinCLI configuration."""
     config = Config()
@@ -2122,6 +2133,14 @@ def config_command(
         config.set_weekdays_only_lookback(weekdays_only)
         click.echo(f"✅ Weekdays only lookback: {weekdays_only}")
 
+    if task_title_wrap_width is not None:
+        config.set_task_title_wrap_width(task_title_wrap_width)
+        click.echo(f"✅ Task title wrap width: {task_title_wrap_width}")
+
+    if task_date_format is not None:
+        config.set_task_date_format(task_date_format)
+        click.echo(f"✅ Task date format: {task_date_format}")
+
     # Show current configuration
     if all(
         param is None
@@ -2132,6 +2151,8 @@ def config_command(
             default_editor,
             show_all_open,
             weekdays_only,
+            task_title_wrap_width,
+            task_date_format,
         ]
     ):
         click.echo("📋 Current Configuration:")
@@ -2141,6 +2162,8 @@ def config_command(
         click.echo(f"  Default editor: {config.get_default_editor() or 'system default'}")
         click.echo(f"  Show all open tasks by default: {config.get_show_all_open_by_default()}")
         click.echo(f"  Weekdays only lookback: {config.get_weekdays_only_lookback()}")
+        click.echo(f"  Task title wrap width: {config.get_task_title_wrap_width()}")
+        click.echo(f"  Task date format: {config.get_task_date_format()}")
         click.echo(f"  Config file: {config.config_file}")
 
 
@@ -2261,7 +2284,7 @@ def main():
             if important_tasks:
                 click.echo("Important")
                 for i, task in enumerate(important_tasks, 1):
-                    formatted_task = format_task_for_display(task)
+                    formatted_task = format_task_for_display(task, config)
                     click.echo(f"{i}")
                     click.echo(f"{formatted_task}")
                 click.echo()
@@ -2270,7 +2293,7 @@ def main():
             if today_tasks:
                 click.echo("Today")
                 for i, task in enumerate(today_tasks, 1):
-                    formatted_task = format_task_for_display(task)
+                    formatted_task = format_task_for_display(task, config)
                     click.echo(f"{i}")
                     click.echo(f"{formatted_task}")
                 click.echo()
@@ -2279,7 +2302,7 @@ def main():
             if open_tasks:
                 click.echo("Open")
                 for i, task in enumerate(open_tasks, 1):
-                    formatted_task = format_task_for_display(task)
+                    formatted_task = format_task_for_display(task, config)
                     click.echo(f"{i}")
                     click.echo(f"{formatted_task}")
             return
