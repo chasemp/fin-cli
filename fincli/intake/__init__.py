@@ -6,6 +6,7 @@ Handles importing tasks from external sources with a plugin architecture.
 
 from typing import Any, Callable, Dict, List, Optional
 
+from ..db import DatabaseManager
 from .csv_importer import import_csv_tasks
 from .excel_importer import import_excel_tasks
 from .json_importer import import_json_tasks
@@ -27,13 +28,13 @@ def get_available_sources() -> List[str]:
     return list(SOURCES.keys())
 
 
-def import_from_source(source: str, db_manager=None, **kwargs) -> Dict[str, Any]:
+def import_from_source(source: str, db_manager: DatabaseManager, **kwargs) -> Dict[str, Any]:
     """
     Import tasks from a specific source.
 
     Args:
         source: Source name (csv, json, text, sheets, excel)
-        db_manager: Optional database manager instance for dependency injection
+        db_manager: Database manager instance (REQUIRED - prevents database pollution)
         **kwargs: Additional arguments for the importer
 
     Returns:
@@ -42,13 +43,11 @@ def import_from_source(source: str, db_manager=None, **kwargs) -> Dict[str, Any]
     if source not in SOURCES:
         raise ValueError(f"Unknown source: {source}")
 
-    importer_func = SOURCES[source]
+    if db_manager is None:
+        raise ValueError("db_manager is required to prevent database pollution during imports")
 
-    # Pass db_manager if provided, otherwise let the importer create its own
-    if db_manager is not None:
-        return importer_func(db_manager=db_manager, **kwargs)
-    else:
-        return importer_func(**kwargs)
+    importer_func = SOURCES[source]
+    return importer_func(db_manager=db_manager, **kwargs)
 
 
 def import_from_source_with_db(source: str, db_manager, **kwargs) -> Dict[str, Any]:

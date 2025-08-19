@@ -23,12 +23,15 @@ def import_csv_tasks(file_path: str = None, db_manager: Optional[DatabaseManager
 
     Args:
         file_path: Path to CSV file (defaults to ~/.fin/tasks.csv)
-        db_manager: Database manager instance (optional, will create one if not provided)
+        db_manager: Database manager instance (REQUIRED - prevents database pollution)
         **kwargs: Additional arguments
 
     Returns:
         Dictionary with import results
     """
+    if db_manager is None:
+        raise ValueError("db_manager is required to prevent database pollution during imports")
+
     if file_path is None:
         file_path = os.path.expanduser("~/fin/tasks.csv")
 
@@ -40,9 +43,7 @@ def import_csv_tasks(file_path: str = None, db_manager: Optional[DatabaseManager
             "skipped": 0,
         }
 
-    # Initialize managers - use provided db_manager or create one
-    if db_manager is None:
-        db_manager = DatabaseManager()
+    # Use provided db_manager (dependency injection)
     task_manager = TaskManager(db_manager)
 
     imported_count = 0
