@@ -2212,6 +2212,10 @@ def main():
                 click.echo(f"   • Max limit: {max_limit}")
                 if total_tasks > max_limit:
                     click.echo(f"   • Total available: {total_tasks}")
+
+                # Show current context
+                current_context = ContextManager.get_current_context()
+                click.echo(f"   • Context: {current_context}")
                 click.echo()
         else:
             # Show recent open tasks (default behavior or days-specified)
@@ -2232,6 +2236,10 @@ def main():
                     click.echo("   • Weekdays only: True (Mon-Fri)")
                 else:
                     click.echo("   • Weekdays only: False (all days)")
+
+                # Show current context
+                current_context = ContextManager.get_current_context()
+                click.echo(f"   • Context: {current_context}")
                 click.echo()
 
         if not tasks:
