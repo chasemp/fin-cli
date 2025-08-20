@@ -292,8 +292,10 @@ def _list_tasks_impl(days, label, status, today=False, due=None, verbose=False):
         click.echo("🔍 Filtering criteria:")
         if today:
             click.echo("   • Today only (overrides days)")
-        else:
+        elif days is not None:
             click.echo(f"   • Days: {days} (looking back {days} day{'s' if days != 1 else ''})")
+        else:
+            click.echo("   • Days: all open tasks (no date filtering)")
         click.echo(f"   • Status: {status}")
         if label:
             click.echo(f"   • Labels: {', '.join(label)}")
@@ -333,10 +335,11 @@ def _list_tasks_impl(days, label, status, today=False, due=None, verbose=False):
                 if created_dt.date() == today_date:
                     filtered_tasks.append(task)
         tasks = filtered_tasks
-    else:
-        # Apply normal days filtering
+    elif days is not None:
+        # Apply days filtering only if days is specified
         weekdays_only = config.get_weekdays_only_lookback()
         tasks = filter_tasks_by_date_range(tasks, days=days, weekdays_only=weekdays_only)
+    # If days is None, don't apply date filtering (show all tasks)
 
     # Apply status filtering
     if status in ["open", "o"]:
@@ -541,7 +544,7 @@ def list_tasks(days, label, today, status, due, verbose):
 
 
 @cli.command(name="list")
-@click.option("--days", "-d", default=1, help="Show tasks from the past N days (default: 1)")
+@click.option("--days", "-d", type=int, help="Show tasks from the past N days (default: show all open tasks)")
 @click.option("--today", "-t", is_flag=True, help="Show only today's tasks (overrides days)")
 @click.option("--label", "-l", multiple=True, help="Filter by labels")
 @click.option(
@@ -564,7 +567,7 @@ def list_tasks(days, label, today, status, due, verbose):
 def list_tasks_alias(days, label, today, status, due, verbose):
     """List tasks with optional filtering (alias for list-tasks)."""
     # Validate conflicting time filters
-    if today and days != 1:  # days defaults to 1, so only conflict if explicitly set
+    if today and days is not None:
         click.echo("❌ Error: Cannot use both --today and --days together")
         click.echo("   --today overrides --days, so they are mutually exclusive")
         click.echo("   Use either --today or --days N, but not both")
