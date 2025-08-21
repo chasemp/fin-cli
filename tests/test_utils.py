@@ -9,6 +9,7 @@ from unittest.mock import patch
 import pytest
 
 from fincli.utils import (
+    evaluate_boolean_label_expression,
     filter_tasks_by_date_range,
     format_task_for_display,
     get_date_range,
@@ -433,3 +434,104 @@ class TestGetEditor:
 
         editor = get_editor()
         assert editor == "nano"
+
+
+class TestBooleanLabelFiltering:
+    """Test boolean label expression evaluation."""
+
+    def test_simple_label_match(self):
+        """Test simple single label matching."""
+        task_labels = ["work", "urgent", "personal"]
+
+        # Simple matches
+        assert evaluate_boolean_label_expression(task_labels, "work") is True
+        assert evaluate_boolean_label_expression(task_labels, "urgent") is True
+        assert evaluate_boolean_label_expression(task_labels, "personal") is True
+        assert evaluate_boolean_label_expression(task_labels, "nonexistent") is False
+
+    def test_not_logic(self):
+        """Test NOT logic for excluding labels."""
+        task_labels = ["work", "urgent", "personal"]
+
+        # NOT logic
+        assert evaluate_boolean_label_expression(task_labels, "NOT urgent") is False  # Has urgent
+        assert evaluate_boolean_label_expression(task_labels, "NOT nonexistent") is True  # Doesn't have nonexistent
+        assert evaluate_boolean_label_expression(task_labels, "NOT work") is False  # Has work
+        assert evaluate_boolean_label_expression(task_labels, "NOT family") is True  # Doesn't have family
+
+    def test_and_logic(self):
+        """Test AND logic for requiring multiple labels."""
+        task_labels = ["work", "urgent", "personal"]
+
+        # AND logic
+        assert evaluate_boolean_label_expression(task_labels, "work AND urgent") is True  # Has both
+        assert evaluate_boolean_label_expression(task_labels, "work AND personal") is True  # Has both
+        assert evaluate_boolean_label_expression(task_labels, "work AND family") is False  # Missing family
+        assert evaluate_boolean_label_expression(task_labels, "urgent AND personal") is True  # Has both
+        assert evaluate_boolean_label_expression(task_labels, "family AND urgent") is False  # Missing family
+
+    def test_or_logic(self):
+        """Test OR logic for optional labels."""
+        task_labels = ["work", "urgent", "personal"]
+
+        # OR logic
+        assert evaluate_boolean_label_expression(task_labels, "work OR urgent") is True  # Has work
+        assert evaluate_boolean_label_expression(task_labels, "work OR family") is True  # Has work
+        assert evaluate_boolean_label_expression(task_labels, "family OR urgent") is True  # Has urgent
+        assert evaluate_boolean_label_expression(task_labels, "family OR school") is False  # Has neither
+
+    def test_complex_not_combinations(self):
+        """Test NOT logic combined with AND/OR."""
+        task_labels = ["work", "urgent", "personal"]
+
+        # Complex NOT combinations
+        assert evaluate_boolean_label_expression(task_labels, "work AND NOT urgent") is False  # Has both
+        assert evaluate_boolean_label_expression(task_labels, "work AND NOT family") is True  # Has work, not family
+        assert evaluate_boolean_label_expression(task_labels, "NOT urgent AND work") is False  # Has urgent
+        assert evaluate_boolean_label_expression(task_labels, "NOT family AND work") is True  # Has work, not family
+        assert evaluate_boolean_label_expression(task_labels, "NOT urgent OR work") is True  # Has work
+        assert evaluate_boolean_label_expression(task_labels, "NOT family OR urgent") is True  # Has urgent
+
+    def test_triple_combination(self):
+        """Test complex three-part combinations."""
+        task_labels = ["family", "work", "urgent"]
+
+        # Triple combinations
+        assert evaluate_boolean_label_expression(task_labels, "family AND work AND NOT love") is True  # Has family+work, not love
+        assert evaluate_boolean_label_expression(task_labels, "family AND work AND urgent") is True  # Has all three
+        assert evaluate_boolean_label_expression(task_labels, "family AND work AND NOT urgent") is False  # Has urgent
+        assert evaluate_boolean_label_expression(task_labels, "family OR work OR urgent") is True  # Has all
+        assert evaluate_boolean_label_expression(task_labels, "family OR work OR love") is True  # Has family+work
+
+    def test_edge_cases(self):
+        """Test edge cases and boundary conditions."""
+        task_labels = ["work", "urgent"]
+
+        # Edge cases
+        assert evaluate_boolean_label_expression(task_labels, "") is True  # Empty expression
+        assert evaluate_boolean_label_expression(task_labels, "   ") is True  # Whitespace only
+        assert evaluate_boolean_label_expression(task_labels, "NOT") is True  # NOT with no label
+        assert evaluate_boolean_label_expression(task_labels, "AND") is False  # AND with no labels
+        assert evaluate_boolean_label_expression(task_labels, "OR") is False  # OR with no labels
+
+    def test_case_insensitive(self):
+        """Test that label matching is case insensitive."""
+        task_labels = ["Work", "URGENT", "Personal"]
+
+        # Case insensitive matching
+        assert evaluate_boolean_label_expression(task_labels, "work") is True
+        assert evaluate_boolean_label_expression(task_labels, "WORK") is True
+        assert evaluate_boolean_label_expression(task_labels, "Work") is True
+        assert evaluate_boolean_label_expression(task_labels, "NOT URGENT") is False
+        assert evaluate_boolean_label_expression(task_labels, "work AND urgent") is True
+
+    def test_whitespace_handling(self):
+        """Test proper whitespace handling in expressions."""
+        task_labels = ["work", "urgent", "personal"]
+
+        # Whitespace handling
+        assert evaluate_boolean_label_expression(task_labels, "  work  ") is True
+        assert evaluate_boolean_label_expression(task_labels, "work  AND  urgent") is True
+        assert evaluate_boolean_label_expression(task_labels, "work  OR  personal") is True
+        assert evaluate_boolean_label_expression(task_labels, "  NOT  urgent") is False
+        assert evaluate_boolean_label_expression(task_labels, "work  AND  NOT  urgent") is False

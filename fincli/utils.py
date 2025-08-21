@@ -460,3 +460,87 @@ class DateParser:
             return 0 <= days_until_due <= days
         except ValueError:
             return False
+
+
+def evaluate_boolean_label_expression(task_labels: List[str], expression: str) -> bool:
+    """
+    Evaluate a boolean label expression for a task.
+
+    Supports AND, OR, and NOT logic with JQL-inspired syntax.
+
+    Args:
+        task_labels: List of labels for the task (normalized to lowercase)
+        expression: Boolean expression string (e.g., "work AND urgent", "family OR personal", "NOT urgent")
+
+    Returns:
+        True if the task matches the expression, False otherwise
+
+    Examples:
+        - "work" -> True if task has #work label
+        - "work AND urgent" -> True if task has both #work AND #urgent labels
+        - "work OR personal" -> True if task has either #work OR #personal label
+        - "NOT urgent" -> True if task does NOT have #urgent label
+        - "work AND NOT urgent" -> True if task has #work but NOT #urgent
+        - "family AND work AND NOT love" -> True if task has #family AND #work but NOT #love
+    """
+    if not expression or not expression.strip():
+        return True
+
+    # Handle "NOT" alone (no space after, case insensitive) before conversion
+    if expression.strip() in ["NOT", "not"]:
+        return True
+
+    expression = expression.strip().lower()
+
+    # Normalize task labels to lowercase for case-insensitive matching
+    normalized_task_labels = [label.lower() for label in task_labels]
+
+    # Normalize AND/OR operators to lowercase with spaces for consistent parsing
+    expression = expression.replace(" AND ", " and ").replace(" OR ", " or ")
+
+    # Check for operators after normalization
+    has_and = " and " in expression
+    has_or = " or " in expression
+    has_not = expression.startswith("not ")
+
+    # Handle simple single label (no operators)
+    if not has_and and not has_or and not has_not:
+        return expression in normalized_task_labels
+
+    # Handle NOT expressions (but only if they don't contain AND/OR)
+    if has_not and not has_and and not has_or:
+        label_to_exclude = expression[4:].strip()
+        if not label_to_exclude:  # "NOT" with no label
+            return True
+        return label_to_exclude not in normalized_task_labels
+
+    # Helper function to evaluate a single part (label or NOT label)
+    def evaluate_part(part: str) -> bool:
+        part = part.strip()
+        if part.startswith("not "):
+            label_to_exclude = part[4:].strip()
+            if not label_to_exclude:  # "NOT" with no label
+                return True
+            return label_to_exclude not in normalized_task_labels
+        else:
+            return part in normalized_task_labels
+
+    # Handle AND expressions
+    if has_and:
+        parts = [part.strip() for part in expression.split(" and ")]
+        for part in parts:
+            part_result = evaluate_part(part)
+            if not part_result:
+                return False
+        return True
+
+    # Handle OR expressions
+    if has_or:
+        parts = [part.strip() for part in expression.split(" or ")]
+        for part in parts:
+            if evaluate_part(part):
+                return True
+        return False
+
+    # Fallback: simple label match
+    return expression in normalized_task_labels

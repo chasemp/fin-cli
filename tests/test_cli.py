@@ -683,6 +683,152 @@ class TestCLI:
         finally:
             sys.argv = original_argv
 
+    def test_cli_not_logic(self, temp_db_path, monkeypatch):
+        """Test NOT logic in CLI label filtering."""
+        # Mock the database path and set environment variable
+        monkeypatch.setattr(
+            "fincli.db.DatabaseManager.__init__",
+            lambda self, db_path=None: self._init_mock_db(temp_db_path),
+        )
+        monkeypatch.setenv("FIN_DB_PATH", temp_db_path)
+
+        # Add some test tasks first
+        import sys
+
+        original_argv = sys.argv
+
+        # Add tasks with different label combinations
+        test_tasks = [
+            ["fin", "Work task #work"],
+            ["fin", "Urgent work task #work #urgent"],
+            ["fin", "Personal task #personal"],
+            ["fin", "Family task #family"],
+        ]
+
+        try:
+            from contextlib import redirect_stdout
+            import io
+
+            from click.exceptions import Exit
+
+            from fincli.cli import main
+
+            # Add test tasks
+            for task_args in test_tasks:
+                sys.argv = task_args
+                f = io.StringIO()
+                with redirect_stdout(f):
+                    try:
+                        main()
+                    except (SystemExit, Exit):
+                        pass  # Expected when command completes
+
+            # Test NOT filtering
+            sys.argv = ["fin", "list", "-l", "NOT urgent"]
+            f = io.StringIO()
+            with redirect_stdout(f):
+                try:
+                    main()
+                except (SystemExit, Exit):
+                    pass  # Expected when command completes
+
+            output = f.getvalue()
+            assert "Work task" in output  # Has work but not urgent
+            assert "Personal task" in output  # Has personal but not urgent
+            assert "Family task" in output  # Has family but not urgent
+            assert "Urgent work task" not in output  # Should not appear (has urgent)
+
+            # Test NOT with AND
+            sys.argv = ["fin", "list", "-l", "work AND NOT urgent"]
+            f = io.StringIO()
+            with redirect_stdout(f):
+                try:
+                    main()
+                except (SystemExit, Exit):
+                    pass  # Expected when command completes
+
+            output = f.getvalue()
+            assert "Work task" in output  # Has work but not urgent
+            assert "Urgent work task" not in output  # Should not appear (has urgent)
+            assert "Personal task" not in output  # Should not appear (no work label)
+            assert "Family task" not in output  # Should not appear (no work label)
+
+        finally:
+            sys.argv = original_argv
+
+    def test_cli_complex_not_combinations(self, temp_db_path, monkeypatch):
+        """Test complex NOT combinations in CLI label filtering."""
+        # Mock the database path and set environment variable
+        monkeypatch.setattr(
+            "fincli.db.DatabaseManager.__init__",
+            lambda self, db_path=None: self._init_mock_db(temp_db_path),
+        )
+        monkeypatch.setenv("FIN_DB_PATH", temp_db_path)
+
+        # Add some test tasks first
+        import sys
+
+        original_argv = sys.argv
+
+        # Add tasks with different label combinations
+        test_tasks = [
+            ["fin", "Family work task #family #work"],
+            ["fin", "Family work urgent task #family #work #urgent"],
+            ["fin", "Family work love task #family #work #love"],
+            ["fin", "Personal task #personal"],
+        ]
+
+        try:
+            from contextlib import redirect_stdout
+            import io
+
+            from click.exceptions import Exit
+
+            from fincli.cli import main
+
+            # Add test tasks
+            for task_args in test_tasks:
+                sys.argv = task_args
+                f = io.StringIO()
+                with redirect_stdout(f):
+                    try:
+                        main()
+                    except (SystemExit, Exit):
+                        pass  # Expected when command completes
+
+            # Test triple combination: family AND work AND NOT love
+            sys.argv = ["fin", "list", "-l", "family AND work AND NOT love"]
+            f = io.StringIO()
+            with redirect_stdout(f):
+                try:
+                    main()
+                except (SystemExit, Exit):
+                    pass  # Expected when command completes
+
+            output = f.getvalue()
+            assert "Family work task" in output  # Has family+work, not love
+            assert "Family work urgent task" in output  # Has family+work, not love
+            assert "Family work love task" not in output  # Should not appear (has love)
+            assert "Personal task" not in output  # Should not appear (no family+work)
+
+            # Test NOT with OR
+            sys.argv = ["fin", "list", "-l", "NOT urgent OR personal"]
+            f = io.StringIO()
+            with redirect_stdout(f):
+                try:
+                    main()
+                except (SystemExit, Exit):
+                    pass  # Expected when command completes
+
+            output = f.getvalue()
+            assert "Family work task" in output  # Not urgent
+            assert "Family work love task" in output  # Not urgent
+            assert "Personal task" in output  # Has personal
+            assert "Family work urgent task" not in output  # Should not appear (has urgent)
+
+        finally:
+            sys.argv = original_argv
+
 
 class TestCLIExecution:
     """Test CLI execution via subprocess."""
