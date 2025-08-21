@@ -24,6 +24,7 @@ from fincli.labels import LabelManager
 from fincli.tasks import TaskManager
 from fincli.utils import (
     DateParser,
+    evaluate_boolean_label_expression,
     filter_tasks_by_date_range,
     format_task_for_display,
     is_important_task,
@@ -60,6 +61,7 @@ def add_task(content: str, labels: tuple, source: str = "cli", due_date: str = N
         click.echo(f"   Reserved words: {', '.join(sorted(reserved_words))}")
         click.echo("   Use complex filtering instead: fin list -l 'work and urgent'")
         click.echo("   Use special patterns: #due:06/17, #due:2025-08-10, #recur:daily, #depends:task123")
+        click.echo("   Use NOT logic: fin list -l 'NOT urgent' or 'work AND NOT urgent'")
         sys.exit(1)
 
     # Check if this is an important task and auto-add today label if configured
@@ -183,6 +185,7 @@ def handle_direct_task(args):
         click.echo(f"   Reserved words: {', '.join(sorted(reserved_words))}")
         click.echo("   Use complex filtering instead: fin list -l 'work and urgent'")
         click.echo("   Use special patterns: #due:2025-08-10, #recur:daily, #depends:task123")
+        click.echo("   Use NOT logic: fin list -l 'NOT urgent' or 'work AND NOT urgent'")
         sys.exit(1)
 
     for hashtag in hashtags:
@@ -356,28 +359,11 @@ def _list_tasks_impl(days, label, status, today=False, due=None, verbose=False):
                 # Clean up labels - remove empty strings and whitespace
                 task_labels = [label.strip().lower() for label in task["labels"] if label.strip()]
 
-                # Check if task matches any of the label criteria
+                # Check if task matches any of the label criteria using boolean logic
                 task_matches = False
                 for label_criteria in label:
-                    label_criteria = label_criteria.lower()
-
-                    # Handle complex label combinations
-                    if " and " in label_criteria:
-                        # All labels must be present
-                        required_labels = [label.strip().lower() for label in label_criteria.split(" and ")]
-                        if all(req_label in task_labels for req_label in required_labels):
-                            task_matches = True
-                    elif " or " in label_criteria:
-                        # Any label can be present
-                        optional_labels = [label.strip().lower() for label in label_criteria.split(" or ")]
-                        if any(opt_label in task_labels for opt_label in optional_labels):
-                            task_matches = True
-                    else:
-                        # Simple label match
-                        if label_criteria in task_labels:
-                            task_matches = True
-
-                    if task_matches:
+                    if evaluate_boolean_label_expression(task_labels, label_criteria):
+                        task_matches = True
                         break
 
                 if task_matches:

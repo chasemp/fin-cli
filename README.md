@@ -310,6 +310,15 @@ fin list -l "work and urgent"
 # Find tasks with any of several labels (OR)
 fin list -l "work or personal"
 
+# Exclude tasks with specific labels (NOT)
+fin list -l "NOT urgent"
+fin list -l "work AND NOT urgent"
+
+# Complex boolean combinations
+fin list -l "family AND work AND NOT love"
+fin list -l "NOT urgent OR personal"
+fin list -l "work AND (urgent OR important)"
+
 # Combine multiple criteria
 fin list -l "work and urgent" -l "personal"
 ```
@@ -322,7 +331,7 @@ The following words are reserved and cannot be used as labels because they're us
 - `due` - Used in due date patterns (`#due:2025-08-10`)
 - `recur` - Used in recurring task patterns (`#recur:daily`)
 - `depends` - Used in dependency patterns (`#depends:task123`)
-- `not` - Reserved for potential future NOT logic in filtering
+- `not` - Used for NOT logic in filtering (`NOT urgent`, `work AND NOT urgent`)
 
 **Example:**
 ```bash
@@ -338,6 +347,10 @@ fin list -l "work and urgent"
 fin "project deadline #due:2025-08-10"
 fin "daily standup #recur:daily"
 fin "implement feature #depends:task123"
+
+# ✅ Use NOT logic
+fin list -l "NOT urgent"
+fin list -l "work AND NOT urgent"
 ```
 
 #### Bulk Operations in Editor
@@ -610,6 +623,52 @@ Configuration is stored at `~/fin/config.json` and includes:
 - `show_all_open_by_default`: Show all open tasks by default instead of recent ones (default: true)
 
 **Note**: The config file is created automatically on first use with default values. Existing configurations are preserved and never overwritten during installation or updates.
+
+### Advanced Boolean Label Filtering
+
+The label filtering system supports full boolean logic with JQL-inspired syntax:
+
+#### Basic Operators
+- **AND**: All labels must be present (`work AND urgent`)
+- **OR**: Any label can be present (`work OR personal`) 
+- **NOT**: Exclude tasks with specific labels (`NOT urgent`, `work AND NOT urgent`)
+
+#### Complex Expressions
+```bash
+# Exclude urgent tasks
+fin list -l "NOT urgent"
+
+# Work tasks that are not urgent
+fin list -l "work AND NOT urgent"
+
+# Family or work tasks, but not urgent ones
+fin list -l "(family OR work) AND NOT urgent"
+
+# Triple combination
+fin list -l "family AND work AND NOT love"
+```
+
+#### Operator Precedence
+1. **NOT** has highest precedence
+2. **AND** has higher precedence than **OR**
+3. Use parentheses for explicit grouping when needed
+
+#### Examples by Use Case
+```bash
+# Personal tasks only (exclude work)
+fin list -l "personal AND NOT work"
+
+# High priority work (urgent + important, but not blocked)
+fin list -l "work AND urgent AND important AND NOT blocked"
+
+# Either urgent or due soon, but not completed
+fin list -l "(urgent OR due_soon) AND NOT completed"
+
+# All tasks except archived ones
+fin list -l "NOT archived"
+```
+
+**Note**: The words `and`, `or`, `ref`, `due`, `recur`, `depends`, and `not` are reserved and cannot be used as labels because they're used for complex filtering or special patterns.
 
 ## Task Modification Tracking
 
