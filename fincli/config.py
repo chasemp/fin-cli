@@ -21,7 +21,12 @@ class Config:
             config_dir: Directory for config file (default: ~/fin)
         """
         if config_dir is None:
-            config_dir = os.path.expanduser("~/fin")
+            # Check for environment variable first, then fall back to default
+            env_config_dir = os.environ.get("FIN_CONFIG_DIR")
+            if env_config_dir:
+                config_dir = env_config_dir
+            else:
+                config_dir = os.path.expanduser("~/fin")
 
         self.config_dir = Path(config_dir)
         self.config_file = self.config_dir / "config.json"
@@ -161,3 +166,45 @@ class Config:
     def set_task_date_format(self, date_format: str) -> None:
         """Set the date format for task titles."""
         self.set("task_date_format", date_format)
+
+    def get_context_default_label_filter(self, context: str = "default") -> str:
+        """Get the default label filter for a specific context.
+
+        Args:
+            context: Context name (defaults to 'default')
+
+        Returns:
+            Default label filter string (e.g., "NOT backlog") or None if not set
+        """
+        context_filters = self.get("context_default_label_filters", {})
+        return context_filters.get(context)
+
+    def set_context_default_label_filter(self, context: str, label_filter: str) -> None:
+        """Set the default label filter for a specific context.
+
+        Args:
+            context: Context name
+            label_filter: Label filter string (e.g., "NOT backlog")
+        """
+        context_filters = self.get("context_default_label_filters", {})
+        context_filters[context] = label_filter
+        self.set("context_default_label_filters", context_filters)
+
+    def remove_context_default_label_filter(self, context: str) -> None:
+        """Remove the default label filter for a specific context.
+
+        Args:
+            context: Context name
+        """
+        context_filters = self.get("context_default_label_filters", {})
+        if context in context_filters:
+            del context_filters[context]
+            self.set("context_default_label_filters", context_filters)
+
+    def get_all_context_default_label_filters(self) -> dict:
+        """Get all context default label filters.
+
+        Returns:
+            Dictionary mapping context names to their default label filters
+        """
+        return self.get("context_default_label_filters", {})

@@ -272,6 +272,48 @@ fin context delete old      # Delete context (with safety checks)
 - Tasks automatically get current context upon creation
 - Context filtering works with all other filters (labels, dates, status)
 
+**Default Label Filters:**
+Each context can have a default label filter that's automatically applied when no explicit labels are specified. This is useful for automatically excluding certain types of tasks in specific contexts.
+
+```bash
+# Set default label filter for default context (exclude backlog tasks)
+fin context-label-filter set default "NOT backlog"
+
+# Set default label filter for work context (exclude personal tasks)
+fin context-label-filter set work "NOT personal"
+
+# View all configured default label filters
+fin context-label-filter list
+
+# Get specific context's default filter
+fin context-label-filter get work
+
+# Remove default label filter from a context
+fin context-label-filter remove work
+```
+
+**Default Label Filter Behavior:**
+- **Automatic Application**: Default filters are applied when no `-l` or `--label` flags are used
+- **Override with Explicit Labels**: Using `-l` or `--label` completely overrides the default filter
+- **Verbose Output**: Use `-v` to see when default label filters are being applied
+- **Context-Specific**: Each context can have its own default filter
+- **Boolean Logic**: Supports all boolean operators (AND, OR, NOT) like regular label filtering
+
+**Examples:**
+```bash
+# With default filter "NOT backlog" set for default context
+fin list                    # Automatically excludes backlog tasks
+fin list -v                 # Shows "Default label filter: NOT backlog"
+
+# Explicit labels override default filter
+fin list -l "backlog"       # Shows only backlog tasks (ignores default filter)
+fin list -l "work"          # Shows only work tasks (ignores default filter)
+
+# Switch to work context with different default filter
+fin -c work
+fin list                    # Uses work context's default filter (if any)
+```
+
 #### Due Dates
 ```bash
 # Add task with due date

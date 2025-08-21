@@ -295,6 +295,9 @@ def _list_tasks_impl(days, label, status, today=False, due=None, verbose=False):
     task_manager = TaskManager(db_manager)
     config = Config()
 
+    # Get current context first (needed for verbose output and filtering)
+    current_context = ContextManager.get_current_context()
+
     # Show verbose information about filtering criteria
     if verbose:
         click.echo("🔍 Filtering criteria:")
@@ -307,6 +310,11 @@ def _list_tasks_impl(days, label, status, today=False, due=None, verbose=False):
         click.echo(f"   • Status: {status}")
         if label:
             click.echo(f"   • Labels: {', '.join(label)}")
+        else:
+            # Show default label filter if no explicit labels provided
+            default_label_filter = config.get_context_default_label_filter(current_context)
+            if default_label_filter:
+                click.echo(f"   • Default label filter: {default_label_filter}")
         if due:
             click.echo(f"   • Due date: {due}")
         weekdays_only = config.get_weekdays_only_lookback()
@@ -316,12 +324,8 @@ def _list_tasks_impl(days, label, status, today=False, due=None, verbose=False):
             click.echo("   • Weekdays only: False (all days)")
 
         # Show current context
-        current_context = ContextManager.get_current_context()
         click.echo(f"   • Context: {current_context}")
         click.echo()
-
-    # Get current context
-    current_context = ContextManager.get_current_context()
 
     # Get tasks (include completed tasks for status filtering, filtered by context)
     tasks = task_manager.list_tasks(include_completed=True, context=current_context)
@@ -374,6 +378,21 @@ def _list_tasks_impl(days, label, status, today=False, due=None, verbose=False):
                 if task_matches:
                     filtered_tasks.append(task)
         tasks = filtered_tasks
+    else:
+        # Apply default label filter for current context if no explicit labels provided
+        default_label_filter = config.get_context_default_label_filter(current_context)
+        if default_label_filter:
+            filtered_tasks = []
+            for task in tasks:
+                task_labels = []
+                if task.get("labels"):
+                    # Clean up labels - remove empty strings and whitespace
+                    task_labels = [label.strip().lower() for label in task["labels"] if label.strip()]
+
+                # Apply the default label filter
+                if evaluate_boolean_label_expression(task_labels, default_label_filter):
+                    filtered_tasks.append(task)
+            tasks = filtered_tasks
 
     # Apply due date filtering if requested
     if due:
@@ -2064,6 +2083,56 @@ def context_command(action, name, description, force):
         click.echo(f"📝 Open tasks: {len(open_tasks)}")
         completed_tasks = [t for t in tasks if t["completed_at"]]
         click.echo(f"✅ Completed tasks: {len(completed_tasks)}")
+
+
+@cli.command(name="context-label-filter")
+@click.argument("action", type=click.Choice(["set", "get", "remove", "list"]))
+@click.argument("context", required=False)
+@click.option("--filter", help="Label filter expression (e.g., 'NOT backlog')")
+def context_label_filter_command(action, context, filter):
+    """Manage default label filters for contexts."""
+    config = Config()
+
+    if action == "set":
+        if not context or not filter:
+            click.echo("❌ Both context and filter are required for setting")
+            click.echo("Example: fin context-label-filter set default 'NOT backlog'")
+            sys.exit(1)
+
+        try:
+            config.set_context_default_label_filter(context, filter)
+            click.echo(f"✅ Set default label filter for context '{context}': {filter}")
+        except Exception as e:
+            click.echo(f"❌ Error setting filter: {e}")
+            sys.exit(1)
+
+    elif action == "get":
+        if not context:
+            click.echo("❌ Context name is required for getting filter")
+            sys.exit(1)
+
+        default_filter = config.get_context_default_label_filter(context)
+        if default_filter:
+            click.echo(f"📁 Context '{context}' default label filter: {default_filter}")
+        else:
+            click.echo(f"📁 Context '{context}' has no default label filter")
+
+    elif action == "remove":
+        if not context:
+            click.echo("❌ Context name is required for removing filter")
+            sys.exit(1)
+
+        config.remove_context_default_label_filter(context)
+        click.echo(f"✅ Removed default label filter for context '{context}'")
+
+    elif action == "list":
+        all_filters = config.get_all_context_default_label_filters()
+        if all_filters:
+            click.echo("📁 Context default label filters:")
+            for ctx, filt in all_filters.items():
+                click.echo(f"  • {ctx}: {filt}")
+        else:
+            click.echo("📁 No context default label filters configured")
 
 
 @cli.command(name="config")
