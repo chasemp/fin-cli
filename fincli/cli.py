@@ -34,7 +34,12 @@ from fincli.utils import (
 
 def _get_db_manager():
     """Get database manager - lazy initialization to avoid import-time connections."""
-    return DatabaseManager()
+    # Check for environment variable first to ensure proper test isolation
+    env_db_path = os.environ.get("FIN_DB_PATH")
+    if env_db_path:
+        return DatabaseManager(env_db_path)
+    else:
+        return DatabaseManager()
 
 
 def add_task(content: str, labels: tuple, source: str = "cli", due_date: str = None):
@@ -286,7 +291,7 @@ def init(db_path: str):
 
 def _list_tasks_impl(days, label, status, today=False, due=None, verbose=False):
     """Implementation for listing tasks."""
-    db_manager = DatabaseManager()
+    db_manager = _get_db_manager()
     task_manager = TaskManager(db_manager)
     config = Config()
 
@@ -573,7 +578,7 @@ def list_tasks_alias(days, label, today, status, due, verbose):
 def open_editor(label, date, all_tasks, dry_run):
     """Open tasks in your editor for editing completion status."""
 
-    db_manager = DatabaseManager()
+    db_manager = _get_db_manager()
     editor_manager = EditorManager(db_manager)
 
     # Get tasks for editing (without opening editor)
@@ -1032,7 +1037,7 @@ def fins_command():
         # If content is provided, add it as a completed task
         if content:
             task_content = " ".join(content)
-            db_manager = DatabaseManager()
+            db_manager = _get_db_manager()
             task_manager = TaskManager(db_manager)
 
             # Add the task as completed
@@ -1255,7 +1260,7 @@ def complete_task(task_identifier, verbose):
     if verbose:
         os.environ["FIN_VERBOSE"] = "1"
 
-    db_manager = DatabaseManager()
+    db_manager = _get_db_manager()
     task_manager = TaskManager(db_manager)
 
     # Get all tasks to search through
@@ -1311,7 +1316,7 @@ def done_task(task_identifier, verbose):
         click.echo("            fin done 1 2 3")
         return
 
-    db_manager = DatabaseManager()
+    db_manager = _get_db_manager()
     task_manager = TaskManager(db_manager)
 
     # Get all tasks to search through
@@ -1366,7 +1371,7 @@ def reopen_task(task_identifier, verbose):
     if verbose:
         os.environ["FIN_VERBOSE"] = "1"
 
-    db_manager = DatabaseManager()
+    db_manager = _get_db_manager()
     task_manager = TaskManager(db_manager)
 
     # Get all tasks to search through
@@ -1423,7 +1428,7 @@ def toggle_task(task_identifier, verbose):
     if verbose:
         os.environ["FIN_VERBOSE"] = "1"
 
-    db_manager = DatabaseManager()
+    db_manager = _get_db_manager()
     task_manager = TaskManager(db_manager)
 
     # Get all tasks to search through
@@ -1466,7 +1471,7 @@ def toggle_task(task_identifier, verbose):
 @cli.command(name="list-labels")
 def list_labels():
     """List all known labels."""
-    db_manager = DatabaseManager()
+    db_manager = _get_db_manager()
     label_manager = LabelManager(db_manager)
 
     labels = label_manager.get_all_labels()
@@ -1484,7 +1489,7 @@ def list_labels():
 @click.option("--description", "-d", help="Description of what changed")
 def create_backup(description):
     """Create a backup of the current database."""
-    db_manager = DatabaseManager()
+    db_manager = _get_db_manager()
     backup_manager = DatabaseBackup(db_manager.db_path)
 
     backup_id = backup_manager.create_backup(description or "Manual backup")
@@ -1498,7 +1503,7 @@ def create_backup(description):
 @cli.command(name="list-backups")
 def list_backups():
     """List all available backups."""
-    db_manager = DatabaseManager()
+    db_manager = _get_db_manager()
     backup_manager = DatabaseBackup(db_manager.db_path)
 
     backups = backup_manager.list_backups()
@@ -1521,7 +1526,7 @@ def list_backups():
 @click.option("--yes", "-y", is_flag=True, help="Skip confirmation prompt (alias for --force)")
 def restore_backup(backup_id, force, yes):
     """Restore database from a backup."""
-    db_manager = DatabaseManager()
+    db_manager = _get_db_manager()
     backup_manager = DatabaseBackup(db_manager.db_path)
 
     skip_confirmation = force or yes
@@ -1544,7 +1549,7 @@ def restore_backup(backup_id, force, yes):
 @click.option("--yes", "-y", is_flag=True, help="Skip confirmation prompt (alias for --force)")
 def restore_latest_backup(force, yes):
     """Restore database from the latest backup."""
-    db_manager = DatabaseManager()
+    db_manager = _get_db_manager()
     backup_manager = DatabaseBackup(db_manager.db_path)
 
     latest_id = backup_manager.get_latest_backup_id()
@@ -1584,7 +1589,7 @@ def restore_latest_backup(force, yes):
 )
 def export_tasks(file_path, format, include_completed):
     """Export all tasks to a flat file."""
-    db_manager = DatabaseManager()
+    db_manager = _get_db_manager()
     task_manager = TaskManager(db_manager)
 
     # Get all tasks
@@ -1669,7 +1674,7 @@ def _export_txt(tasks, file_path):
     """Export tasks to plain text format using editor format."""
     from fincli.editor import EditorManager
 
-    db_manager = DatabaseManager()
+    db_manager = _get_db_manager()
     editor_manager = EditorManager(db_manager)
 
     with open(file_path, "w", encoding="utf-8") as f:
@@ -1696,7 +1701,7 @@ def _export_txt(tasks, file_path):
 @click.option("--yes", "-y", is_flag=True, help="Skip confirmation prompt (alias for --force)")
 def import_tasks_from_file(file_path, format, label, clear_existing, force, yes):
     """Import tasks from a flat file."""
-    db_manager = DatabaseManager()
+    db_manager = _get_db_manager()
     task_manager = TaskManager(db_manager)
 
     # Auto-detect format if not specified
@@ -1792,7 +1797,7 @@ def _get_import_preview(file_path, format, additional_labels, clear_existing):
         elif format == "txt":
             from fincli.editor import EditorManager
 
-            db_manager = DatabaseManager()
+            db_manager = _get_db_manager()
             editor_manager = EditorManager(db_manager)
 
             with open(file_path, "r", encoding="utf-8") as f:
@@ -1810,7 +1815,7 @@ def _get_import_preview(file_path, format, additional_labels, clear_existing):
         preview_lines.append(f"📊 File contains: {task_count} tasks ({completed_count} completed)")
 
         # Show current database stats
-        db_manager = DatabaseManager()
+        db_manager = _get_db_manager()
         task_manager = TaskManager(db_manager)
         current_tasks = task_manager.list_tasks(include_completed=True)
         current_count = len(current_tasks)
@@ -1891,7 +1896,7 @@ def _import_txt(task_manager, file_path, additional_labels):
     """Import tasks from plain text format using editor parsing."""
     from fincli.editor import EditorManager
 
-    db_manager = DatabaseManager()
+    db_manager = _get_db_manager()
     editor_manager = EditorManager(db_manager)
 
     imported_count = 0
@@ -1944,7 +1949,7 @@ def _import_txt(task_manager, file_path, additional_labels):
 )
 def digest(output_format, period):
     """Generate a digest report."""
-    db_manager = DatabaseManager()
+    db_manager = _get_db_manager()
     analytics_manager = AnalyticsManager(db_manager)
 
     report = analytics_manager.generate_digest(period, output_format)
@@ -1969,7 +1974,7 @@ def digest(output_format, period):
 @click.option("--overdue", is_flag=True, help="Show only overdue tasks")
 def report(output_format, period, output, overdue):
     """Generate a detailed analytics report."""
-    db_manager = DatabaseManager()
+    db_manager = _get_db_manager()
     analytics_manager = AnalyticsManager(db_manager)
 
     if overdue:
@@ -1992,7 +1997,7 @@ def report(output_format, period, output, overdue):
 @click.option("--force", is_flag=True, help="Force deletion of context with tasks")
 def context_command(action, name, description, force):
     """Manage task contexts."""
-    db_manager = DatabaseManager()
+    db_manager = _get_db_manager()
 
     if action == "list":
         contexts = ContextManager.list_contexts(db_manager)
@@ -2193,7 +2198,7 @@ def main():
         if verbose:
             os.environ["FIN_VERBOSE"] = "1"
 
-        db_manager = DatabaseManager()
+        db_manager = _get_db_manager()
         task_manager = TaskManager(db_manager)
         config = Config()
 
