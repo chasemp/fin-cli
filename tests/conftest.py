@@ -116,6 +116,23 @@ def isolated_cli_runner(temp_db_path, monkeypatch):
 
 
 @pytest.fixture
+def isolated_config(monkeypatch):
+    """Create an isolated config for testing."""
+    import os
+    import tempfile
+
+    # Create a temporary config directory
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        # Set the FIN_CONFIG_DIR environment variable to use the temp directory
+        monkeypatch.setenv("FIN_CONFIG_DIR", tmp_dir)
+
+        yield tmp_dir
+
+        # Clean up environment variable after test
+        monkeypatch.delenv("FIN_CONFIG_DIR", raising=False)
+
+
+@pytest.fixture
 def mock_home_dir(monkeypatch):
     """Mock home directory for testing."""
     with tempfile.TemporaryDirectory() as tmp_dir:
