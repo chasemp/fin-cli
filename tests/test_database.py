@@ -67,6 +67,12 @@ class TestDatabaseManager:
                 "source",
                 "due_date",
                 "context",
+                "remote_id",
+                "remote_source",
+                "remote_authority",
+                "is_shadow_task",
+                "remote_status",
+                "last_synced_at",
             ]
 
             assert set(column_names) == set(expected_columns)
