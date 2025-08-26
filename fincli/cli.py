@@ -21,6 +21,9 @@ from fincli.db import DatabaseManager
 from fincli.editor import EditorManager
 from fincli.intake import import_from_source
 from fincli.labels import LabelManager
+from fincli.sheets_connector import create_sheets_reader_from_token
+from fincli.sync_engine import SyncEngine
+from fincli.sync_strategies import RemoteSystemType, SyncStrategyFactory
 from fincli.tasks import TaskManager
 from fincli.utils import (
     DateParser,
@@ -2241,7 +2244,7 @@ def main():
         return
 
     # Check for Click commands that should always be handled by Click
-    click_commands = ["context", "config", "backup", "restore", "import", "export", "digest", "report"]
+    click_commands = ["context", "config", "backup", "restore", "import", "export", "digest", "report", "sync-sheets", "sync-status"]
     if args and args[0] in click_commands:
         # Normal Click processing for these commands
         cli()
@@ -2367,6 +2370,7 @@ def main():
                     click.echo(f"{formatted_task}")
             return
 
+    # If we get here, we have arguments that should be treated as a direct task addition
     # Check if this is a direct task addition (no subcommand)
     if (
         args
@@ -2395,6 +2399,8 @@ def main():
             "config",
             "fins",
             "fine",
+            "sync-sheets",
+            "sync-status",
         ]
     ):
         # This looks like a direct task addition
@@ -2402,6 +2408,154 @@ def main():
     else:
         # Normal Click processing
         cli()
+
+
+@cli.command(name="sync-sheets")
+@click.option("--sheet-name", default="todo", help="Name of the sheet to sync from (default: todo)")
+@click.option("--dry-run", is_flag=True, help="Show what would be synced without making changes")
+@click.option("--purge-after-import", is_flag=True, default=True, help="Purge remote tasks after import (default: True)")
+@click.option("--token-path", help="Path to Google OAuth token file (default: ~/.fin/google_token.json)")
+@click.option("--sheet-id", help="Google Sheet ID (can also be set via SHEET_ID env var)")
+@click.option("--verbose", "-v", is_flag=True, help="Show verbose output")
+def sync_sheets_command(sheet_name, dry_run, purge_after_import, token_path, sheet_id, verbose):
+    """Sync tasks from Google Sheets."""
+    try:
+        # Get sheet ID from environment or parameter
+        sheet_id = sheet_id or os.environ.get("SHEET_ID")
+        if not sheet_id:
+            click.echo("❌ Error: Sheet ID not provided. Use --sheet-id or set SHEET_ID environment variable.")
+            return
+
+        # Get token path from parameter or default
+        token_path = token_path or os.path.expanduser("~/.fin/google_token.json")
+        if not os.path.exists(token_path):
+            click.echo(f"❌ Error: Token file not found: {token_path}")
+            click.echo("   Run gcreds.py first to authenticate with Google")
+            return
+
+        if verbose:
+            click.echo("🔧 Configuration:")
+            click.echo(f"   • Sheet ID: {sheet_id}")
+            click.echo(f"   • Sheet name: {sheet_name}")
+            click.echo(f"   • Token path: {token_path}")
+            click.echo(f"   • Dry run: {dry_run}")
+            click.echo(f"   • Purge after import: {purge_after_import}")
+            click.echo()
+
+        # Create sheets reader
+        sheets_reader = create_sheets_reader_from_token(token_path, sheet_id)
+
+        # Create sync engine and strategy
+        db_manager = _get_db_manager()
+        task_manager = TaskManager(db_manager)
+        sync_engine = SyncEngine(db_manager, task_manager)
+
+        strategy = SyncStrategyFactory.create_strategy(RemoteSystemType.GOOGLE_SHEETS, sync_engine, sheets_reader=sheets_reader)
+
+        if verbose:
+            click.echo("🔄 Starting Google Sheets sync...")
+            click.echo()
+
+        # Validate sheet structure first
+        validation_result = strategy.validate_sheet_structure(sheet_name)
+        if not validation_result["valid"]:
+            click.echo(f"❌ Sheet validation failed: {validation_result['error']}")
+            if "missing_headers" in validation_result:
+                click.echo(f"   Missing headers: {', '.join(validation_result['missing_headers'])}")
+                click.echo(f"   Found headers: {', '.join(validation_result['found_headers'])}")
+            return
+
+        if verbose:
+            click.echo("✅ Sheet structure validated successfully")
+            click.echo(f"   • Total rows: {validation_result['total_rows']}")
+            click.echo(f"   • Valid tasks found: {validation_result['valid_tasks_found']}")
+            click.echo()
+
+        # Perform sync
+        sync_result = strategy.sync_sheet_tasks(sheet_name=sheet_name, dry_run=dry_run, purge_after_import=purge_after_import)
+
+        if not sync_result["success"]:
+            click.echo(f"❌ Sync failed: {sync_result['error']}")
+            return
+
+        # Display results
+        if dry_run:
+            click.echo("🔍 DRY RUN RESULTS (no changes made):")
+        else:
+            click.echo("✅ Sync completed successfully:")
+
+        click.echo(f"   • Total rows in sheet: {sync_result['total_rows']}")
+        click.echo(f"   • Tasks imported: {sync_result.get('tasks_imported', 0)}")
+        click.echo(f"   • Tasks updated: {sync_result.get('tasks_updated', 0)}")
+        click.echo(f"   • Tasks skipped: {sync_result.get('tasks_skipped', 0)}")
+
+        if "purge_results" in sync_result:
+            purge = sync_result["purge_results"]
+            click.echo(f"   • Remote tasks purged: {purge.get('tasks_purged', 0)}")
+            if purge.get("errors"):
+                click.echo(f"   • Purge errors: {len(purge['errors'])}")
+
+        if verbose and "errors" in sync_result and sync_result["errors"]:
+            click.echo(f"   • Sync errors: {len(sync_result['errors'])}")
+            for error in sync_result["errors"]:
+                click.echo(f"     - {error}")
+
+    except Exception as e:
+        click.echo(f"❌ Error during sync: {str(e)}")
+        if verbose:
+            import traceback
+
+            click.echo(traceback.format_exc())
+
+
+@cli.command(name="sync-status")
+@click.option("--source", help="Filter by remote source (e.g., google_sheets)")
+@click.option("--verbose", "-v", is_flag=True, help="Show verbose output")
+def sync_status_command(source, verbose):
+    """Show sync status for remote tasks."""
+    try:
+        db_manager = _get_db_manager()
+        task_manager = TaskManager(db_manager)
+        sync_engine = SyncEngine(db_manager, task_manager)
+
+        if verbose:
+            click.echo("🔍 Fetching sync status:...")
+            click.echo()
+
+        # Get sync status
+        status = sync_engine.get_sync_status(remote_source=source)
+
+        if not status:
+            click.echo("📝 No remote tasks found.")
+            return
+
+        click.echo("📊 Remote Task Sync Status:")
+        click.echo()
+
+        # Display status by authority type
+        for key, info in status.items():
+            if key == "last_sync":
+                continue
+
+            authority, is_shadow = key.split("_", 1)
+            task_type = "Shadow" if is_shadow == "True" else "Authoritative"
+
+            click.echo(f"🔸 {authority.replace('_', ' ').title()} Authority - {task_type} Tasks:")
+            click.echo(f"   • Count: {info['count']}")
+            if info.get("last_sync"):
+                click.echo(f"   • Last sync: {info['last_sync']}")
+            click.echo()
+
+        # Show last sync time if available
+        if "last_sync" in status:
+            click.echo(f"🕒 Last sync: {status['last_sync']}")
+
+    except Exception as e:
+        click.echo(f"❌ Error getting sync status: {str(e)}")
+        if verbose:
+            import traceback
+
+            click.echo(traceback.format_exc())
 
 
 if __name__ == "__main__":
