@@ -40,12 +40,13 @@ class SheetsReader:
         self.sheet_id = sheet_id
         self.service = build("sheets", "v4", credentials=credentials)
 
-    def read_all_rows(self, sheet_name: str = "Sheet1") -> List[List[str]]:
+    def read_all_rows(self, sheet_name: str = "Sheet1", max_rows: Optional[int] = None) -> List[List[str]]:
         """
         Read all rows from a specific sheet.
 
         Args:
             sheet_name: Name of the sheet to read (default: "Sheet1")
+            max_rows: Optional maximum number of rows to read
 
         Returns:
             List of rows, where each row is a list of cell values
@@ -60,11 +61,47 @@ class SheetsReader:
                 logger.warning(f"No data found in sheet '{sheet_name}'")
                 return []
 
+            # Limit rows if max_rows is specified
+            if max_rows and max_rows > 0:
+                values = values[:max_rows]
+
             logger.info(f"Read {len(values)} rows from sheet '{sheet_name}'")
             return values
 
         except HttpError as e:
             logger.error(f"Error reading sheet '{sheet_name}': {e}")
+            raise
+
+    def read_rows_with_metadata(self, sheet_name: str = "Sheet1") -> List[Dict[str, Any]]:
+        """
+        Read rows with additional metadata including row numbers.
+
+        Args:
+            sheet_name: Name of the sheet to read
+
+        Returns:
+            List of dictionaries with row data and metadata
+        """
+        try:
+            # Read all data from the sheet
+            range_name = f"{sheet_name}!A:Z"  # Read columns A-Z
+            result = self.service.spreadsheets().values().get(spreadsheetId=self.sheet_id, range=range_name).execute()
+
+            values = result.get("values", [])
+            if not values:
+                logger.warning(f"No data found in sheet '{sheet_name}'")
+                return []
+
+            # Convert to list of dictionaries with metadata
+            rows_with_metadata = []
+            for i, row in enumerate(values, start=1):
+                rows_with_metadata.append({"row_number": i, "data": row, "sheet_name": sheet_name})
+
+            logger.info(f"Read {len(rows_with_metadata)} rows with metadata from sheet '{sheet_name}'")
+            return rows_with_metadata
+
+        except HttpError as e:
+            logger.error(f"Error reading sheet '{sheet_name}' with metadata: {e}")
             raise
 
     def parse_task_data(self, rows: List[List[str]]) -> List[RemoteTask]:
@@ -185,6 +222,96 @@ class SheetsReader:
         except HttpError as e:
             logger.error(f"Error getting sheet info: {e}")
             raise
+
+    def delete_row(self, sheet_name: str, row_number: int) -> bool:
+        """
+        Delete a specific row from a sheet.
+
+        Args:
+            sheet_name: Name of the sheet
+            row_number: Row number to delete (1-based)
+
+        Returns:
+            True if deletion was successful, False otherwise
+        """
+        try:
+            # Get sheet ID first
+            sheet_info = self.get_sheet_info()
+            sheet_id = None
+            for sheet in sheet_info["sheets"]:
+                if sheet["name"] == sheet_name:
+                    sheet_id = sheet["id"]
+                    break
+
+            if sheet_id is None:
+                logger.error(f"Sheet '{sheet_name}' not found")
+                return False
+
+            # Delete the row using the batchUpdate method
+            request_body = {"requests": [{"deleteDimension": {"range": {"sheetId": sheet_id, "dimension": "ROWS", "startIndex": row_number - 1, "endIndex": row_number}}}]}  # Convert to 0-based  # Delete single row
+
+            self.service.spreadsheets().batchUpdate(spreadsheetId=self.sheet_id, body=request_body).execute()
+
+            logger.info(f"Successfully deleted row {row_number} from sheet '{sheet_name}'")
+            return True
+
+        except HttpError as e:
+            logger.error(f"Error deleting row {row_number} from sheet '{sheet_name}': {e}")
+            return False
+        except Exception as e:
+            logger.error(f"Unexpected error deleting row {row_number} from sheet '{sheet_name}': {e}")
+            return False
+
+    def batch_delete_rows(self, sheet_name: str, row_numbers: List[int]) -> Dict[str, Any]:
+        """
+        Delete multiple rows from a sheet in a single batch operation.
+
+        Args:
+            sheet_name: Name of the sheet
+            row_numbers: List of row numbers to delete (1-based)
+
+        Returns:
+            Dictionary with deletion results
+        """
+        if not row_numbers:
+            return {"success": True, "deleted_rows": 0, "errors": []}
+
+        try:
+            # Get sheet ID first
+            sheet_info = self.get_sheet_info()
+            sheet_id = None
+            for sheet in sheet_info["sheets"]:
+                if sheet["name"] == sheet_name:
+                    sheet_id = sheet["id"]
+                    break
+
+            if sheet_id is None:
+                logger.error(f"Sheet '{sheet_name}' not found")
+                return {"success": False, "deleted_rows": 0, "errors": [f"Sheet '{sheet_name}' not found"]}
+
+            # Sort row numbers in descending order to avoid index shifting issues
+            sorted_row_numbers = sorted(row_numbers, reverse=True)
+
+            # Create batch delete requests
+            requests = []
+            for row_number in sorted_row_numbers:
+                requests.append({"deleteDimension": {"range": {"sheetId": sheet_id, "dimension": "ROWS", "startIndex": row_number - 1, "endIndex": row_number}}})  # Convert to 0-based  # Delete single row
+
+            request_body = {"requests": requests}
+
+            self.service.spreadsheets().batchUpdate(spreadsheetId=self.sheet_id, body=request_body).execute()
+
+            logger.info(f"Successfully deleted {len(sorted_row_numbers)} rows from sheet '{sheet_name}'")
+            return {"success": True, "deleted_rows": len(sorted_row_numbers), "deleted_row_numbers": sorted_row_numbers, "errors": []}
+
+        except HttpError as e:
+            error_msg = f"Error batch deleting rows from sheet '{sheet_name}': {e}"
+            logger.error(error_msg)
+            return {"success": False, "deleted_rows": 0, "errors": [error_msg]}
+        except Exception as e:
+            error_msg = f"Unexpected error batch deleting rows from sheet '{sheet_name}': {e}"
+            logger.error(error_msg)
+            return {"success": False, "deleted_rows": 0, "errors": [error_msg]}
 
 
 def create_sheets_reader_from_token(token_path: str, sheet_id: str) -> SheetsReader:
