@@ -95,6 +95,45 @@ class DatabaseManager:
                     # Index might already exist
                     pass
 
+            # Check if remote tracking columns exist, add them if they don't
+            if "remote_id" not in columns:
+                cursor.execute("ALTER TABLE tasks ADD COLUMN remote_id TEXT")
+                try:
+                    cursor.execute("CREATE INDEX idx_tasks_remote_id ON tasks(remote_id)")
+                except sqlite3.OperationalError:
+                    # Index might already exist
+                    pass
+
+            if "remote_source" not in columns:
+                cursor.execute("ALTER TABLE tasks ADD COLUMN remote_source TEXT")
+                try:
+                    cursor.execute("CREATE INDEX idx_tasks_remote_source ON tasks(remote_source)")
+                except sqlite3.OperationalError:
+                    # Index might already exist
+                    pass
+
+            if "remote_authority" not in columns:
+                cursor.execute("ALTER TABLE tasks ADD COLUMN remote_authority TEXT CHECK (remote_authority IN ('full', 'status_only'))")
+                try:
+                    cursor.execute("CREATE INDEX idx_tasks_remote_authority ON tasks(remote_authority)")
+                except sqlite3.OperationalError:
+                    # Index might already exist
+                    pass
+
+            if "is_shadow_task" not in columns:
+                cursor.execute("ALTER TABLE tasks ADD COLUMN is_shadow_task BOOLEAN DEFAULT FALSE")
+                try:
+                    cursor.execute("CREATE INDEX idx_tasks_is_shadow ON tasks(is_shadow_task)")
+                except sqlite3.OperationalError:
+                    # Index might already exist
+                    pass
+
+            if "remote_status" not in columns:
+                cursor.execute("ALTER TABLE tasks ADD COLUMN remote_status TEXT")
+
+            if "last_synced_at" not in columns:
+                cursor.execute("ALTER TABLE tasks ADD COLUMN last_synced_at TIMESTAMP")
+
             conn.commit()
 
     def get_connection(self):
