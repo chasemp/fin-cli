@@ -116,6 +116,24 @@ def isolated_cli_runner(temp_db_path, monkeypatch):
 
 
 @pytest.fixture
+def isolated_cli_runner_with_config(temp_db_path, isolated_config, monkeypatch):
+    """Create a Click CLI runner with isolated database and config environment."""
+    from click.testing import CliRunner
+
+    # Set up isolated environment for this test
+    monkeypatch.setenv("FIN_DB_PATH", temp_db_path)
+    monkeypatch.setenv("FIN_CONFIG_DIR", isolated_config)
+
+    runner = CliRunner()
+
+    yield runner
+
+    # Clean up environment variables after test
+    monkeypatch.delenv("FIN_DB_PATH", raising=False)
+    monkeypatch.delenv("FIN_CONFIG_DIR", raising=False)
+
+
+@pytest.fixture
 def isolated_config(monkeypatch):
     """Create an isolated config for testing."""
     import os

@@ -236,78 +236,82 @@ class TestContextDefaultLabelFilters:
 class TestContextLabelFilterCLI:
     """Test CLI commands for managing context default label filters."""
 
-    def test_context_label_filter_set(self, isolated_cli_runner):
+    def test_context_label_filter_set(self, isolated_cli_runner_with_config, isolated_config):
         """Test setting a context default label filter via CLI."""
-        result = isolated_cli_runner.invoke(cli, ["context-label-filter", "set", "default", "--filter", "NOT backlog"])
+        result = isolated_cli_runner_with_config.invoke(cli, ["context-label-filter", "set", "default", "--filter", "NOT backlog"], env={"FIN_CONFIG_DIR": isolated_config})
         assert result.exit_code == 0
         assert "Set default label filter for context 'default': NOT backlog" in result.output
 
-        # Verify it was actually set
-        config = Config()
-        assert config.get_context_default_label_filter("default") == "NOT backlog"
+        # Verify it was actually set by creating a new config instance
+        new_config = Config()
+        assert new_config.get_context_default_label_filter("default") == "NOT backlog"
 
-    def test_context_label_filter_get(self, isolated_cli_runner):
+    def test_context_label_filter_get(self, isolated_cli_runner_with_config, isolated_config):
         """Test getting a context default label filter via CLI."""
         # Set a filter first
         config = Config()
         config.set_context_default_label_filter("work", "NOT personal")
 
-        result = isolated_cli_runner.invoke(cli, ["context-label-filter", "get", "work"])
+        result = isolated_cli_runner_with_config.invoke(cli, ["context-label-filter", "get", "work"], env={"FIN_CONFIG_DIR": isolated_config})
         assert result.exit_code == 0
         assert "Context 'work' default label filter: NOT personal" in result.output
 
-    def test_context_label_filter_get_nonexistent(self, isolated_cli_runner):
+    def test_context_label_filter_get_nonexistent(self, isolated_cli_runner_with_config, isolated_config):
         """Test getting a context default label filter that doesn't exist."""
-        result = isolated_cli_runner.invoke(cli, ["context-label-filter", "get", "nonexistent"])
+        result = isolated_cli_runner_with_config.invoke(cli, ["context-label-filter", "get", "nonexistent"], env={"FIN_CONFIG_DIR": isolated_config})
         assert result.exit_code == 0
         assert "has no default label filter" in result.output
 
-    def test_context_label_filter_remove(self, isolated_cli_runner):
+    def test_context_label_filter_remove(self, isolated_cli_runner_with_config, isolated_config):
         """Test removing a context default label filter via CLI."""
         # Set a filter first
         config = Config()
         config.set_context_default_label_filter("work", "NOT personal")
         assert config.get_context_default_label_filter("work") == "NOT personal"
 
-        result = isolated_cli_runner.invoke(cli, ["context-label-filter", "remove", "work"])
+        # Pass the config directory environment variable directly to the CLI command
+        result = isolated_cli_runner_with_config.invoke(cli, ["context-label-filter", "remove", "work"], env={"FIN_CONFIG_DIR": isolated_config})
         assert result.exit_code == 0
         assert "Removed default label filter for context 'work'" in result.output
 
-        # Verify it was actually removed
-        assert config.get_context_default_label_filter("work") is None
+        # Create a new config instance to check if the CLI actually wrote to the file
+        new_config = Config()
 
-    def test_context_label_filter_list(self, isolated_cli_runner):
+        # Verify it was actually removed
+        assert new_config.get_context_default_label_filter("work") is None
+
+    def test_context_label_filter_list(self, isolated_cli_runner_with_config, isolated_config):
         """Test listing all context default label filters via CLI."""
         # Set some filters first
         config = Config()
         config.set_context_default_label_filter("default", "NOT backlog")
         config.set_context_default_label_filter("work", "NOT personal")
 
-        result = isolated_cli_runner.invoke(cli, ["context-label-filter", "list"])
+        result = isolated_cli_runner_with_config.invoke(cli, ["context-label-filter", "list"], env={"FIN_CONFIG_DIR": isolated_config})
         assert result.exit_code == 0
         assert "default: NOT backlog" in result.output
         assert "work: NOT personal" in result.output
 
-    def test_context_label_filter_list_empty(self, isolated_cli_runner):
+    def test_context_label_filter_list_empty(self, isolated_cli_runner_with_config, isolated_config):
         """Test listing context default label filters when none exist."""
-        result = isolated_cli_runner.invoke(cli, ["context-label-filter", "list"])
+        result = isolated_cli_runner_with_config.invoke(cli, ["context-label-filter", "list"], env={"FIN_CONFIG_DIR": isolated_config})
         assert result.exit_code == 0
         assert "No context default label filters configured" in result.output
 
-    def test_context_label_filter_set_missing_arguments(self, isolated_cli_runner):
+    def test_context_label_filter_set_missing_arguments(self, isolated_cli_runner_with_config, isolated_config):
         """Test setting a context default label filter with missing arguments."""
-        result = isolated_cli_runner.invoke(cli, ["context-label-filter", "set", "default"])
+        result = isolated_cli_runner_with_config.invoke(cli, ["context-label-filter", "set", "default"], env={"FIN_CONFIG_DIR": isolated_config})
         assert result.exit_code == 1
         assert "Both context and filter are required for setting" in result.output
 
-    def test_context_label_filter_get_missing_context(self, isolated_cli_runner):
+    def test_context_label_filter_get_missing_context(self, isolated_cli_runner_with_config, isolated_config):
         """Test getting a context default label filter with missing context."""
-        result = isolated_cli_runner.invoke(cli, ["context-label-filter", "get"])
+        result = isolated_cli_runner_with_config.invoke(cli, ["context-label-filter", "get"], env={"FIN_CONFIG_DIR": isolated_config})
         assert result.exit_code == 1
         assert "Context name is required for getting filter" in result.output
 
-    def test_context_label_filter_remove_missing_context(self, isolated_cli_runner):
+    def test_context_label_filter_remove_missing_context(self, isolated_cli_runner_with_config, isolated_config):
         """Test removing a context default label filter with missing context."""
-        result = isolated_cli_runner.invoke(cli, ["context-label-filter", "remove"])
+        result = isolated_cli_runner_with_config.invoke(cli, ["context-label-filter", "remove"], env={"FIN_CONFIG_DIR": isolated_config})
         assert result.exit_code == 1
         assert "Context name is required for removing filter" in result.output
