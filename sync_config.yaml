@@ -1,0 +1,104 @@
+# Google Sheets Sync Configuration
+# This file configures multiple Google Sheets sources for syncing into fin-cli
+
+# Global settings
+global:
+  # Default purge behavior (can be overridden per source)
+  purge_after_import: true
+  
+  # Default dry run mode (can be overridden per source)
+  dry_run: false
+  
+  # Logging level
+  log_level: INFO
+  
+  # Database and config paths (optional, will use defaults if not specified)
+  fin_db_path: null  # Path to fin-cli database
+  fin_config_dir: null  # Path to fin-cli config directory
+  
+  # Google OAuth token path (can be overridden per source)
+  google_token_path: "~/.fin/google_token.json"
+
+# Sheet sources configuration
+sources:
+  # Example: Main project tasks
+  main_project:
+    sheet_id: "1TWob-vh6qZ1rzUNN1GMAxDl87UwH5P5ngyh2THeLcGo"
+    sheet_name: "todo"
+    description: "Main project task tracking"
+    purge_after_import: true
+    enabled: true
+    
+  # Example: Team collaboration tasks
+  team_tasks:
+    sheet_id: "YOUR_TEAM_SHEET_ID_HERE"
+    sheet_name: "tasks"
+    description: "Team collaboration and shared tasks"
+    purge_after_import: false  # Don't purge team tasks
+    enabled: false  # Disabled by default
+    
+  # Example: Personal tasks
+  personal:
+    sheet_id: "YOUR_PERSONAL_SHEET_ID_HERE"
+    sheet_name: "todo"
+    description: "Personal task management"
+    purge_after_import: true
+    enabled: false  # Disabled by default
+
+# Sync schedule configuration (for cron jobs)
+schedule:
+  # How often to sync each source (in minutes)
+  # Set to 0 to disable automatic syncing
+  main_project: 30    # Sync every 30 minutes
+  team_tasks: 60      # Sync every hour
+  personal: 120       # Sync every 2 hours
+  
+  # Random delay range to avoid API rate limits (in seconds)
+  random_delay_range: [0, 300]  # 0-5 minutes
+
+# Notification settings
+notifications:
+  # Email notifications (optional)
+  email:
+    enabled: false
+    smtp_server: "smtp.gmail.com"
+    smtp_port: 587
+    username: "your-email@gmail.com"
+    password: "your-app-password"
+    recipients: ["your-email@gmail.com"]
+    
+  # Slack notifications (optional)
+  slack:
+    enabled: false
+    webhook_url: "https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
+    channel: "#tasks"
+    
+  # Discord notifications (optional)
+  discord:
+    enabled: false
+    webhook_url: "https://discord.com/api/webhooks/YOUR/WEBHOOK/URL"
+
+# Error handling and retry settings
+error_handling:
+  # Maximum number of retries for failed syncs
+  max_retries: 3
+  
+  # Delay between retries (in seconds)
+  retry_delay: 300  # 5 minutes
+  
+  # Exponential backoff multiplier
+  backoff_multiplier: 2
+  
+  # Maximum delay between retries (in seconds)
+  max_retry_delay: 3600  # 1 hour
+
+# Performance settings
+performance:
+  # Maximum number of concurrent syncs
+  max_concurrent_syncs: 2
+  
+  # Timeout for API calls (in seconds)
+  api_timeout: 30
+  
+  # Batch size for processing tasks
+  batch_size: 100
