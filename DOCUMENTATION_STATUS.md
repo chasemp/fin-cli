@@ -57,6 +57,8 @@ This document tracks the status of all FinCLI documentation and ensures consiste
 - **`fin`**: Help text reflects current default behavior
 - **`fine`**: Help text shows all filtering options
 - **`fins`**: Help text shows all filtering options
+- **`toggle`**: Help text updated to show ID-only behavior
+- **`t`**: New alias command with proper help text
 - **Configuration commands**: Help text updated for new options
 
 ## 📋 **Documentation Consistency Check**
@@ -72,6 +74,8 @@ This document tracks the status of all FinCLI documentation and ensures consiste
 - [x] CLI command examples
 - [x] Testing guidelines
 - [x] Contexts system
+- [x] Task completion commands (toggle, complete, done, reopen)
+- [x] Command aliases (t for toggle)
 
 ### **Example Consistency** ✅
 - [x] All examples use current command syntax
