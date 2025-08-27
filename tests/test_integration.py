@@ -39,7 +39,7 @@ class TestIntegration:
             ],
             capture_output=True,
             text=True,
-            env={"FIN_DB_PATH": temp_db_path, **os.environ},
+            env={"FIN_DB_PATH": temp_db_path},
         )
 
         assert result.returncode == 0

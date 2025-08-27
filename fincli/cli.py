@@ -253,7 +253,7 @@ def cli(context):
 @click.option("--label", "-l", multiple=True, help="Labels for the task")
 @click.option("--source", default="cli", help="Source of the task")
 def add_task_command(content, label, source):
-    """Add a new task."""
+    """Add a new task with optional labels."""
     if not content:
         sys.stderr.write("Missing argument\n")
         raise click.Abort()
@@ -266,7 +266,7 @@ def add_task_command(content, label, source):
 @click.option("--label", "-l", multiple=True, help="Labels for the task")
 @click.option("--source", default="cli", help="Source of the task")
 def add_command(content, label, source):
-    """Add a new task (alias for add-task)."""
+    """Add a new task with optional labels (alias for add-task)."""
     if not content:
         sys.stderr.write("Missing argument\n")
         raise click.Abort()
@@ -1270,11 +1270,10 @@ def fins_command():
 @click.argument("task_identifier", nargs=-1)
 @click.option("--verbose", "-v", is_flag=True, help="Show verbose output")
 def close_task(task_identifier, verbose):
-    """Mark task(s) as completed by ID or content pattern."""
+    """Mark task(s) as completed by ID."""
     if not task_identifier:
-        click.echo("❌ Error: Please specify task ID(s) or content pattern")
+        click.echo("❌ Error: Please specify task ID(s)")
         click.echo("   Examples: fin close 1")
-        click.echo("            fin close 'flight'")
         click.echo("            fin close 1 2 3")
         return
 
@@ -1306,16 +1305,7 @@ def close_task(task_identifier, verbose):
             else:
                 click.echo(f"❌ Task {task_id} not found")
         except ValueError:
-            # Treat as content pattern
-            matching_tasks = [task for task in all_tasks if identifier.lower() in task["content"].lower() and not task["completed_at"]]
-            if matching_tasks:
-                # Take the first matching task
-                task = matching_tasks[0]
-                task_manager.update_task_completion(task["id"], True)
-                click.echo(f"✅ Marked task {task['id']} as completed: {task['content']}")
-                completed_count += 1
-            else:
-                click.echo(f"❌ No open tasks found containing '{identifier}'")
+            click.echo(f"❌ Error: '{identifier}' is not a valid task ID (must be a number)")
 
     if completed_count > 0:
         click.echo(f"🎉 Completed {completed_count} task(s)")

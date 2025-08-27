@@ -14,10 +14,10 @@ fin "urgent meeting #i"
 # List all open tasks
 fin
 
-# Edit tasks in your editor
+# Edit tasks in your editor (default: open tasks)
 fine
 
-# View completed tasks
+# View completed tasks (no date limit)
 fins
 
 # Quick filtering
@@ -37,14 +37,14 @@ pip install -e .
 
 ### **Daily Workflow**
 ```bash
-# Start your day - see what's open
+# Start your day - see what's open (default: open tasks from last 1 day)
 fin
 
 # Add today's priorities
 fin "morning standup #t"
 fin "review PRs #t #work"
 
-# Check what's completed recently
+# Check what's completed recently (default: all completed tasks)
 fins
 
 # End of day - mark things complete
@@ -56,7 +56,7 @@ fine -s o
 # See what was accomplished this week
 fins -d 7
 
-# Review all open tasks
+# Review all open tasks (default: open tasks only)
 fine -s o --dry-run
 
 # Plan next week
@@ -552,14 +552,14 @@ fin restore-latest --yes
 | Command | Description |
 |---------|-------------|
 | `fin "task"` | Add task directly |
-| `fin` | List all open tasks (organized sections) |
+| `fin` | List open tasks from last 1 day (default) |
 | `fin -d 7` | List tasks from last 7 days |
 | `fin -s completed` | List completed tasks |
 | `fin -s "done,open"` | List both completed and open tasks |
 | `fin -d 0` | List all time (limited by max_limit) |
-| `fine` | Edit tasks in editor |
+| `fine` | Edit tasks in editor (default: open tasks only) |
 | `fine -d 3 -s done` | Edit completed tasks from last 3 days |
-| `fins` | View completed tasks |
+| `fins` | View completed tasks (default: all completed tasks) |
 | `fins -d 0` | View all time completed tasks |
 | `fin config` | Manage configuration |
 | `fin export file.csv` | Export tasks |
@@ -568,9 +568,7 @@ fin restore-latest --yes
 | `fin restore 001` | Restore from backup |
 | `fin toggle 123` | Toggle task completion status by ID |
 | `fin t 123` | Alias for toggle command |
-| `fin complete 123` | Mark task as completed by ID |
-| `fin done 123` | Mark task as completed by ID |
-| `fin reopen 123` | Reopen completed task by ID |
+| `fin close 123` | Mark task as completed by ID |
 
 ## Options
 
@@ -594,7 +592,7 @@ fin "daily standup #t"
 # Add task that's both important and for today
 fin "critical deadline #i #t"
 
-# List with organized sections
+# List open tasks from last 1 day (default)
 fin
 
 # Filter by status combinations
