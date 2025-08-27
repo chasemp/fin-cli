@@ -269,8 +269,8 @@ class TestSyncEngine:
         # Verify status
         assert status["total_tasks"] == 15
         assert status["total_remote_tasks"] == 8
-        assert status["remote_tasks_by_authority"]["full_False"] == 5
-        assert status["remote_tasks_by_authority"]["status_only_True"] == 3
+        assert status["remote_tasks_by_authority"]["full_False"]["count"] == 5
+        assert status["remote_tasks_by_authority"]["status_only_True"]["count"] == 3
         assert status["last_sync_info"]["last_sync"] == "2024-01-15 10:30:00"
 
     def test_get_sync_status_by_source(self, sync_engine, mock_db_manager):
@@ -289,7 +289,7 @@ class TestSyncEngine:
         # Verify status
         assert status["total_tasks"] == 15
         assert status["total_remote_tasks"] == 3
-        assert status["remote_tasks_by_authority"]["full_False"] == 3
+        assert status["remote_tasks_by_authority"]["full_False"]["count"] == 3
 
     def test_cleanup_remote_tasks(self, sync_engine, mock_db_manager):
         """Test cleanup of remote tasks."""

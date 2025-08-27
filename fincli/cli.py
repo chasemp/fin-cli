@@ -1266,16 +1266,16 @@ def fins_command():
     fins_cli()
 
 
-@cli.command(name="complete")
+@cli.command(name="close")
 @click.argument("task_identifier", nargs=-1)
 @click.option("--verbose", "-v", is_flag=True, help="Show verbose output")
-def complete_task(task_identifier, verbose):
+def close_task(task_identifier, verbose):
     """Mark task(s) as completed by ID or content pattern."""
     if not task_identifier:
         click.echo("❌ Error: Please specify task ID(s) or content pattern")
-        click.echo("   Examples: fin complete 1")
-        click.echo("            fin complete 'flight'")
-        click.echo("            fin complete 1 2 3")
+        click.echo("   Examples: fin close 1")
+        click.echo("            fin close 'flight'")
+        click.echo("            fin close 1 2 3")
         return
 
     # Set verbose environment variable for DatabaseManager
@@ -1319,119 +1319,6 @@ def complete_task(task_identifier, verbose):
 
     if completed_count > 0:
         click.echo(f"🎉 Completed {completed_count} task(s)")
-
-
-@cli.command(name="done")
-@click.argument("task_identifier", nargs=-1)
-@click.option("--verbose", "-v", is_flag=True, help="Show verbose output")
-def done_task(task_identifier, verbose):
-    """Mark task(s) as completed by ID or content pattern (alias for complete)."""
-    # Set verbose environment variable for DatabaseManager
-    if verbose:
-        os.environ["FIN_VERBOSE"] = "1"
-
-    # Reuse the complete logic
-    if not task_identifier:
-        click.echo("❌ Error: Please specify task ID(s) or content pattern")
-        click.echo("   Examples: fin done 1")
-        click.echo("            fin done 'flight'")
-        click.echo("            fin done 1 2 3")
-        return
-
-    db_manager = _get_db_manager()
-    task_manager = TaskManager(db_manager)
-
-    # Get all tasks to search through
-    all_tasks = task_manager.list_tasks(include_completed=True)
-
-    completed_count = 0
-
-    for identifier in task_identifier:
-        # Try to parse as integer (task ID)
-        try:
-            task_id = int(identifier)
-            # Find task by ID
-            task = next((task for task in all_tasks if task["id"] == task_id), None)
-            if task:
-                if task["completed_at"]:
-                    click.echo(f"⚠️  Task {task_id} is already completed")
-                else:
-                    task_manager.update_task_completion(task_id, True)
-                    click.echo(f"✅ Marked task {task_id} as completed: {task['content']}")
-                    completed_count += 1
-            else:
-                click.echo(f"❌ Task {task_id} not found")
-        except ValueError:
-            # Treat as content pattern
-            matching_tasks = [task for task in all_tasks if identifier.lower() in task["content"].lower() and not task["completed_at"]]
-            if matching_tasks:
-                # Take the first matching task
-                task = matching_tasks[0]
-                task_manager.update_task_completion(task["id"], True)
-                click.echo(f"✅ Marked task {task['id']} as completed: {task['content']}")
-                completed_count += 1
-            else:
-                click.echo(f"❌ No open tasks found containing '{identifier}'")
-
-    if completed_count > 0:
-        click.echo(f"🎉 Completed {completed_count} task(s)")
-
-
-@cli.command(name="reopen")
-@click.argument("task_identifier", nargs=-1)
-@click.option("--verbose", "-v", is_flag=True, help="Show verbose output")
-def reopen_task(task_identifier, verbose):
-    """Reopen completed task(s) by ID or content pattern."""
-    if not task_identifier:
-        click.echo("❌ Error: Please specify task ID(s) or content pattern")
-        click.echo("   Examples: fin reopen 1")
-        click.echo("            fin reopen 'flight'")
-        click.echo("            fin reopen 1 2 3")
-        return
-
-    # Set verbose environment variable for DatabaseManager
-    if verbose:
-        os.environ["FIN_VERBOSE"] = "1"
-
-    db_manager = _get_db_manager()
-    task_manager = TaskManager(db_manager)
-
-    # Get all tasks to search through
-    all_tasks = task_manager.list_tasks(include_completed=True)
-
-    reopened_count = 0
-
-    for identifier in task_identifier:
-        # Try to parse as integer (task ID)
-        try:
-            task_id = int(identifier)
-            # Find task by ID
-            task = next((task for task in all_tasks if task["id"] == task_id), None)
-            if task:
-                if not task["completed_at"]:
-                    click.echo(f"⚠️  Task {task_id} is already open")
-                else:
-                    task_manager.update_task_completion(task_id, False)
-                    click.echo(f"✅ Reopened task {task_id}:")
-                    click.echo(f"   {task['content']}")
-                    reopened_count += 1
-            else:
-                click.echo(f"❌ Task {task_id} not found")
-        except ValueError:
-            # Treat as content pattern
-            matching_tasks = [task for task in all_tasks if identifier.lower() in task["content"].lower() and task["completed_at"]]
-            if matching_tasks:
-                # Take the first matching task
-                task = matching_tasks[0]
-                task_manager.update_task_completion(task["id"], False)
-                click.echo(f"✅ Reopened task {task['id']}:")
-                click.echo(f"   {task['content']}")
-                reopened_count += 1
-            else:
-                click.echo(f"❌ No completed tasks found containing '{identifier}'")
-
-    if reopened_count > 0:
-        click.echo(f"🎉 Reopened {reopened_count} task(s)")
 
 
 @cli.command(name="toggle")
@@ -2277,7 +2164,7 @@ def main():
         return
 
     # Check for Click commands that should always be handled by Click
-    click_commands = ["context", "config", "backup", "restore", "import", "export", "digest", "report", "sync-sheets", "sync-status", "t", "toggle"]
+    click_commands = ["context", "config", "backup", "restore", "import", "export", "digest", "report", "sync-sheets", "sync-status", "t", "toggle", "close"]
     if args and args[0] in click_commands:
         # Normal Click processing for these commands
         cli()

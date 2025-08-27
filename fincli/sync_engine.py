@@ -310,7 +310,7 @@ class SyncEngine:
 
             for authority, is_shadow, count in results:
                 key = f"{authority}_{is_shadow}"
-                status["remote_tasks_by_authority"][key] = count
+                status["remote_tasks_by_authority"][key] = {"count": count}
 
             # Get last sync information
             if remote_source:
