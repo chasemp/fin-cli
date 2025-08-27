@@ -1438,11 +1438,10 @@ def reopen_task(task_identifier, verbose):
 @click.argument("task_identifier", nargs=-1)
 @click.option("--verbose", "-v", is_flag=True, help="Show verbose output")
 def toggle_task(task_identifier, verbose):
-    """Toggle task completion status by ID or content pattern."""
+    """Toggle task completion status by ID."""
     if not task_identifier:
-        click.echo("❌ Error: Please specify task ID(s) or content pattern")
+        click.echo("❌ Error: Please specify task ID(s)")
         click.echo("   Examples: fin toggle 1")
-        click.echo("            fin toggle 'flight'")
         click.echo("            fin toggle 1 2 3")
         return
 
@@ -1473,18 +1472,52 @@ def toggle_task(task_identifier, verbose):
             else:
                 click.echo(f"❌ Task {task_id} not found")
         except ValueError:
-            # Treat as content pattern
-            matching_tasks = [task for task in all_tasks if identifier.lower() in task["content"].lower()]
-            if matching_tasks:
-                # Take the first matching task
-                task = matching_tasks[0]
+            click.echo(f"❌ Error: '{identifier}' is not a valid task ID (must be a number)")
+
+    if toggled_count > 0:
+        click.echo(f"🎉 Toggled {toggled_count} task(s)")
+
+
+@cli.command(name="t")
+@click.argument("task_identifier", nargs=-1)
+@click.option("--verbose", "-v", is_flag=True, help="Show verbose output")
+def toggle_alias(task_identifier, verbose):
+    """Alias for toggle command."""
+    # Call the toggle logic directly
+    if not task_identifier:
+        click.echo("❌ Error: Please specify task ID(s)")
+        click.echo("   Examples: fin t 1")
+        click.echo("            fin t 1 2 3")
+        return
+
+    # Set verbose environment variable for DatabaseManager
+    if verbose:
+        os.environ["FIN_VERBOSE"] = "1"
+
+    db_manager = _get_db_manager()
+    task_manager = TaskManager(db_manager)
+
+    # Get all tasks to search through
+    all_tasks = task_manager.list_tasks(include_completed=True)
+
+    toggled_count = 0
+
+    for identifier in task_identifier:
+        # Parse as integer (task ID)
+        try:
+            task_id = int(identifier)
+            # Find task by ID
+            task = next((task for task in all_tasks if task["id"] == task_id), None)
+            if task:
                 new_status = not task["completed_at"]
-                task_manager.update_task_completion(task["id"], new_status)
+                task_manager.update_task_completion(task_id, new_status)
                 status_text = "completed" if new_status else "reopened"
-                click.echo(f"✅ {status_text.title()} task {task['id']}: {task['content']}")
+                click.echo(f"✅ {status_text.title()} task {task_id}: {task['content']}")
                 toggled_count += 1
             else:
-                click.echo(f"❌ No tasks found containing '{identifier}'")
+                click.echo(f"❌ Task {task_id} not found")
+        except ValueError:
+            click.echo(f"❌ Error: '{identifier}' is not a valid task ID (must be a number)")
 
     if toggled_count > 0:
         click.echo(f"🎉 Toggled {toggled_count} task(s)")
@@ -2244,7 +2277,7 @@ def main():
         return
 
     # Check for Click commands that should always be handled by Click
-    click_commands = ["context", "config", "backup", "restore", "import", "export", "digest", "report", "sync-sheets", "sync-status"]
+    click_commands = ["context", "config", "backup", "restore", "import", "export", "digest", "report", "sync-sheets", "sync-status", "t", "toggle"]
     if args and args[0] in click_commands:
         # Normal Click processing for these commands
         cli()
