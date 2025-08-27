@@ -137,9 +137,10 @@ def sync_single_source(source_name: str, source_config: Dict[str, Any], global_c
         task_manager = TaskManager(db_manager)
         sync_engine = SyncEngine(db_manager, task_manager)
 
-        # Create sync strategy
+        # Create sync strategy with column mapping if available
         logger.info(f"🔄 Creating sync strategy for {source_name}...")
-        strategy = SyncStrategyFactory.create_strategy(RemoteSystemType.GOOGLE_SHEETS, sync_engine, sheets_reader=sheets_reader)
+        column_mapping = source_config.get("column_mapping", {})
+        strategy = SyncStrategyFactory.create_strategy(RemoteSystemType.GOOGLE_SHEETS, sync_engine, sheets_reader=sheets_reader, column_mapping=column_mapping)
 
         # Validate sheet structure
         logger.info(f"✅ Validating sheet structure for {source_name}...")
@@ -240,12 +241,7 @@ def main():
         logger.warning("⚠️  No enabled sources found")
         sys.exit(0)
 
-    # Add random delay if configured
-    random_delay_range = config.get("schedule", {}).get("random_delay_range", [0, 0])
-    if random_delay_range[1] > 0:
-        delay = random.uniform(random_delay_range[0], random_delay_range[1])
-        logger.info(f"⏰ Adding random delay: {delay:.1f}s")
-        time.sleep(delay)
+    # No random delay - cron jobs should run at deterministic times
 
     # Sync each source
     results = []

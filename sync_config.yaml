@@ -17,11 +17,11 @@ global:
   fin_config_dir: null  # Path to fin-cli config directory
   
   # Google OAuth token path (can be overridden per source)
-  google_token_path: "~/.fin/google_token.json"
+  google_token_path: "token.json"
 
 # Sheet sources configuration
 sources:
-  # Example: Main project tasks
+  # Main project tasks
   main_project:
     sheet_id: "1TWob-vh6qZ1rzUNN1GMAxDl87UwH5P5ngyh2THeLcGo"
     sheet_name: "todo"
@@ -29,32 +29,20 @@ sources:
     purge_after_import: true
     enabled: true
     
-  # Example: Team collaboration tasks
-  team_tasks:
-    sheet_id: "YOUR_TEAM_SHEET_ID_HERE"
-    sheet_name: "tasks"
-    description: "Team collaboration and shared tasks"
-    purge_after_import: false  # Don't purge team tasks
-    enabled: false  # Disabled by default
-    
-  # Example: Personal tasks
-  personal:
-    sheet_id: "YOUR_PERSONAL_SHEET_ID_HERE"
-    sheet_name: "todo"
-    description: "Personal task management"
-    purge_after_import: true
-    enabled: false  # Disabled by default
+    # Column mapping - maps expected column purposes to actual column names in your sheet
+    column_mapping:
+      source: "Source"           # Column containing the source system
+      runid: "RunID"            # Column containing unique task ID
+      ts_time: "Ts Time"        # Column containing timestamp
+      user_name: "User Name"    # Column containing user name
+      text: "Text"              # Column containing task description
+      permalink: "Permalink"    # Column containing URL/link
 
 # Sync schedule configuration (for cron jobs)
 schedule:
   # How often to sync each source (in minutes)
   # Set to 0 to disable automatic syncing
   main_project: 30    # Sync every 30 minutes
-  team_tasks: 60      # Sync every hour
-  personal: 120       # Sync every 2 hours
-  
-  # Random delay range to avoid API rate limits (in seconds)
-  random_delay_range: [0, 300]  # 0-5 minutes
 
 # Notification settings
 notifications:

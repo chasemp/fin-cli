@@ -2299,6 +2299,7 @@ def main():
                 click.echo("🔍 Default filtering criteria:")
                 click.echo("   • Status: open (all open tasks)")
                 click.echo(f"   • Max limit: {max_limit}")
+                click.echo(f"   • Tasks matching filters: {len(tasks)}")
                 if total_tasks > max_limit:
                     click.echo(f"   • Total available: {total_tasks}")
 
@@ -2321,6 +2322,7 @@ def main():
                 else:
                     click.echo(f"   • Days: {days} (looking back {days} day{'s' if days != 1 else ''})")
                 click.echo("   • Status: open")
+                click.echo(f"   • Tasks matching filters: {len(tasks)}")
                 if weekdays_only:
                     click.echo("   • Weekdays only: True (Mon-Fri)")
                 else:
