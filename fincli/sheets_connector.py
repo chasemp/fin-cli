@@ -104,17 +104,14 @@ class SheetsReader:
             logger.error(f"Error reading sheet '{sheet_name}' with metadata: {e}")
             raise
 
-    def parse_task_data(self, rows: List[List[str]]) -> List[RemoteTask]:
+    def parse_task_data(self, rows: List[List[str]], column_mapping: Dict[str, str] = None, headers: List[str] = None) -> List[RemoteTask]:
         """
         Parse raw sheet rows into structured task data.
 
-        Expected sheet structure:
-        | Source | RunID | Ts Time | User Name | Text | Permalink |
-        |--------|-------|---------|-----------|------|-----------|
-        | ...    | ...   | ...     | ...       | ...  | ...       |
-
         Args:
-            rows: Raw sheet rows from read_all_rows()
+            rows: Raw sheet rows from read_all_rows() (data rows only, no headers)
+            column_mapping: Optional mapping of expected columns to actual column names
+            headers: Optional headers row (if not provided, first row of rows will be used)
 
         Returns:
             List of parsed RemoteTask objects
@@ -123,11 +120,21 @@ class SheetsReader:
             return []
 
         # Extract header row
-        headers = rows[0]
-        logger.info(f"Sheet headers: {headers}")
+        if headers is None:
+            headers = rows[0]
+            data_rows = rows[1:]  # Skip header row
+        else:
+            data_rows = rows  # All rows are data rows
 
-        # Expected column names (case-insensitive)
-        expected_columns = {"source": ["source", "Source", "SOURCE"], "runid": ["runid", "RunID", "RUNID", "run_id"], "ts_time": ["ts time", "Ts Time", "TS TIME", "timestamp", "Timestamp"], "user_name": ["user name", "User Name", "USER NAME", "username", "Username"], "text": ["text", "Text", "TEXT", "description", "Description"], "permalink": ["permalink", "Permalink", "PERMALINK", "url", "URL", "link", "Link"]}
+        logger.info(f"Sheet headers: {headers}")
+        logger.info(f"Data rows to parse: {len(data_rows)} rows")
+
+        # Use provided column mapping or fall back to default expected columns
+        if column_mapping:
+            expected_columns = {"source": [column_mapping.get("source", "Source")], "runid": [column_mapping.get("runid", "RunID")], "ts_time": [column_mapping.get("ts_time", "Ts Time")], "user_name": [column_mapping.get("user_name", "User Name")], "text": [column_mapping.get("text", "Text")], "permalink": [column_mapping.get("permalink", "Permalink")]}
+        else:
+            # Fallback to default expected column names
+            expected_columns = {"source": ["source", "Source", "SOURCE"], "runid": ["runid", "RunID", "RUNID", "run_id"], "ts_time": ["ts time", "Ts Time", "TS TIME", "timestamp", "Timestamp"], "user_name": ["user name", "User Name", "USER NAME", "username", "Username"], "text": ["text", "Text", "TEXT", "description", "Description"], "permalink": ["permalink", "Permalink", "PERMALINK", "url", "URL", "link", "Link"]}
 
         # Find column indices
         column_indices = {}
@@ -147,11 +154,17 @@ class SheetsReader:
 
         # Parse data rows
         tasks = []
-        for i, row in enumerate(rows[1:], start=2):  # Skip header row
+        for i, row in enumerate(data_rows, start=2):  # Start from row 2 (after headers)
             try:
+                # Debug: Log the raw row data
+                logger.info(f"Row {i}: Raw row data: {row}")
+                logger.info(f"Row {i}: Row length: {len(row)}, Max column index needed: {max(column_indices.values()) if column_indices else 0}")
+
                 # Ensure row has enough columns
                 while len(row) < max(column_indices.values()) + 1:
                     row.append("")
+
+                logger.info(f"Row {i}: After padding, row length: {len(row)}")
 
                 # Extract task data
                 source = row[column_indices["source"]].strip()
@@ -160,22 +173,46 @@ class SheetsReader:
                 text = row[column_indices["text"]].strip()
                 permalink = row[column_indices.get("permalink", 0)].strip()
 
-                # Validate required fields
-                if not runid or not text:
-                    logger.warning(f"Row {i}: Missing required fields (RunID or Text), skipping")
+                # Debug: Log what we extracted
+                logger.info(f"Row {i}: Extracted - source='{source}', runid='{runid}', user_name='{user_name}', text_length={len(text)}, permalink_length={len(permalink)}")
+
+                # Validate required fields - RunID is always required
+                if not runid:
+                    logger.warning(f"Row {i}: Missing required field - RunID: '{runid}', skipping")
                     continue
+
+                # If Text is empty, try to create meaningful content from other fields
+                if not text:
+                    if user_name and source:
+                        text = f"{user_name} shared content from {source}"
+                        logger.info(f"Row {i}: Generated text from empty field: '{text}'")
+                    elif user_name:
+                        text = f"{user_name} shared content"
+                        logger.info(f"Row {i}: Generated text from empty field: '{text}'")
+                    elif source:
+                        text = f"Content from {source}"
+                        logger.info(f"Row {i}: Generated text from empty field: '{text}'")
+                    else:
+                        text = "Imported task"
+                        logger.info(f"Row {i}: Generated default text: '{text}'")
 
                 # Create remote task
                 try:
+                    # Debug: Log what we're creating
+                    logger.info(f"Row {i}: Creating task with runid='{runid}', user_name='{user_name}', text_length={len(text)}, permalink_length={len(permalink)}, source='{source}'")
+
                     remote_task = create_google_sheets_task(remote_id=runid, content="", user_name=user_name, text=text, permalink=permalink, source=source, remote_metadata={"row_number": i})  # Will be formatted by the factory function
+
+                    # Debug: Log what was created
+                    logger.info(f"Row {i}: Created task with content_length={len(remote_task.content)}, content_preview='{remote_task.content[:100]}...'")
 
                     # Validate the remote task
                     if RemoteTaskValidator.is_valid(remote_task):
                         tasks.append(remote_task)
-                        logger.debug(f"Parsed task from row {i}: {runid}")
+                        logger.info(f"Row {i}: Task {runid} validated successfully")
                     else:
                         errors = RemoteTaskValidator.validate_remote_task(remote_task)
-                        logger.warning(f"Row {i}: Invalid remote task: {errors}")
+                        logger.warning(f"Row {i}: Task {runid} validation failed: {errors}")
 
                 except Exception as e:
                     logger.error(f"Row {i}: Error creating remote task: {e}")

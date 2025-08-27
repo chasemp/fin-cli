@@ -26,17 +26,19 @@ logger = logging.getLogger(__name__)
 class GoogleSheetsSyncStrategy:
     """Specialized sync strategy for Google Sheets."""
 
-    def __init__(self, sync_engine: SyncEngine, sheets_reader: SheetsReader):
+    def __init__(self, sync_engine: SyncEngine, sheets_reader: SheetsReader, column_mapping: Dict[str, str] = None):
         """
         Initialize the Google Sheets sync strategy.
 
         Args:
             sync_engine: Base sync engine instance
             sheets_reader: Google Sheets reader instance
+            column_mapping: Optional mapping of expected columns to actual column names
         """
         self.sync_engine = sync_engine
         self.sheets_reader = sheets_reader
         self.system_type = RemoteSystemType.GOOGLE_SHEETS
+        self.column_mapping = column_mapping or {}
 
     def sync_sheet_tasks(self, sheet_name: str = "todo", dry_run: bool = False, purge_after_import: bool = True) -> Dict[str, Any]:
         """
@@ -62,8 +64,11 @@ class GoogleSheetsSyncStrategy:
                 logger.info(f"No rows found in sheet '{sheet_name}'")
                 return {"success": True, "sheet_name": sheet_name, "total_rows": 0, "tasks_processed": 0, "dry_run": dry_run, "message": "No rows to process"}
 
-            # Parse tasks from rows
-            remote_tasks = self.sheets_reader.parse_task_data(rows)
+            # Parse tasks from rows using column mapping if available
+            # First row should be headers, rest are data
+            headers = rows[0]
+            data_rows = rows[1:]
+            remote_tasks = self.sheets_reader.parse_task_data(data_rows, self.column_mapping, headers)
             logger.info(f"Parsed {len(remote_tasks)} tasks from sheet '{sheet_name}'")
 
             # Sync tasks using the base engine
@@ -179,34 +184,48 @@ class GoogleSheetsSyncStrategy:
         logger.info(f"Validating sheet structure for '{sheet_name}'")
 
         try:
-            # Read a small sample of rows to check structure
-            rows = self.sheets_reader.read_all_rows(sheet_name, max_rows=5)
+            # Read all rows to get the actual headers and data
+            all_rows = self.sheets_reader.read_all_rows(sheet_name)
 
-            if not rows:
+            if not all_rows:
                 return {"valid": False, "sheet_name": sheet_name, "error": "Sheet is empty or not accessible"}
 
-            # Check if we have the expected headers
-            headers = [cell.lower().strip() for cell in rows[0] if cell]
-            # Normalize headers to match the expected format (replace spaces with underscores)
-            normalized_headers = [h.replace(" ", "_") for h in headers]
-            required_headers = ["source", "runid", "user_name", "text"]
+            # The first row should contain the actual headers
+            headers = all_rows[0]
+            logger.info(f"Found headers: {headers}")
 
-            missing_headers = [h for h in required_headers if h not in normalized_headers]
+            # Check if we have the expected headers using column mapping
+            if self.column_mapping:
+                # Use column mapping to validate headers
+                expected_headers = list(self.column_mapping.values())
+                missing_headers = [h for h in expected_headers if h not in headers]
 
-            if missing_headers:
-                return {"valid": False, "sheet_name": sheet_name, "missing_headers": missing_headers, "found_headers": headers, "error": f"Missing required headers: {missing_headers}"}
+                if missing_headers:
+                    return {"valid": False, "sheet_name": sheet_name, "missing_headers": missing_headers, "found_headers": headers, "error": f"Missing required headers: {missing_headers}"}
+            else:
+                # Fallback to default header validation
+                headers_lower = [cell.lower().strip() for cell in headers if cell]
+                normalized_headers = [h.replace(" ", "_") for h in headers_lower]
+                required_headers = ["source", "runid", "user_name", "text"]
+
+                missing_headers = [h for h in required_headers if h not in normalized_headers]
+
+                if missing_headers:
+                    return {"valid": False, "sheet_name": sheet_name, "missing_headers": missing_headers, "found_headers": headers, "error": f"Missing required headers: {missing_headers}"}
 
             # Try to parse a few rows to validate data structure
             try:
                 # Only try to parse if we have data rows (not just headers)
-                if len(rows) > 1:
-                    remote_tasks = self.sheets_reader.parse_task_data(rows[1:])  # Skip header row
+                if len(all_rows) > 1:
+                    # Use the first few data rows for validation
+                    sample_rows = all_rows[1:6]  # Skip header row, take next 5 rows
+                    remote_tasks = self.sheets_reader.parse_task_data(sample_rows, self.column_mapping, headers)
                     valid_tasks = [task for task in remote_tasks if RemoteTaskValidator.is_valid(task)]
 
-                    return {"valid": True, "sheet_name": sheet_name, "total_rows": len(rows), "sample_rows_parsed": len(rows) - 1, "valid_tasks_found": len(valid_tasks), "found_headers": headers}
+                    return {"valid": True, "sheet_name": sheet_name, "total_rows": len(all_rows), "sample_rows_parsed": len(sample_rows), "valid_tasks_found": len(valid_tasks), "found_headers": headers}
                 else:
                     # Only headers, no data rows
-                    return {"valid": False, "sheet_name": sheet_name, "total_rows": len(rows), "found_headers": headers, "error": "Sheet contains only headers, no data rows"}
+                    return {"valid": False, "sheet_name": sheet_name, "total_rows": len(all_rows), "found_headers": headers, "error": "Sheet contains only headers, no data rows"}
 
             except Exception as parse_error:
                 return {"valid": False, "sheet_name": sheet_name, "found_headers": headers, "parse_error": str(parse_error), "error": f"Failed to parse sample rows: {parse_error}"}
@@ -264,7 +283,8 @@ class SyncStrategyFactory:
             sheets_reader = kwargs.get("sheets_reader")
             if not sheets_reader:
                 raise ValueError("sheets_reader is required for Google Sheets sync strategy")
-            return GoogleSheetsSyncStrategy(sync_engine, sheets_reader)
+            column_mapping = kwargs.get("column_mapping")
+            return GoogleSheetsSyncStrategy(sync_engine, sheets_reader, column_mapping)
 
         elif system_type == RemoteSystemType.CONFLUENCE:
             return ConfluenceSyncStrategy(sync_engine)

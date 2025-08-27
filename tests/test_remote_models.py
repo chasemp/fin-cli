@@ -217,7 +217,7 @@ class TestRemoteTaskValidator:
 
     def test_validate_content_too_long(self):
         """Test validating a task with content too long."""
-        long_content = "x" * 1001
+        long_content = "x" * 1501
         task = RemoteTask(remote_id="TEST-001", remote_source="test_system", content=long_content)
 
         errors = RemoteTaskValidator.validate_remote_task(task)

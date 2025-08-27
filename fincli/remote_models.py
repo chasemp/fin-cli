@@ -179,7 +179,21 @@ class TaskMapper:
 
         # Add custom labels if provided
         if remote_task.labels:
-            labels.extend(remote_task.labels)
+            # Filter out invalid labels (like column references)
+            valid_labels = []
+            for label in remote_task.labels:
+                # Skip labels that look like column references or other invalid patterns
+                if not label.startswith(":") and not label.startswith("#") and not label.startswith(",") and len(label) > 1 and not label.isupper() or len(label) > 2:  # Skip single character labels  # Skip single/double uppercase letters (like A, B, C)
+                    valid_labels.append(label)
+
+            if valid_labels:
+                labels.extend(valid_labels)
+            elif remote_task.labels:
+                # Log what we're filtering out
+                import logging
+
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Filtered out invalid labels for task {remote_task.remote_id}: {remote_task.labels}")
 
         return labels
 
@@ -200,6 +214,12 @@ class RemoteTaskValidator:
         """
         errors = []
 
+        # Debug: Log what we're validating
+        import logging
+
+        logger = logging.getLogger(__name__)
+        logger.info(f"Validating task {remote_task.remote_id}: content length={len(remote_task.content) if remote_task.content else 0}")
+
         # Required fields
         if not remote_task.remote_id:
             errors.append("remote_id is required")
@@ -213,12 +233,19 @@ class RemoteTaskValidator:
             errors.append(f"Invalid authority: {remote_task.authority}")
 
         # Content length validation
-        if remote_task.content and len(remote_task.content) > 1000:
-            errors.append("Content too long (max 1000 characters)")
+        if remote_task.content and len(remote_task.content) > 1500:
+            errors.append(f"Content too long (max 1500 characters, actual: {len(remote_task.content)})")
+            # Log the first 200 characters to see what the content looks like
+            logger.warning(f"Long content preview: {remote_task.content[:200]}...")
 
         # Remote ID format validation
         if remote_task.remote_id and len(remote_task.remote_id) > 100:
-            errors.append("Remote ID too long (max 100 characters)")
+            errors.append(f"Remote ID too long (max 100 characters, actual: {len(remote_task.remote_id)})")
+
+        if errors:
+            logger.warning(f"Task {remote_task.remote_id} validation failed: {errors}")
+        else:
+            logger.info(f"Task {remote_task.remote_id} validation passed")
 
         return errors
 
