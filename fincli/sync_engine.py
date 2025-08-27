@@ -167,7 +167,7 @@ class SyncEngine:
 
         try:
             # Add task to local database
-            task_id = self.task_manager.add_task(content=mapping_result.local_content, labels=",".join(mapping_result.local_labels) if mapping_result.local_labels else None, source="remote_sync", due_date=None, context="default")
+            task_id = self.task_manager.add_task(content=mapping_result.local_content, labels=mapping_result.local_labels if mapping_result.local_labels else None, source="remote_sync", due_date=None, context="default")
 
             # Update task with remote tracking information
             self._update_task_remote_info(task_id, remote_task.remote_id, remote_task.remote_source, remote_task.authority.value, remote_task.is_shadow_task, remote_task.remote_status, datetime.now())

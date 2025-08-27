@@ -206,7 +206,7 @@ class TestSyncEngine:
         assert result["labels"] == ["work", "urgent"]
 
         # Verify task manager was called
-        mock_task_manager.add_task.assert_called_once_with(content="Test task content #remote", labels="work,urgent", source="remote_sync", due_date=None, context="default")
+        mock_task_manager.add_task.assert_called_once_with(content="Test task content #remote", labels=["work", "urgent"], source="remote_sync", due_date=None, context="default")
 
     def test_import_new_task_dry_run(self, sync_engine, mock_db_manager, mock_task_manager):
         """Test dry run import of new task."""
