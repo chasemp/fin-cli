@@ -183,7 +183,7 @@ class TaskMapper:
             valid_labels = []
             for label in remote_task.labels:
                 # Skip labels that look like column references or other invalid patterns
-                if not label.startswith(":") and not label.startswith("#") and not label.startswith(",") and len(label) > 1 and not label.isupper() or len(label) > 2:  # Skip single character labels  # Skip single/double uppercase letters (like A, B, C)
+                if not label.startswith(":") and not label.startswith("#") and not label.startswith(",") and len(label) > 1 and not (label.isupper() and len(label) <= 2):  # Skip single/double uppercase letters (like A, B, C, AA, BB)
                     valid_labels.append(label)
 
             if valid_labels:
