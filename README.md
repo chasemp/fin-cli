@@ -566,6 +566,11 @@ fin restore-latest --yes
 | `fin import file.csv` | Import tasks |
 | `fin backup` | Create backup |
 | `fin restore 001` | Restore from backup |
+| `fin toggle 123` | Toggle task completion status by ID |
+| `fin t 123` | Alias for toggle command |
+| `fin complete 123` | Mark task as completed by ID |
+| `fin done 123` | Mark task as completed by ID |
+| `fin reopen 123` | Reopen completed task by ID |
 
 ## Options
 
@@ -646,6 +651,16 @@ fin export priority.csv -l "i,t"
 
 # Import with priority labels
 fin import tasks.csv -l i -l t
+
+# Task completion commands
+fin toggle 123          # Toggle task 123 completion status
+fin t 123               # Same as toggle (shorthand)
+fin complete 123        # Mark task 123 as completed
+fin done 123            # Mark task 123 as completed
+fin reopen 123          # Reopen completed task 123
+
+# Toggle multiple tasks
+fin t 123 456 789       # Toggle tasks 123, 456, and 789
 
 # Configure weekday-only lookback
 fin config --weekdays-only true
