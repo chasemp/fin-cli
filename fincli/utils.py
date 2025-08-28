@@ -237,10 +237,10 @@ def format_task_for_display(task: Dict[str, Any], config=None, verbose: bool = F
         else:
             primary_time_str = primary_timestamp.strftime("%Y-%m-%d %H:%M")
 
-    # Check if task was modified after creation/completion
+    # Check if task was modified after creation/completion (only show with verbose mode)
     modification_indicator = ""
 
-    if task.get("modified_at"):
+    if verbose and task.get("modified_at"):
         modified_timestamp = datetime.fromisoformat(task["modified_at"].replace("Z", "+00:00"))
 
         if task["completed_at"]:
