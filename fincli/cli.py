@@ -469,7 +469,7 @@ def _list_tasks_impl(days, label, status, today=False, due=None, verbose=False):
     if important_tasks:
         click.echo("Important")
         for i, task in enumerate(important_tasks, 1):
-            formatted_task = format_task_for_display(task, config)
+            formatted_task = format_task_for_display(task, config, verbose)
             click.echo(f"{formatted_task}")
         click.echo()
 
@@ -477,7 +477,7 @@ def _list_tasks_impl(days, label, status, today=False, due=None, verbose=False):
     if today_tasks:
         click.echo("Today")
         for i, task in enumerate(today_tasks, 1):
-            formatted_task = format_task_for_display(task, config)
+            formatted_task = format_task_for_display(task, config, verbose)
             click.echo(f"{formatted_task}")
         click.echo()
 
@@ -485,7 +485,7 @@ def _list_tasks_impl(days, label, status, today=False, due=None, verbose=False):
     if overdue_tasks:
         click.echo("🚨 Overdue")
         for task in overdue_tasks:
-            formatted_task = format_task_for_display(task, config)
+            formatted_task = format_task_for_display(task, config, verbose)
             click.echo(formatted_task)
         click.echo()
 
@@ -493,7 +493,7 @@ def _list_tasks_impl(days, label, status, today=False, due=None, verbose=False):
     if due_soon_tasks:
         click.echo("⏰ Due Soon")
         for task in due_soon_tasks:
-            formatted_task = format_task_for_display(task, config)
+            formatted_task = format_task_for_display(task, config, verbose)
             click.echo(formatted_task)
         click.echo()
 
@@ -501,7 +501,7 @@ def _list_tasks_impl(days, label, status, today=False, due=None, verbose=False):
     if due_today_tasks:
         click.echo("📅 Due Today")
         for task in due_today_tasks:
-            formatted_task = format_task_for_display(task, config)
+            formatted_task = format_task_for_display(task, config, verbose)
             click.echo(formatted_task)
         click.echo()
 
@@ -509,7 +509,7 @@ def _list_tasks_impl(days, label, status, today=False, due=None, verbose=False):
     if open_tasks:
         click.echo("Open")
         for i, task in enumerate(open_tasks, 1):
-            formatted_task = format_task_for_display(task, config)
+            formatted_task = format_task_for_display(task, config, verbose)
             click.echo(f"{formatted_task}")
         click.echo()
 
@@ -517,7 +517,7 @@ def _list_tasks_impl(days, label, status, today=False, due=None, verbose=False):
     if completed_tasks:
         click.echo("Completed")
         for task in completed_tasks:
-            formatted_task = format_task_for_display(task, config)
+            formatted_task = format_task_for_display(task, config, verbose)
             click.echo(formatted_task)
 
 
@@ -1238,7 +1238,7 @@ def fins_command():
         for task in filtered_tasks:
             if verbose:
                 # Show with full formatting including task ID
-                formatted_task = format_task_for_display(task)
+                formatted_task = format_task_for_display(task, verbose=verbose)
                 click.echo(formatted_task)
             else:
                 # Show clean format without task ID - just the essential info
@@ -1257,8 +1257,13 @@ def fins_command():
 
                 labels_display = ""
                 if task.get("labels"):
-                    hashtags = [f"#{label}" for label in task["labels"]]
-                    labels_display = f"  {','.join(hashtags)}"
+                    # Filter hidden labels in non-verbose mode
+                    from fincli.utils import filter_hidden_labels
+
+                    visible_labels = filter_hidden_labels(task["labels"], verbose=False)
+                    if visible_labels:
+                        hashtags = [f"#{label}" for label in visible_labels]
+                        labels_display = f"  {','.join(hashtags)}"
 
                 click.echo(f"{status_symbol}{date_display} {content}{labels_display}")
 
@@ -1493,7 +1498,33 @@ def restore_latest_backup(force, yes):
 
     if not skip_confirmation:
         click.echo(f"⚠️  This will overwrite your current database with backup_{latest_id:03d}")
-        click.echo("💡 Use --force or --yes to skip this confirmation")
+
+        # Show preview of changes
+        preview = backup_manager.get_restore_preview(latest_id)
+        if preview:
+            click.echo("\n📊 Preview of changes:")
+            click.echo("=" * 50)
+
+            # current_total = preview["current_state"]["total"]
+            # backup_total = preview["backup_state"]["total"]
+
+            if preview["changes"]["tasks_added"] > 0:
+                click.echo(f"➕ Tasks that will be added: {preview['changes']['tasks_added']}")
+            if preview["changes"]["tasks_removed"] > 0:
+                click.echo(f"➖ Tasks that will be removed: {preview['changes']['tasks_removed']}")
+            if preview["changes"]["tasks_added"] == 0 and preview["changes"]["tasks_removed"] == 0:
+                click.echo("🔄 No task count change (content may differ)")
+
+            # Show sample tasks from backup
+            if preview["backup_state"]["sample_tasks"]:
+                click.echo(f"\n📝 Sample tasks in backup_{latest_id:03d}:")
+                for task in preview["backup_state"]["sample_tasks"][:3]:  # Show first 3
+                    status = "✅" if task["completed"] else "⏳"
+                    click.echo(f"  {status} {task['id']}: {task['content']}")
+
+            click.echo("=" * 50)
+
+        click.echo("\n💡 Use --force or --yes to skip this confirmation")
         if not click.confirm("Proceed with restore?"):
             click.echo("Restore cancelled.")
             return
@@ -1502,6 +1533,38 @@ def restore_latest_backup(force, yes):
         click.echo(f"✅ Successfully restored from backup_{latest_id:03d}")
     else:
         click.echo(f"❌ Failed to restore from backup_{latest_id:03d}")
+
+
+@cli.command(name="cleanup-labels")
+def cleanup_labels():
+    """Clean up invalid labels from all tasks (removes random alphabet labels)."""
+    db_manager = _get_db_manager()
+    task_manager = TaskManager(db_manager)
+
+    # Get all tasks
+    all_tasks = task_manager.list_tasks(include_completed=True)
+
+    cleaned_count = 0
+    for task in all_tasks:
+        if task.get("labels"):
+            original_labels = task["labels"]
+            # Filter out invalid labels (like column references)
+            valid_labels = []
+            for label in original_labels:
+                # Skip labels that look like column references or other invalid patterns
+                if not label.startswith(":") and not label.startswith("#") and not label.startswith(",") and len(label) > 1 and not (label.isupper() and len(label) <= 2):  # Skip single/double uppercase letters
+                    valid_labels.append(label)
+
+            # If we filtered out any labels, update the task
+            if len(valid_labels) != len(original_labels):
+                if task_manager.update_task_labels(task["id"], valid_labels):
+                    cleaned_count += 1
+                    click.echo(f"✅ Cleaned task {task['id']}: removed {len(original_labels) - len(valid_labels)} invalid labels")
+
+    if cleaned_count > 0:
+        click.echo(f"\n🎉 Cleaned up labels for {cleaned_count} tasks")
+    else:
+        click.echo("✨ No tasks needed label cleanup")
 
 
 @cli.command(name="export")
@@ -2154,7 +2217,7 @@ def main():
         return
 
     # Check for Click commands that should always be handled by Click
-    click_commands = ["context", "config", "backup", "restore", "import", "export", "digest", "report", "sync-sheets", "sync-status", "t", "toggle", "close"]
+    click_commands = ["context", "config", "backup", "restore", "import", "export", "digest", "report", "sync-sheets", "sync-status", "hidden-labels", "t", "toggle", "close"]
     if args and args[0] in click_commands:
         # Normal Click processing for these commands
         cli()
@@ -2262,7 +2325,7 @@ def main():
             if important_tasks:
                 click.echo("Important")
                 for i, task in enumerate(important_tasks, 1):
-                    formatted_task = format_task_for_display(task, config)
+                    formatted_task = format_task_for_display(task, config, verbose)
                     click.echo(f"{formatted_task}")
                 click.echo()
 
@@ -2270,7 +2333,7 @@ def main():
             if today_tasks:
                 click.echo("Today")
                 for i, task in enumerate(today_tasks, 1):
-                    formatted_task = format_task_for_display(task, config)
+                    formatted_task = format_task_for_display(task, config, verbose)
                     click.echo(f"{formatted_task}")
                 click.echo()
 
@@ -2278,7 +2341,7 @@ def main():
             if open_tasks:
                 click.echo("Open")
                 for i, task in enumerate(open_tasks, 1):
-                    formatted_task = format_task_for_display(task, config)
+                    formatted_task = format_task_for_display(task, config, verbose)
                     click.echo(f"{formatted_task}")
             return
 
@@ -2300,6 +2363,7 @@ def main():
             "reopen",
             "toggle",
             "list-labels",
+            "cleanup-labels",
             "import",
             "export",
             "digest",
@@ -2418,6 +2482,27 @@ def sync_sheets_command(sheet_name, dry_run, purge_after_import, token_path, she
             import traceback
 
             click.echo(traceback.format_exc())
+
+
+@cli.command(name="hidden-labels")
+def hidden_labels_command():
+    """Show information about labels that are hidden by default."""
+    from fincli.utils import get_hidden_labels_info
+
+    hidden_labels = get_hidden_labels_info()
+
+    if not hidden_labels:
+        click.echo("✨ No hidden labels configured")
+        return
+
+    click.echo("🏷️  Hidden Labels (shown with -v/--verbose):")
+    click.echo()
+
+    for label, description in hidden_labels.items():
+        click.echo(f"   • {label}: {description}")
+
+    click.echo()
+    click.echo("💡 Use -v or --verbose with any command to see these labels")
 
 
 @cli.command(name="sync-status")

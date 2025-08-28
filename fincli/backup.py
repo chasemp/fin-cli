@@ -212,6 +212,63 @@ class DatabaseBackup:
         backup_ids = self._list_backup_ids()
         return max(backup_ids) if backup_ids else None
 
+    def get_restore_preview(self, backup_id: int) -> Optional[dict]:
+        """
+        Get a preview of what will change when restoring to a specific backup.
+
+        Args:
+            backup_id: ID of the backup to preview
+
+        Returns:
+            Dictionary with preview information or None if backup not found
+        """
+        backup_path = self._get_backup_path(backup_id)
+        if not backup_path.exists():
+            return None
+
+        try:
+            # Get current task count and sample tasks
+            current_tasks = self._get_task_summary(self.db_path)
+            backup_tasks = self._get_task_summary(backup_path)
+
+            # Calculate differences
+            preview = {"backup_id": backup_id, "current_state": current_tasks, "backup_state": backup_tasks, "changes": {"tasks_added": backup_tasks["total"] - current_tasks["total"], "tasks_removed": current_tasks["total"] - backup_tasks["total"], "sample_current": current_tasks.get("sample_tasks", []), "sample_backup": backup_tasks.get("sample_tasks", [])}}
+
+            return preview
+
+        except Exception:
+            return None
+
+    def _get_task_summary(self, db_path: str) -> dict:
+        """Get a summary of tasks in a database."""
+        try:
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+
+            # Get total task count
+            cursor.execute("SELECT COUNT(*) FROM tasks")
+            total_tasks = cursor.fetchone()[0]
+
+            # Get sample of recent tasks
+            cursor.execute(
+                """
+                SELECT id, content, completed_at, created_at 
+                FROM tasks 
+                ORDER BY created_at DESC 
+                LIMIT 5
+            """
+            )
+            sample_tasks = []
+            for row in cursor.fetchall():
+                sample_tasks.append({"id": row[0], "content": row[1][:50] + "..." if len(row[1]) > 50 else row[1], "completed": bool(row[2]), "created": row[3]})
+
+            conn.close()
+
+            return {"total": total_tasks, "sample_tasks": sample_tasks}
+
+        except Exception:
+            return {"total": 0, "sample_tasks": []}
+
     def restore_latest(self) -> bool:
         """Restore to the latest backup."""
         latest_id = self.get_latest_backup_id()

@@ -412,6 +412,22 @@ class EditorManager:
                     if self.task_manager.update_task_due_date(task_id, task_info.get("due_date")):
                         content_modified_count += 1
 
+            # Check for label changes
+            if original_tasks:
+                original_task = next((t for t in original_tasks if t["id"] == task_id), None)
+                if original_task:
+                    original_labels = original_task.get("labels", [])
+                    new_labels = task_info.get("labels", [])
+
+                    # Compare labels (normalize for comparison)
+                    original_labels_set = set(label.lower().strip() for label in original_labels if label.strip())
+                    new_labels_set = set(label.lower().strip() for label in new_labels if label.strip())
+
+                    if original_labels_set != new_labels_set:
+                        # Labels were modified
+                        if self.task_manager.update_task_labels(task_id, new_labels):
+                            content_modified_count += 1
+
             # Update completion status if changed
             if self.task_manager.update_task_completion(task_id, task_info["is_completed"]):
                 if task_info["is_completed"]:

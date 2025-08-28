@@ -5,7 +5,55 @@ Contains date/time helpers, formatting, and utility functions.
 """
 
 from datetime import date, datetime, timedelta
+import os
+import re
 from typing import Any, Dict, List, Optional
+
+# Configuration for labels that should be hidden by default
+# These labels contain metadata that's not typically needed in normal task viewing
+HIDDEN_LABELS = {
+    "authority:full": "Task authority level (full = fin-cli controls both definition and status)",
+    "authority:status": "Task authority level (status = fin-cli controls only local status)",
+    "source:slack": "Source system identifier",
+    "source:gmail": "Source system identifier",
+    "source:confluence": "Source system identifier",
+    "source:sheets": "Source system identifier",
+    "remote": "Task imported from remote system",
+    "shadow": "Shadow task (remote definition, local status control)",
+}
+
+
+def filter_hidden_labels(labels: List[str], verbose: bool = False) -> List[str]:
+    """
+    Filter out hidden labels unless verbose mode is enabled.
+
+    Args:
+        labels: List of labels to filter
+        verbose: If True, show all labels including hidden ones
+
+    Returns:
+        Filtered list of labels
+    """
+    if verbose or not labels:
+        return labels
+
+    # Filter out hidden labels
+    visible_labels = []
+    for label in labels:
+        if label not in HIDDEN_LABELS:
+            visible_labels.append(label)
+
+    return visible_labels
+
+
+def get_hidden_labels_info() -> Dict[str, str]:
+    """
+    Get information about hidden labels for help/verbose output.
+
+    Returns:
+        Dictionary mapping hidden labels to their descriptions
+    """
+    return HIDDEN_LABELS.copy()
 
 
 def is_important_task(task: Dict[str, Any]) -> bool:
@@ -155,7 +203,7 @@ def wrap_text(text: str, max_width: int, prefix: str = "", is_task_wrapping: boo
         return "\n".join(result)
 
 
-def format_task_for_display(task: Dict[str, Any], config=None) -> str:
+def format_task_for_display(task: Dict[str, Any], config=None, verbose: bool = False) -> str:
     """
     Format a task for display in syslog-like Markdown format.
 
@@ -213,11 +261,13 @@ def format_task_for_display(task: Dict[str, Any], config=None) -> str:
                     mod_time_str = modified_timestamp.strftime("%Y-%m-%d %H:%M")
                 modification_indicator = f" (mod: {mod_time_str})"
 
-    # Format labels as hashtags
+    # Format labels as hashtags (filter hidden labels unless verbose)
     labels_display = ""
     if task["labels"]:
-        hashtags = [f"#{label}" for label in task["labels"]]
-        labels_display = f"  {','.join(hashtags)}"
+        visible_labels = filter_hidden_labels(task["labels"], verbose)
+        if visible_labels:
+            hashtags = [f"#{label}" for label in visible_labels]
+            labels_display = f"  {','.join(hashtags)}"
 
     # Format due date (appears at end of line as requested)
     due_date_display = ""
@@ -332,7 +382,6 @@ def get_editor() -> str:
     Returns:
         Editor command string
     """
-    import os
     import subprocess
 
     editor = os.environ.get("EDITOR")

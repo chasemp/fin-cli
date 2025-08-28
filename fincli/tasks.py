@@ -271,6 +271,42 @@ class TaskManager:
 
         return True
 
+    def update_task_labels(self, task_id: int, labels: Optional[List[str]]) -> bool:
+        """
+        Update the labels of a task.
+
+        Args:
+            task_id: ID of the task to update
+            labels: New list of labels, or None to remove all labels
+
+        Returns:
+            True if update was successful, False otherwise
+        """
+        try:
+            with self.db_manager.get_connection() as conn:
+                cursor = conn.cursor()
+
+                # Convert labels list to comma-separated string
+                labels_str = None
+                if labels:
+                    # Normalize labels: lowercase, trim whitespace, remove duplicates
+                    normalized_labels = []
+                    for label in labels:
+                        if label.strip():
+                            normalized_labels.append(label.strip().lower())
+                    # Remove duplicates and sort
+                    unique_labels = sorted(list(set(normalized_labels)))
+                    labels_str = ",".join(unique_labels) if unique_labels else None
+
+                cursor.execute(
+                    "UPDATE tasks SET labels = ?, modified_at = CURRENT_TIMESTAMP WHERE id = ?",
+                    (labels_str, task_id),
+                )
+                conn.commit()
+                return True
+        except Exception:
+            return False
+
     def delete_task(self, task_id: int) -> bool:
         """
         Delete a task by ID.
