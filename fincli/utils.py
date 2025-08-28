@@ -19,8 +19,7 @@ HIDDEN_LABELS = {
     "source:confluence": "Source system identifier",
     "source:sheets": "Source system identifier",
     "remote": "Task imported from remote system",
-    "shadow": "Shadow task (remote definition, local status control)",
-    "mod:*": "Task modification timestamp (when task was last modified)",
+    "mod:*": "Task modification timestamp (when task was last updated)",
 }
 
 
