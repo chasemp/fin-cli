@@ -354,7 +354,10 @@ def _list_tasks_impl(days, label, status, today=False, due=None, verbose=False):
         # Apply days filtering only if days is specified
         weekdays_only = config.get_weekdays_only_lookback()
         tasks = filter_tasks_by_date_range(tasks, days=days, weekdays_only=weekdays_only)
-    # If days is None, don't apply date filtering (show all tasks)
+    else:
+        # Default behavior: show open tasks from today and yesterday (2 days)
+        weekdays_only = config.get_weekdays_only_lookback()
+        tasks = filter_tasks_by_date_range(tasks, days=2, weekdays_only=weekdays_only)
 
     # Apply status filtering
     if status in ["open", "o"]:
@@ -522,13 +525,14 @@ def _list_tasks_impl(days, label, status, today=False, due=None, verbose=False):
 
 
 @cli.command(name="list-tasks")
-@click.option("--days", "-d", default=1, help="Show tasks from the past N days (default: 1)")
+@click.option("--days", "-d", type=int, help="Show tasks from the past N days (default: 2 days for open tasks)")
 @click.option("--today", "-t", is_flag=True, help="Show only today's tasks (overrides days)")
 @click.option("--label", "-l", multiple=True, help="Filter by labels")
 @click.option(
     "--status",
     "-s",
     type=click.Choice(["open", "o", "completed", "done", "d", "all", "a"]),
+    default="open",
     help="Filter by status (open/o, completed, done/d, all/a)",
 )
 @click.option(
@@ -544,7 +548,7 @@ def _list_tasks_impl(days, label, status, today=False, due=None, verbose=False):
 def list_tasks(days, label, today, status, due, verbose):
     """List tasks with optional filtering."""
     # Validate conflicting time filters
-    if today and days != 1:  # days defaults to 1, so only conflict if explicitly set
+    if today and days is not None:
         click.echo("❌ Error: Cannot use both --today and --days together")
         click.echo("   --today overrides --days, so they are mutually exclusive")
         click.echo("   Use either --today or --days N, but not both")
@@ -557,7 +561,7 @@ def list_tasks(days, label, today, status, due, verbose):
 
 
 @cli.command(name="list")
-@click.option("--days", "-d", type=int, help="Show tasks from the past N days (default: show all open tasks)")
+@click.option("--days", "-d", type=int, help="Show tasks from the past N days (default: 2 days for open tasks)")
 @click.option("--today", "-t", is_flag=True, help="Show only today's tasks (overrides days)")
 @click.option("--label", "-l", multiple=True, help="Filter by labels")
 @click.option(
@@ -589,6 +593,7 @@ def list_tasks_alias(days, label, today, status, due, verbose):
     # Set verbose environment variable for DatabaseManager
     if verbose:
         os.environ["FIN_VERBOSE"] = "1"
+    # Call the underlying implementation function
     _list_tasks_impl(days, label, status, today, due, verbose)
 
 
