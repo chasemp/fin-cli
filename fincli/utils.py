@@ -20,6 +20,7 @@ HIDDEN_LABELS = {
     "source:sheets": "Source system identifier",
     "remote": "Task imported from remote system",
     "shadow": "Shadow task (remote definition, local status control)",
+    "mod:*": "Task modification timestamp (when task was last modified)",
 }
 
 
@@ -37,10 +38,21 @@ def filter_hidden_labels(labels: List[str], verbose: bool = False) -> List[str]:
     if verbose or not labels:
         return labels
 
-    # Filter out hidden labels
+    # Filter out hidden labels (including wildcard patterns)
     visible_labels = []
     for label in labels:
-        if label not in HIDDEN_LABELS:
+        is_hidden = False
+        for hidden_pattern in HIDDEN_LABELS:
+            if hidden_pattern.endswith("*"):
+                # Handle wildcard patterns like "mod:*"
+                if label.startswith(hidden_pattern[:-1]):
+                    is_hidden = True
+                    break
+            elif label == hidden_pattern:
+                is_hidden = True
+                break
+
+        if not is_hidden:
             visible_labels.append(label)
 
     return visible_labels
@@ -238,7 +250,7 @@ def format_task_for_display(task: Dict[str, Any], config=None, verbose: bool = F
             primary_time_str = primary_timestamp.strftime("%Y-%m-%d %H:%M")
 
     # Check if task was modified after creation/completion (only show with verbose mode)
-    modification_indicator = ""
+    modification_label = None
 
     if verbose and task.get("modified_at"):
         modified_timestamp = datetime.fromisoformat(task["modified_at"].replace("Z", "+00:00"))
@@ -250,24 +262,33 @@ def format_task_for_display(task: Dict[str, Any], config=None, verbose: bool = F
                 if config and hasattr(config, "get_task_date_format"):
                     mod_time_str = format_date_by_format(modified_timestamp, config.get_task_date_format())
                 else:
-                    mod_time_str = modified_timestamp.strftime("%Y-%m-%d %H:%M")
-                modification_indicator = f" (mod: {mod_time_str})"
+                    mod_time_str = modified_timestamp.strftime("%Y-%m-%d")
+                modification_label = f"mod:{mod_time_str}"
         else:
             # For open tasks, check if modified after creation
             if modified_timestamp > primary_timestamp:
                 if config and hasattr(config, "get_task_date_format"):
                     mod_time_str = format_date_by_format(modified_timestamp, config.get_task_date_format())
                 else:
-                    mod_time_str = modified_timestamp.strftime("%Y-%m-%d %H:%M")
-                modification_indicator = f" (mod: {mod_time_str})"
+                    mod_time_str = modified_timestamp.strftime("%Y-%m-%d")
+                modification_label = f"mod:{mod_time_str}"
 
     # Format labels as hashtags (filter hidden labels unless verbose)
     labels_display = ""
+
+    # Process existing labels
     if task["labels"]:
         visible_labels = filter_hidden_labels(task["labels"], verbose)
         if visible_labels:
             hashtags = [f"#{label}" for label in visible_labels]
             labels_display = f"  {','.join(hashtags)}"
+
+    # Add modification label if present (only in verbose mode)
+    if verbose and modification_label:
+        if labels_display:
+            labels_display += f",#{modification_label}"
+        else:
+            labels_display = f"  #{modification_label}"
 
     # Format due date (appears at end of line as requested)
     due_date_display = ""
@@ -275,7 +296,7 @@ def format_task_for_display(task: Dict[str, Any], config=None, verbose: bool = F
         due_date_display = f"  due:{task['due_date']}"
 
     # Build the base line without content
-    base_line = f"{task_id} {status} {primary_time_str}{modification_indicator}  "
+    base_line = f"{task_id} {status} {primary_time_str}  "
 
     # Get the content and apply wrapping if config is provided
     content = task["content"]
