@@ -9,7 +9,7 @@ import os
 import re
 from typing import Any, Dict, List, Optional
 
-# Configuration for labels that should be hidden by default
+# Configuration for labels that should be hidden from display by default
 # These labels contain metadata that's not typically needed in normal task viewing
 HIDDEN_LABELS = {
     "authority:full": "Task authority level (full = fin-cli controls both definition and status)",
@@ -21,6 +21,9 @@ HIDDEN_LABELS = {
     "remote": "Task imported from remote system",
     "mod:*": "Task modification timestamp (when task was last updated)",
 }
+
+# Note: Task filtering is now handled by configuration-based default label filters
+# See Config.get_context_default_label_filter() and context-label-filter CLI commands
 
 
 def filter_hidden_labels(labels: List[str], verbose: bool = False) -> List[str]:
@@ -65,6 +68,41 @@ def get_hidden_labels_info() -> Dict[str, str]:
         Dictionary mapping hidden labels to their descriptions
     """
     return HIDDEN_LABELS.copy()
+
+
+def task_has_hidden_labels(task: Dict[str, Any]) -> bool:
+    """
+    Check if a task has any hidden labels (metadata labels not shown by default).
+
+    Args:
+        task: Task dictionary with 'labels' key
+
+    Returns:
+        bool: True if task has any hidden labels, False otherwise
+
+    Examples:
+        >>> task = {"labels": ["work", "remote"]}
+        >>> task_has_hidden_labels(task)
+        True
+
+        >>> task = {"labels": ["work", "urgent"]}
+        >>> task_has_hidden_labels(task)
+        False
+    """
+    task_labels = task.get("labels", [])
+    if not task_labels:
+        return False
+
+    for label in task_labels:
+        for hidden_pattern in HIDDEN_LABELS:
+            if hidden_pattern.endswith("*"):
+                # Handle wildcard patterns like "mod:*"
+                if label.startswith(hidden_pattern[:-1]):
+                    return True
+            elif label == hidden_pattern:
+                return True
+
+    return False
 
 
 def is_important_task(task: Dict[str, Any]) -> bool:
@@ -230,11 +268,19 @@ def format_task_for_display(task: Dict[str, Any], config=None, verbose: bool = F
     task_id = task["id"]
 
     # Determine status
-    status = "[x]" if task["completed_at"] else "[ ]"
+    task_labels = [label.lower() for label in task.get("labels", []) or []]
+    if task["completed_at"] and "dismissed" in task_labels:
+        status = "[d]"
+    elif task["completed_at"]:
+        status = "[x]"
+    elif "backlog" in task_labels:
+        status = "[b]"
+    else:
+        status = "[ ]"
 
     # Format primary timestamp
     if task["completed_at"]:
-        # Use completed_at for completed tasks
+        # Use completed_at for completed tasks (including dismissed)
         primary_timestamp = datetime.fromisoformat(task["completed_at"].replace("Z", "+00:00"))
         if config and hasattr(config, "get_task_date_format"):
             primary_time_str = format_date_by_format(primary_timestamp, config.get_task_date_format())
@@ -255,7 +301,7 @@ def format_task_for_display(task: Dict[str, Any], config=None, verbose: bool = F
         modified_timestamp = datetime.fromisoformat(task["modified_at"].replace("Z", "+00:00"))
 
         if task["completed_at"]:
-            # For completed tasks, check if modified after completion
+            # For completed tasks (including dismissed), check if modified after completion
             completed_timestamp = datetime.fromisoformat(task["completed_at"].replace("Z", "+00:00"))
             if modified_timestamp > completed_timestamp:
                 if config and hasattr(config, "get_task_date_format"):
@@ -370,7 +416,7 @@ def filter_tasks_by_date_range(tasks: List[Dict[str, Any]], days: int = 1, weekd
 
             # Determine the relevant date for filtering
             if task["completed_at"]:
-                # For completed tasks, use completion date
+                # For completed tasks (including dismissed), use completion date
                 completed_dt = datetime.fromisoformat(task["completed_at"].replace("Z", "+00:00"))
                 task_date = completed_dt.date()
             else:

@@ -125,20 +125,20 @@ class TestListCommandsDefaultBehavior:
         # Should NOT show tasks from 3+ days ago
         assert "Old completed task" not in result.output
 
-    def test_default_with_status_all_shows_all_tasks(self, cli_runner, populated_db):
-        """Test that --status all shows all tasks within the default 2-day limit."""
-        result = cli_runner.invoke(cli, ["list", "--status", "all"], env={"FIN_DB_PATH": populated_db})
+    def test_default_with_status_all_shows_all_tasks(self, cli_runner, populated_db, isolated_config):
+        """Test that --status all shows all tasks (no date limit by default when show_all_open is True)."""
+        result = cli_runner.invoke(cli, ["list", "--status", "all"], env={"FIN_DB_PATH": populated_db, "FIN_CONFIG_DIR": isolated_config})
 
         assert result.exit_code == 0
 
-        # Should show all tasks within 2 days (today and yesterday)
+        # Should show all tasks (no date filtering when show_all_open_by_default is True)
         assert "Today's task 1" in result.output
         assert "Today's task 2" in result.output
         assert "Yesterday's task" in result.output
 
-        # Should NOT show tasks from 3+ days ago (even with --status all)
-        # because the default 2-day limit applies before status filtering
-        assert "Old completed task" not in result.output
+        # Should also show old tasks because show_all_open_by_default is True
+        # which means no date filtering is applied by default
+        assert "Old completed task" in result.output
 
     def test_days_parameter_overrides_default(self, cli_runner, populated_db):
         """Test that --days parameter overrides the default 2-day behavior."""

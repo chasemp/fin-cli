@@ -87,6 +87,7 @@ class TestEditorSafe:
             new_tasks_count,
             content_modified_count,
             deleted_count,
+            dismissed_count,
         ) = editor_manager.parse_edited_content(original_content)
 
         assert completed_count == 0
@@ -123,6 +124,7 @@ class TestEditorSafe:
             new_tasks_count,
             content_modified_count,
             deleted_count,
+            dismissed_count,
         ) = editor_manager.parse_edited_content(modified_content)
 
         assert completed_count == 1
@@ -164,6 +166,7 @@ class TestEditorSafe:
             new_tasks_count,
             content_modified_count,
             deleted_count,
+            dismissed_count,
         ) = editor_manager.parse_edited_content(modified_content)
 
         assert completed_count == 0
@@ -198,6 +201,7 @@ class TestEditorSafe:
             new_tasks_count,
             content_modified_count,
             deleted_count,
+            dismissed_count,
         ) = editor_manager.parse_edited_content(modified_content)
 
         assert completed_count == 0
@@ -233,6 +237,7 @@ class TestEditorSafe:
             new_tasks_count,
             content_modified_count,
             deleted_count,
+            dismissed_count,
         ) = editor_manager.parse_edited_content(modified_content)
 
         assert completed_count == 0
@@ -273,6 +278,7 @@ class TestEditorSafe:
             new_tasks_count,
             content_modified_count,
             deleted_count,
+            dismissed_count,
         ) = editor_manager.parse_edited_content(modified_content)
 
         assert completed_count == 0
@@ -315,6 +321,7 @@ class TestEditorSafe:
             new_tasks_count,
             content_modified_count,
             deleted_count,
+            dismissed_count,
         ) = editor_manager.parse_edited_content(modified_content)
 
         assert completed_count == 0
@@ -404,6 +411,7 @@ class TestEditorSafe:
             new_tasks_count,
             content_modified_count,
             deleted_count,
+            dismissed_count,
         ) = editor_manager.parse_edited_content(modified_content)
 
         # Should not create any changes since we only track completion status
@@ -457,6 +465,7 @@ class TestEditorSafe:
             new_tasks_count,
             content_modified_count,
             deleted_count,
+            dismissed_count,
         ) = editor_manager.parse_edited_content(modified_content)
 
         assert completed_count == 1  # Task 1 completed
@@ -515,6 +524,7 @@ Invalid line without proper format
             new_tasks_count,
             content_modified_count,
             deleted_count,
+            dismissed_count,
         ) = editor_manager.parse_edited_content(invalid_content)
 
         # Should only count the valid task line changes
@@ -561,6 +571,7 @@ Invalid line without proper format
             new_tasks_count,
             content_modified_count,
             deleted_count,
+            dismissed_count,
         ) = editor_manager.simulate_edit_with_content(original_content, modified_content)
 
         assert completed_count == 1
@@ -648,6 +659,7 @@ Invalid line without proper format
             new_tasks_count,
             content_modified_count,
             deleted_count,
+            dismissed_count,
         ) = editor_manager.parse_edited_content(modified_content)
 
         assert completed_count == 0
@@ -683,6 +695,7 @@ Invalid line without proper format
             new_tasks_count,
             content_modified_count,
             deleted_count,
+            dismissed_count,
         ) = editor_manager.parse_edited_content(modified_content)
 
         assert completed_count == 1
@@ -717,6 +730,7 @@ Invalid line without proper format
             new_tasks_count,
             content_modified_count,
             deleted_count,
+            dismissed_count,
         ) = editor_manager.parse_edited_content(modified_content)
 
         assert completed_count == 0
@@ -750,6 +764,7 @@ Invalid line without proper format
             new_tasks_count,
             content_modified_count,
             deleted_count,
+            dismissed_count,
         ) = editor_manager.parse_edited_content(modified_content)
 
         # Should not create any changes since we only track completion status
@@ -807,6 +822,7 @@ Invalid line without proper format
             new_tasks_count,
             content_modified_count,
             deleted_count,
+            dismissed_count,
         ) = editor_manager.parse_edited_content(modified_content)
 
         assert completed_count == 1  # Task 1 completed
@@ -872,6 +888,7 @@ Invalid line without proper format
                 new_tasks_count,
                 content_modified_count,
                 deleted_count,
+                dismissed_count,
             ) = editor_manager.parse_edited_content(edge_case)
 
             expected_completed, expected_reopened, expected_new = expected_results[i]
@@ -910,6 +927,7 @@ Invalid line without proper format
             new_tasks_count,
             content_modified_count,
             deleted_count,
+            dismissed_count,
         ) = editor_manager.parse_edited_content(modified_content)
 
         assert completed_count == 1
@@ -971,6 +989,7 @@ Invalid line without proper format
             new_tasks_count,
             content_modified_count,
             deleted_count,
+            dismissed_count,
         ) = editor_manager.parse_edited_content(modified_content)
 
         # Verify the changes were applied
@@ -1052,6 +1071,7 @@ Invalid line without proper format
             new_tasks_count,
             content_modified_count,
             deleted_count,
+            dismissed_count,
         ) = editor_manager.parse_edited_content(modified_content, {task1_id, task2_id, task3_id})
 
         # Verify the changes

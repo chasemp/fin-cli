@@ -347,6 +347,7 @@ class TestEditorIntegration:
             new_tasks_count,
             content_modified_count,
             deleted_count,
+            dismissed_count,
         ) = editor_manager.parse_edited_content(modified_content, original_tasks=[original_task])
 
         # Should detect due date change
@@ -391,6 +392,7 @@ class TestEditorIntegration:
             new_tasks_count,
             content_modified_count,
             deleted_count,
+            dismissed_count,
         ) = editor_manager.parse_edited_content(modified_content, original_tasks=[original_task])
 
         # Should detect due date change
@@ -417,6 +419,7 @@ class TestEditorIntegration:
             new_tasks_count,
             content_modified_count,
             deleted_count,
+            dismissed_count,
         ) = editor_manager.parse_edited_content(new_task_line)
 
         # Should create new task

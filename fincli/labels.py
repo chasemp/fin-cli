@@ -92,3 +92,40 @@ class LabelManager:
                     )
 
             return tasks
+
+    def get_label_counts(self) -> Dict[str, Dict[str, int]]:
+        """
+        Get counts of tasks for each label, broken down by status.
+
+        Returns:
+            Dictionary mapping label names to counts:
+            {"label": {"open": count, "completed": count, "total": count}}
+        """
+        with self.db_manager.get_connection() as conn:
+            cursor = conn.cursor()
+
+            cursor.execute(
+                """
+                SELECT labels, completed_at FROM tasks 
+                WHERE labels IS NOT NULL AND labels != ''
+                """
+            )
+
+            label_counts = {}
+            for row in cursor.fetchall():
+                labels_str, completed_at = row
+                if labels_str:
+                    labels = [label.strip() for label in labels_str.split(",") if label.strip()]
+                    is_completed = completed_at is not None
+
+                    for label in labels:
+                        if label not in label_counts:
+                            label_counts[label] = {"open": 0, "completed": 0, "total": 0}
+
+                        if is_completed:
+                            label_counts[label]["completed"] += 1
+                        else:
+                            label_counts[label]["open"] += 1
+                        label_counts[label]["total"] += 1
+
+            return label_counts

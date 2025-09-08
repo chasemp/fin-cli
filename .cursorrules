@@ -1,0 +1,71 @@
+# FinCLI Cursor Rules
+
+## Testing Requirements
+
+### Post-Feature Development
+- **ALL tests must pass** before considering any feature complete
+- **New functionality MUST include tests** - no exceptions
+- Run `python -m pytest tests/ -v` to verify all tests pass
+- Test coverage should include:
+  - Unit tests for new functions/methods
+  - Integration tests for CLI commands
+  - Edge cases and error conditions
+
+### Test Organization
+- Place tests in `tests/` directory
+- Follow naming convention: `test_<feature_name>.py`
+- Use descriptive test method names: `test_<action>_<expected_result>`
+- Include docstrings explaining what each test validates
+
+### Before Submitting Changes
+1. Run full test suite: `python -m pytest tests/`
+2. Ensure all tests pass (no failures, no skips unless documented)
+3. Add tests for any new functionality
+4. Update existing tests if behavior changes
+
+### Test Quality Standards
+- Tests should be **isolated** (no dependencies between tests)
+- Tests should be **deterministic** (same result every time)
+- Tests should be **fast** (use temp databases, mock external calls)
+- Tests should **cover edge cases** (empty inputs, invalid data, etc.)
+
+## Code Quality
+
+### Documentation
+- Update README.md for user-facing features
+- Add docstrings for new functions/classes
+- Update help text for new CLI commands
+
+### Database Changes
+- Include database migrations if schema changes
+- Update database tests to reflect new schema
+- Ensure backward compatibility where possible
+
+## Example Test Structure
+
+```python
+class TestNewFeature:
+    """Test suite for new feature functionality."""
+    
+    def test_feature_basic_functionality(self, temp_db_path):
+        """Test that the feature works in the basic case."""
+        # Arrange
+        # Act  
+        # Assert
+        
+    def test_feature_edge_cases(self, temp_db_path):
+        """Test edge cases and error conditions."""
+        # Test empty inputs, invalid data, etc.
+        
+    def test_feature_integration(self, temp_db_path):
+        """Test feature integration with existing functionality."""
+        # Test how it works with other features
+```
+
+## Current Test Status
+- Target: All tests passing
+- Run: `python -m pytest tests/ -v` 
+- Coverage: Aim for comprehensive coverage of new features
+
+---
+**Remember: No feature is complete until it's tested and all tests pass!** ✅

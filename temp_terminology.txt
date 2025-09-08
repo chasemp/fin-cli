@@ -1,0 +1,80 @@
+## SAMM Maturity Level Terminology: Life360 Framework
+
+### Life360's SAMM Maturity Terminology
+
+Life360 has established consistent maturity level terminology that replaces both OWASP SAMM standard terms and previous SAMM360 web application terminology to create business-aligned, intuitive language for stakeholder communication.
+
+**Complete Terminology Mapping:**
+
+| **Life360 Standard** | **OWASP SAMM 2.0** | **Previous SAMM360** | **Business Meaning** |
+|---------------------|--------------------|--------------------|-------------------|
+| **Foundational (Level 1)** | Initial | Adhoc/Ad-hoc | Basic, structured practices |
+| **Integrated (Level 2)** | Managed | Consistent | Security measured, consistent, embedded in workflows |
+| **Enabling (Level 3)** | Defined | Optimized | Security accelerates, optimized & enabling the business |
+
+### Maturity Progression Framework
+
+```
+FOUNDATIONAL ──────────> INTEGRATED ──────────> ENABLING
+   (Level 1)                (Level 2)              (Level 3)
+
+   SAMM:     Initial        SAMM:     Managed      SAMM:     Defined
+   SAMM360:  Foundational   SAMM360:  Integrated   SAMM360:  Enabling
+
+   ───────────────┐      ───────────────┐      ───────────────┐
+                  │      ┌──────────────┘      ┌──────────────┘
+   Basic,         │      Security measured,    Security accelerates,
+   structured     │      consistent, embedded  optimized & enabling
+   practices      │      in workflows          the business
+   ───────────────┘      ───────────────┘      ───────────────┘
+```
+
+### Detailed Maturity Level Definitions
+
+#### **Foundational (Level 1)**
+- **Core Concept**: Establish basic, structured security practices as prerequisite capabilities
+- **Organizational State**: Security activities occur with basic structure and governance
+- **Key Characteristics**:
+  - Basic security practices are defined and documented
+  - Essential security controls are implemented
+  - Security activities have clear ownership and accountability
+  - Foundational governance frameworks are established
+- **Business Value**: Creates security baseline and reduces immediate risk exposure
+- **Progression Requirement**: Must achieve Foundational maturity before advancing to higher levels
+
+#### **Integrated (Level 2)**  
+- **Core Concept**: Security practices are systematically embedded into development workflows
+- **Organizational State**: Security is measured, consistent, and integrated throughout the development lifecycle
+- **Key Characteristics**:
+  - Security practices are repeatable and standardized across teams
+  - Security metrics are consistently collected and analyzed
+  - Security activities are embedded in standard development workflows
+  - Cross-functional collaboration on security is systematic
+- **Business Value**: Predictable security outcomes with reduced friction and improved developer experience
+- **Progression Requirement**: Builds on Foundational capabilities with systematic process integration
+
+#### **Enabling (Level 3)**
+- **Core Concept**: Security becomes a business accelerator that optimizes and enables organizational objectives
+- **Organizational State**: Security accelerates business goals through optimization and strategic enablement
+- **Key Characteristics**:
+  - Security practices are continuously optimized based on business outcomes
+  - Security enables faster, safer delivery of business value
+  - Strategic alignment between security investments and business priorities
+  - Security capabilities provide competitive advantage
+- **Business Value**: Security as strategic differentiator that accelerates business growth and innovation
+- **Progression Requirement**: Builds on Integrated maturity with strategic business alignment and optimization
+
+### Implementation Principles
+
+**Why This Terminology Framework:**
+1. **Business-Aligned Language**: Terms that executives and stakeholders intuitively understand
+2. **Positive Progression Narrative**: Each level represents advancement toward business enablement
+3. **Clear Differentiation**: Distinct concepts that avoid confusion between levels
+4. **Strategic Communication**: Positions security as enablement rather than overhead
+5. **Cross-Repository Consistency**: Unified terminology across all Life360 security maturity materials
+
+**Usage Standards:**
+- Always use Life360 terminology in business communications and strategic documents
+- Include OWASP SAMM mapping when referencing standard framework: "SAMM Foundational (Level 1)"
+- Maintain consistency across SAMP documents, SAMM360 assessments, and organizational communications
+

@@ -12,23 +12,26 @@ from fincli.db import DatabaseManager
 
 
 @pytest.fixture(autouse=True)
-def isolate_tests_from_real_database(monkeypatch):
+def isolate_tests_from_real_database_and_config(monkeypatch):
     """
-    Global fixture that ensures all tests use isolated databases.
+    Global fixture that ensures all tests use isolated databases and configuration.
 
     This fixture runs automatically for every test and prevents tests from
-    accidentally using the real user database.
+    accidentally using the real user database or configuration.
     """
     # Create a temporary database path for this test
     with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as tmp:
         temp_db_path = tmp.name
 
-    # Set the environment variable to use the temp database
-    # This ensures tests don't accidentally use the real database
-    monkeypatch.setenv("FIN_DB_PATH", temp_db_path)
+    # Create a temporary config directory for this test
+    with tempfile.TemporaryDirectory() as temp_config_dir:
+        # Set environment variables to use the temp database and config
+        # This ensures tests don't accidentally use the real database or config
+        monkeypatch.setenv("FIN_DB_PATH", temp_db_path)
+        monkeypatch.setenv("FIN_CONFIG_DIR", temp_config_dir)
 
-    # Clean up after the test
-    yield
+        # Clean up after the test
+        yield
 
     # Clean up the temporary database
     if os.path.exists(temp_db_path):
