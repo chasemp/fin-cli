@@ -189,6 +189,35 @@ fin -d 7 -s "done,open"
 fin -d 0 -s completed  # All completed tasks from all time
 ```
 
+### Task States
+
+FinCLI supports three task states:
+
+- **Open** `[ ]` - Tasks that are active and need to be done
+- **Completed** `[x]` - Tasks that have been finished successfully  
+- **Dismissed** `[d]` - Tasks that were decided not to do (declined/cancelled)
+
+```bash
+# View tasks by state
+fin -s open        # Show only open tasks
+fin -s completed   # Show completed tasks (dismissed tasks hidden by default)
+fin -s all         # Show all tasks regardless of state
+
+# View dismissed tasks explicitly
+fin -l dismissed -s completed  # Show only dismissed tasks
+
+# In the editor (fine), you can change task states:
+# [ ] Open task
+# [x] Completed task  
+# [d] Dismissed task (completed + #dismissed label)
+
+# Dismissed tasks behavior:
+# - Don't show in default "open" or "completed" task lists (hidden label)
+# - Do show in "all" task lists and with verbose mode (-v)
+# - Can be filtered explicitly with -l dismissed -s completed
+# - Can be reopened by changing [d] back to [ ] (removes #dismissed label)
+```
+
 ### Date Filtering (`-d` flag)
 
 ```bash
@@ -569,6 +598,7 @@ fin restore-latest --yes
 | `fin toggle 123` | Toggle task completion status by ID |
 | `fin t 123` | Alias for toggle command |
 | `fin close 123` | Mark task as completed by ID |
+| `fin dismiss 123` | Mark task as dismissed/declined by ID |
 
 ## Options
 
@@ -656,6 +686,10 @@ fin t 123               # Same as toggle (shorthand)
 fin complete 123        # Mark task 123 as completed
 fin done 123            # Mark task 123 as completed
 fin reopen 123          # Reopen completed task 123
+
+# Task dismissal commands (for tasks you decide not to do)
+fin dismiss 123         # Mark task 123 as dismissed/declined
+fin dismiss 123 456     # Dismiss multiple tasks
 
 # Toggle multiple tasks
 fin t 123 456 789       # Toggle tasks 123, 456, and 789

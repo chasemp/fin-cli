@@ -134,6 +134,16 @@ class DatabaseManager:
             if "last_synced_at" not in columns:
                 cursor.execute("ALTER TABLE tasks ADD COLUMN last_synced_at TIMESTAMP")
 
+            # Create indexes for performance (if they don't exist)
+            try:
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_tasks_completed_at ON tasks(completed_at)")
+
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_tasks_created_at ON tasks(created_at)")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_tasks_labels ON tasks(labels)")
+            except sqlite3.OperationalError:
+                # Indexes might already exist
+                pass
+
             conn.commit()
 
     def get_connection(self):

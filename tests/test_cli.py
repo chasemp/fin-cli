@@ -967,7 +967,7 @@ class TestCLIOutput:
 class TestCLIBackup:
     """Test CLI backup functionality."""
 
-    def test_backup_create(self, cli_runner, temp_db_path, monkeypatch):
+    def test_backup_create(self, cli_runner, temp_db_path, isolated_config, monkeypatch):
         """Test creating a backup via CLI."""
         # Mock the database path
         monkeypatch.setattr(
@@ -984,7 +984,7 @@ class TestCLIBackup:
         assert result.exit_code == 0
         assert "✅ Backup created: backup_" in result.output
 
-    def test_backup_list(self, cli_runner, temp_db_path, monkeypatch):
+    def test_backup_list(self, cli_runner, temp_db_path, isolated_config, monkeypatch):
         """Test listing backups via CLI."""
         # Mock the database path
         monkeypatch.setattr(
@@ -1002,7 +1002,7 @@ class TestCLIBackup:
         assert "Available backups:" in result.output
         assert "backup_" in result.output
 
-    def test_backup_restore(self, cli_runner, temp_db_path, monkeypatch):
+    def test_backup_restore(self, cli_runner, temp_db_path, isolated_config, monkeypatch):
         """Test restoring from backup via CLI."""
         # Mock the database path
         monkeypatch.setattr(
@@ -1041,7 +1041,7 @@ class TestCLIBackup:
         assert "Original task" in result.output
         assert "New task" not in result.output
 
-    def test_backup_restore_latest(self, cli_runner, temp_db_path, monkeypatch):
+    def test_backup_restore_latest(self, cli_runner, temp_db_path, isolated_config, monkeypatch):
         """Test restoring from latest backup via CLI."""
         # Mock the database path
         monkeypatch.setattr(

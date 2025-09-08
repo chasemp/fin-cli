@@ -97,7 +97,7 @@ class TaskManager:
                 """
                 SELECT id, content, created_at, modified_at, completed_at, labels, source, due_date, context
                 FROM tasks WHERE id = ?
-                """,
+            """,
                 (task_id,),
             )
 

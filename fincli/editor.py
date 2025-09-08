@@ -75,11 +75,11 @@ class EditorManager:
         Returns:
             Dictionary with task info or None if not a valid task line
         """
-        # Match task line pattern: task_id [ ] or [x] followed by timestamp,
+        # Match task line pattern: task_id [ ] or [x] or [d] followed by timestamp,
         # content, labels, due date, and optional reference
         # Format: 1 [ ] 2024-01-01 10:00  Task content  #labels  due:YYYY-MM-DD  #ref:task_123
         # First, try to match with reference and task_id
-        pattern_with_ref_and_id = r"^(\d+) (\[ \]|\[x\]) (\d{4}-\d{2}-\d{2} \d{2}:\d{2})  (.+?)" r"(  #.+)?(  due:[^ ]+)?  #ref:([^ ]+)$"
+        pattern_with_ref_and_id = r"^(\d+) (\[ \]|\[x\]|\[d\]|\[b\]) (\d{4}-\d{2}-\d{2} \d{2}:\d{2})  (.+?)" r"(  #.+)?(  due:[^ ]+)?  #ref:([^ ]+)$"
         match = re.match(pattern_with_ref_and_id, line.strip())
 
         if match:
@@ -93,7 +93,7 @@ class EditorManager:
             reference_part = match.group(7) or ""
         else:
             # Try to match with task_id but without reference
-            pattern_with_id_no_ref = r"^(\d+) (\[ \]|\[x\]) (\d{4}-\d{2}-\d{2} \d{2}:\d{2})  (.+?)" r"(  #.+)?(  due:[^ ]+)?$"
+            pattern_with_id_no_ref = r"^(\d+) (\[ \]|\[x\]|\[d\]|\[b\]) (\d{4}-\d{2}-\d{2} \d{2}:\d{2})  (.+?)" r"(  #.+)?(  due:[^ ]+)?$"
             match = re.match(pattern_with_id_no_ref, line.strip())
 
             if match:
@@ -107,7 +107,7 @@ class EditorManager:
                 reference_part = ""
             else:
                 # Try to match old format without task_id (for backward compatibility)
-                pattern_old_format_with_ref = r"^(\[ \]|\[x\]) (\d{4}-\d{2}-\d{2} \d{2}:\d{2})  (.+?)" r"(  #.+)?(  due:[^ ]+)?  #ref:([^ ]+)$"
+                pattern_old_format_with_ref = r"^(\[ \]|\[x\]|\[d\]|\[b\]) (\d{4}-\d{2}-\d{2} \d{2}:\d{2})  (.+?)" r"(  #.+)?(  due:[^ ]+)?  #ref:([^ ]+)$"
                 match = re.match(pattern_old_format_with_ref, line.strip())
 
                 if match:
@@ -121,7 +121,7 @@ class EditorManager:
                     reference_part = match.group(6) or ""
                 else:
                     # Try to match old format without reference
-                    pattern_old_format_no_ref = r"^(\[ \]|\[x\]) (\d{4}-\d{2}-\d{2} \d{2}:\d{2})  (.+?)" r"(  #.+)?(  due:[^ ]+)?$"
+                    pattern_old_format_no_ref = r"^(\[ \]|\[x\]|\[d\]|\[b\]) (\d{4}-\d{2}-\d{2} \d{2}:\d{2})  (.+?)" r"(  #.+)?(  due:[^ ]+)?$"
                     match = re.match(pattern_old_format_no_ref, line.strip())
 
                     if match:
@@ -168,6 +168,8 @@ class EditorManager:
 
         # Normalize status - handle both [] and [ ] as incomplete
         is_completed = status == "[x]"
+        is_dismissed = status == "[d]"
+        is_backlog = status == "[b]"
         if status == "[]":
             status = "[ ]"  # Normalize to standard format
 
@@ -184,6 +186,8 @@ class EditorManager:
             "labels": labels,
             "due_date": due_date,
             "is_completed": is_completed,
+            "is_dismissed": is_dismissed,
+            "is_backlog": is_backlog,
             "task_id": final_task_id,  # None for new tasks
         }
 
@@ -339,12 +343,13 @@ class EditorManager:
             original_tasks: List of original tasks to compare content changes
 
         Returns:
-            Tuple of (completed_count, reopened_count, new_tasks_count, content_modified_count, deleted_count)
+            Tuple of (completed_count, reopened_count, new_tasks_count, content_modified_count, deleted_count, dismissed_count)
         """
         completed_count = 0
         reopened_count = 0
         new_tasks_count = 0
         content_modified_count = 0
+        dismissed_count = 0
         processed_task_ids = set()
 
         # Create a mapping of task_id to original content for comparison
@@ -435,6 +440,50 @@ class EditorManager:
                 else:
                     reopened_count += 1
 
+            # Update dismissed status if changed (using label-based approach)
+            if original_tasks:
+                original_task = next((t for t in original_tasks if t["id"] == task_id), None)
+                if original_task:
+                    original_labels = original_task.get("labels", [])
+                    was_dismissed = "dismissed" in [label.lower() for label in original_labels]
+
+                    if task_info["is_dismissed"] != was_dismissed:
+                        current_labels = task_info.get("labels", [])
+                        if task_info["is_dismissed"]:
+                            # Mark as dismissed: ensure completed and add dismissed label
+                            if not task_info["is_completed"]:
+                                self.task_manager.update_task_completion(task_id, True)
+                            if "dismissed" not in [label.lower() for label in current_labels]:
+                                current_labels.append("dismissed")
+                                self.task_manager.update_task_labels(task_id, current_labels)
+                            dismissed_count += 1
+                        else:
+                            # Remove dismissed status: remove dismissed label
+                            current_labels = [label for label in current_labels if label.lower() != "dismissed"]
+                            self.task_manager.update_task_labels(task_id, current_labels)
+                            dismissed_count += 1
+
+            # Update backlog status if changed (using label-based approach)
+            if original_tasks:
+                original_task = next((t for t in original_tasks if t["id"] == task_id), None)
+                if original_task:
+                    original_labels = original_task.get("labels", [])
+                    was_backlog = "backlog" in [label.lower() for label in original_labels]
+
+                    if task_info["is_backlog"] != was_backlog:
+                        current_labels = task_info.get("labels", [])
+                        if task_info["is_backlog"]:
+                            # Mark as backlog: ensure not completed and add backlog label
+                            if task_info["is_completed"]:
+                                self.task_manager.update_task_completion(task_id, False)
+                            if "backlog" not in [label.lower() for label in current_labels]:
+                                current_labels.append("backlog")
+                                self.task_manager.update_task_labels(task_id, current_labels)
+                        else:
+                            # Remove backlog status: remove backlog label
+                            current_labels = [label for label in current_labels if label.lower() != "backlog"]
+                            self.task_manager.update_task_labels(task_id, current_labels)
+
         # Handle task deletions if we have the original task IDs
         deleted_count = 0
         if original_task_ids:
@@ -453,6 +502,7 @@ class EditorManager:
             new_tasks_count,
             content_modified_count,
             deleted_count,
+            dismissed_count,
         )
 
     def edit_tasks_with_tasks(
@@ -467,14 +517,14 @@ class EditorManager:
             tasks: List of tasks to edit (already filtered)
 
         Returns:
-            Tuple of (completed_count, reopened_count, new_tasks_count, content_modified_count, deleted_count)
+            Tuple of (completed_count, reopened_count, new_tasks_count, content_modified_count, deleted_count, dismissed_count)
         """
         # Safety check - prevent accidental editor opening
         if self._editor_opened:
             raise RuntimeError("Editor has already been opened in this session")
 
         if not tasks:
-            return 0, 0, 0, 0, 0
+            return 0, 0, 0, 0, 0, 0
 
         # Create backup before editing
         self.backup_manager.create_backup("Auto-backup before editor session")
@@ -516,6 +566,7 @@ class EditorManager:
                 new_tasks_count,
                 content_modified_count,
                 deleted_count,
+                dismissed_count,
             ) = self.parse_edited_content(edited_content, original_task_ids, tasks)
 
             # Create a backup after editing with change details
@@ -525,6 +576,7 @@ class EditorManager:
                 "new_tasks_count": new_tasks_count,
                 "content_modified_count": content_modified_count,
                 "deleted_count": deleted_count,
+                "dismissed_count": dismissed_count,
             }
 
             # Only create backup if there were actual changes
@@ -540,6 +592,7 @@ class EditorManager:
                 new_tasks_count,
                 content_modified_count,
                 deleted_count,
+                dismissed_count,
             )
 
         except Exception as e:
@@ -582,7 +635,7 @@ class EditorManager:
         tasks = self.get_tasks_for_editing(label, target_date, all_tasks)
 
         if not tasks:
-            return 0, 0, 0, 0, 0
+            return 0, 0, 0, 0, 0, 0
 
         # Create backup before editing
         self.backup_manager.create_backup("Auto-backup before editor session")
@@ -624,6 +677,7 @@ class EditorManager:
                 new_tasks_count,
                 content_modified_count,
                 deleted_count,
+                dismissed_count,
             ) = self.parse_edited_content(edited_content, original_task_ids, tasks)
 
             # Create a backup after editing with change details
@@ -633,6 +687,7 @@ class EditorManager:
                 "new_tasks_count": new_tasks_count,
                 "content_modified_count": content_modified_count,
                 "deleted_count": deleted_count,
+                "dismissed_count": dismissed_count,
             }
 
             # Only create backup if there were actual changes
@@ -648,6 +703,7 @@ class EditorManager:
                 new_tasks_count,
                 content_modified_count,
                 deleted_count,
+                dismissed_count,
             )
 
         except Exception as e:

@@ -340,7 +340,7 @@ def _list_tasks_impl(days, label, status, today=False, due=None, verbose=False):
         filtered_tasks = []
         for task in tasks:
             if task["completed_at"]:
-                # For completed tasks, check if completed today
+                # For completed tasks (including dismissed), check if completed today
                 completed_dt = datetime.fromisoformat(task["completed_at"].replace("Z", "+00:00"))
                 if completed_dt.date() == today_date:
                     filtered_tasks.append(task)
@@ -364,7 +364,10 @@ def _list_tasks_impl(days, label, status, today=False, due=None, verbose=False):
         tasks = [task for task in tasks if task["completed_at"] is None]
     elif status in ["completed", "done", "d"]:
         tasks = [task for task in tasks if task["completed_at"] is not None]
-    # For "all" or "a", we keep all tasks (both open and completed)
+    # For "all" or "a", we keep all tasks (open and completed)
+
+    # Filter out tasks with filtering labels unless explicitly requested with label filter
+    # Note: Task filtering is now handled by the configuration-based default label filter below
 
     # Apply label filtering if requested
     if label:
@@ -468,6 +471,8 @@ def _list_tasks_impl(days, label, status, today=False, due=None, verbose=False):
     # Completed tasks go in Completed section
     completed_tasks = [task for task in tasks if task["completed_at"] and not is_important_task(task) and not is_today_task(task)]
 
+    # Note: Task filtering information is now shown in the main verbose output above
+
     # Display Important section
     if important_tasks:
         click.echo("Important")
@@ -533,7 +538,7 @@ def _list_tasks_impl(days, label, status, today=False, due=None, verbose=False):
     "-s",
     type=click.Choice(["open", "o", "completed", "done", "d", "all", "a"]),
     default="open",
-    help="Filter by status (open/o, completed, done/d, all/a)",
+    help="Filter by status (open/o, completed, done/d, dismissed, all/a)",
 )
 @click.option(
     "--due",
@@ -569,7 +574,7 @@ def list_tasks(days, label, today, status, due, verbose):
     "-s",
     type=click.Choice(["open", "o", "completed", "done", "d", "all", "a"]),
     default="open",
-    help="Filter by status (open/o, completed, done/d, all/a)",
+    help="Filter by status (open/o, completed, done/d, dismissed, all/a)",
 )
 @click.option(
     "--due",
@@ -643,6 +648,7 @@ def open_editor(label, date, all_tasks, dry_run):
             new_tasks_count,
             content_modified_count,
             deleted_count,
+            dismissed_count,
         ) = editor_manager.edit_tasks(label=label_filter, target_date=date, all_tasks=all_tasks)
 
         # Get the state after editing for detailed comparison
@@ -650,7 +656,7 @@ def open_editor(label, date, all_tasks, dry_run):
         updated_completed = [t for t in updated_tasks if t.get("completed_at")]
         updated_open = [t for t in updated_tasks if not t.get("completed_at")]
 
-        changes_made = completed_count > 0 or reopened_count > 0 or new_tasks_count > 0 or content_modified_count > 0 or deleted_count > 0
+        changes_made = completed_count > 0 or reopened_count > 0 or new_tasks_count > 0 or content_modified_count > 0 or deleted_count > 0 or dismissed_count > 0
 
         if changes_made:
             click.echo("\n📊 Summary of Changes:")
@@ -687,6 +693,15 @@ def open_editor(label, date, all_tasks, dry_run):
                     click.echo(f"  • {task['content']}{labels_str}")
                 click.echo()
 
+            # Show dismissed tasks
+            if dismissed_count > 0:
+                click.echo(f"🚫 Dismissed ({dismissed_count}):")
+                # Get dismissed tasks from updated tasks
+                dismissed_tasks = [t for t in updated_tasks if t.get("dismissed_at")]
+                for task in dismissed_tasks:
+                    click.echo(f"  • {task['content']}")
+                click.echo()
+
             # Show deleted tasks
             if deleted_count > 0:
                 click.echo(f"🗑️  Deleted ({deleted_count}):")
@@ -694,7 +709,7 @@ def open_editor(label, date, all_tasks, dry_run):
                 click.echo()
 
             # Show overall summary
-            total_changes = completed_count + reopened_count + new_tasks_count + deleted_count
+            total_changes = completed_count + reopened_count + new_tasks_count + deleted_count + dismissed_count
             click.echo(f"📈 Total changes: {total_changes}")
 
         else:
@@ -748,7 +763,7 @@ def fine_command():
     @click.option(
         "--status",
         "-s",
-        help=("Filter by status(es): open/o, completed, done/d, all/a, or " "comma-separated list like 'done,open' (default: open)"),
+        help=("Filter by status(es): open/o, completed, done/d, dismissed, all/a, or " "comma-separated list like 'done,open' (default: open)"),
     )
     @click.option(
         "--verbose",
@@ -927,6 +942,7 @@ def fine_command():
                 new_tasks_count,
                 content_modified_count,
                 deleted_count,
+                dismissed_count,
             ) = editor_manager.edit_tasks_with_tasks(tasks)
 
             # Get the state after editing for detailed comparison
@@ -935,7 +951,7 @@ def fine_command():
             updated_completed = [t for t in updated_tasks if t.get("completed_at")]
             updated_open = [t for t in updated_tasks if not t.get("completed_at")]
 
-            changes_made = completed_count > 0 or reopened_count > 0 or new_tasks_count > 0 or content_modified_count > 0 or deleted_count > 0
+            changes_made = completed_count > 0 or reopened_count > 0 or new_tasks_count > 0 or content_modified_count > 0 or deleted_count > 0 or dismissed_count > 0
 
             if changes_made:
                 click.echo("\n📊 Summary of Changes:")
@@ -978,6 +994,15 @@ def fine_command():
                         click.echo(f"  • {task['content']}{labels_str}")
                     click.echo()
 
+                # Show dismissed tasks
+                if dismissed_count > 0:
+                    click.echo(f"🚫 Dismissed ({dismissed_count}):")
+                    # Get dismissed tasks from updated tasks
+                    dismissed_tasks = [t for t in updated_tasks if t.get("dismissed_at")]
+                    for task in dismissed_tasks:
+                        click.echo(f"  • {task['content']}")
+                    click.echo()
+
                 # Show deleted tasks
                 if deleted_count > 0:
                     click.echo(f"🗑️  Deleted ({deleted_count}):")
@@ -985,7 +1010,7 @@ def fine_command():
                     click.echo()
 
                 # Show overall summary
-                total_changes = completed_count + reopened_count + new_tasks_count + content_modified_count + deleted_count
+                total_changes = completed_count + reopened_count + new_tasks_count + content_modified_count + deleted_count + dismissed_count
                 click.echo(f"📈 Total changes: {total_changes}")
 
             else:
@@ -1034,7 +1059,7 @@ def fins_command():
     @click.option(
         "--status",
         "-s",
-        help=("Filter by status(es): open/o, completed, done/d, all/a, or " "comma-separated list like 'done,open' (default: completed)"),
+        help=("Filter by status(es): open/o, completed, done/d, dismissed, all/a, or " "comma-separated list like 'done,open' (default: completed)"),
     )
     @click.option(
         "--due",
@@ -1321,6 +1346,57 @@ def close_task(task_identifier, verbose):
         click.echo(f"🎉 Completed {completed_count} task(s)")
 
 
+@cli.command(name="dismiss")
+@click.argument("task_identifier", nargs=-1)
+@click.option("--verbose", "-v", is_flag=True, help="Show verbose output")
+def dismiss_task(task_identifier, verbose):
+    """Mark task(s) as dismissed by ID."""
+    if not task_identifier:
+        click.echo("❌ Error: Please specify task ID(s)")
+        click.echo("   Examples: fin dismiss 1")
+        click.echo("            fin dismiss 1 2 3")
+        return
+
+    # Set verbose environment variable for DatabaseManager
+    if verbose:
+        os.environ["FIN_VERBOSE"] = "1"
+
+    db_manager = _get_db_manager()
+    task_manager = TaskManager(db_manager)
+
+    # Get all tasks to search through
+    all_tasks = task_manager.list_tasks(include_completed=True)
+
+    dismissed_count = 0
+
+    for identifier in task_identifier:
+        # Try to parse as integer (task ID)
+        try:
+            task_id = int(identifier)
+            # Find task by ID
+            task = next((task for task in all_tasks if task["id"] == task_id), None)
+            if task:
+                # Check if already dismissed (has dismissed label)
+                if "dismissed" in [label.lower() for label in task.get("labels", [])]:
+                    click.echo(f"⚠️  Task {task_id} is already dismissed")
+                else:
+                    # Mark as completed
+                    task_manager.update_task_completion(task_id, True)
+                    # Add dismissed label
+                    current_labels = task.get("labels", [])
+                    new_labels = current_labels + ["dismissed"]
+                    task_manager.update_task_labels(task_id, new_labels)
+                    click.echo(f"🚫 Dismissed task {task_id}: {task['content']}")
+                    dismissed_count += 1
+            else:
+                click.echo(f"❌ Task {task_id} not found")
+        except ValueError:
+            click.echo(f"❌ Error: '{identifier}' is not a valid task ID (must be a number)")
+
+    if dismissed_count > 0:
+        click.echo(f"🎉 Dismissed {dismissed_count} task(s)")
+
+
 @cli.command(name="toggle")
 @click.argument("task_identifier", nargs=-1)
 @click.option("--verbose", "-v", is_flag=True, help="Show verbose output")
@@ -1412,19 +1488,23 @@ def toggle_alias(task_identifier, verbose):
 
 @cli.command(name="list-labels")
 def list_labels():
-    """List all known labels."""
+    """List all known labels with task counts."""
     db_manager = _get_db_manager()
     label_manager = LabelManager(db_manager)
 
-    labels = label_manager.get_all_labels()
+    label_counts = label_manager.get_label_counts()
 
-    if not labels:
+    if not label_counts:
         click.echo("No labels found in any tasks")
         return
 
     click.echo("Known labels:")
-    for label in sorted(labels):
-        click.echo(f"- {label}")
+    for label in sorted(label_counts.keys()):
+        counts = label_counts[label]
+        open_count = counts["open"]
+        completed_count = counts["completed"]
+        total_count = counts["total"]
+        click.echo(f"- {label} ({open_count} open, {completed_count} completed, {total_count} total)")
 
 
 @cli.command(name="backup")
@@ -2222,7 +2302,7 @@ def main():
         return
 
     # Check for Click commands that should always be handled by Click
-    click_commands = ["context", "config", "backup", "restore", "import", "export", "digest", "report", "sync-sheets", "sync-status", "hidden-labels", "t", "toggle", "close"]
+    click_commands = ["context", "context-label-filter", "config", "backup", "restore", "import", "export", "digest", "report", "sync-sheets", "sync-status", "hidden-labels", "t", "toggle", "close", "dismiss", "add-task", "add", "list", "list-tasks"]
     if args and args[0] in click_commands:
         # Normal Click processing for these commands
         cli()
@@ -2243,8 +2323,41 @@ def main():
         except (ValueError, IndexError):
             pass
 
-    # If no arguments provided or only verbose/days flags, default to list behavior
-    if not args or (args and all(arg in ["--verbose", "-v"] for arg in args)):
+    # Check for label flag (-l/--label) when used standalone
+    label_args = []
+    if args and ("-l" in args or "--label" in args):
+        # Handle -l flag
+        while "-l" in args:
+            try:
+                l_index = args.index("-l")
+                if l_index + 1 < len(args):
+                    label_args.append(args[l_index + 1])
+                    # Remove the -l and its value from args for further processing
+                    args = args[:l_index] + args[l_index + 2 :]
+                else:
+                    # -l without value, remove just the flag
+                    args = args[:l_index] + args[l_index + 1 :]
+                    break
+            except (ValueError, IndexError):
+                break
+
+        # Handle --label flag
+        while "--label" in args:
+            try:
+                label_index = args.index("--label")
+                if label_index + 1 < len(args):
+                    label_args.append(args[label_index + 1])
+                    # Remove the --label and its value from args for further processing
+                    args = args[:label_index] + args[label_index + 2 :]
+                else:
+                    # --label without value, remove just the flag
+                    args = args[:label_index] + args[label_index + 1 :]
+                    break
+            except (ValueError, IndexError):
+                break
+
+    # If no arguments provided or only verbose/days/label flags, default to list behavior
+    if not args or (args and all(arg in ["--verbose", "-v"] for arg in args)) or label_args:
         if verbose:
             os.environ["FIN_VERBOSE"] = "1"
 
@@ -2267,6 +2380,46 @@ def main():
             tasks = task_manager.list_tasks(include_completed=True)
             tasks = [task for task in tasks if task["completed_at"] is None]
 
+            # Apply label filtering (explicit labels override default filter)
+            current_context = ContextManager.get_current_context()
+            if label_args:
+                # Apply explicit label filtering
+                from fincli.utils import evaluate_boolean_label_expression
+
+                filtered_tasks = []
+                for task in tasks:
+                    if task.get("labels"):
+                        # Clean up labels - remove empty strings and whitespace
+                        task_labels = [label.strip().lower() for label in task["labels"] if label.strip()]
+
+                        # Check if task matches any of the label criteria using boolean logic
+                        task_matches = False
+                        for label_criteria in label_args:
+                            if evaluate_boolean_label_expression(task_labels, label_criteria):
+                                task_matches = True
+                                break
+
+                        if task_matches:
+                            filtered_tasks.append(task)
+                tasks = filtered_tasks
+            else:
+                # Apply default label filter for current context if no explicit labels provided
+                default_label_filter = config.get_context_default_label_filter(current_context)
+                if default_label_filter:
+                    from fincli.utils import evaluate_boolean_label_expression
+
+                    filtered_tasks = []
+                    for task in tasks:
+                        task_labels = []
+                        if task.get("labels"):
+                            # Clean up labels - remove empty strings and whitespace
+                            task_labels = [label.strip().lower() for label in task["labels"] if label.strip()]
+
+                        # Apply the default label filter
+                        if evaluate_boolean_label_expression(task_labels, default_label_filter):
+                            filtered_tasks.append(task)
+                    tasks = filtered_tasks
+
             # Apply max limit and show warning if needed
             total_tasks = len(tasks)
             if total_tasks > max_limit:
@@ -2284,6 +2437,16 @@ def main():
                 # Show current context
                 current_context = ContextManager.get_current_context()
                 click.echo(f"   • Context: {current_context}")
+
+                # Show label filtering information
+                if label_args:
+                    click.echo(f"   • Labels: {', '.join(label_args)}")
+                else:
+                    # Show default label filter if configured
+                    default_label_filter = config.get_context_default_label_filter(current_context)
+                    if default_label_filter:
+                        click.echo(f"   • Default label filter: {default_label_filter} (from context '{current_context}')")
+
                 click.echo()
         else:
             # Show recent open tasks (default behavior or days-specified)
@@ -2292,6 +2455,46 @@ def main():
             tasks = task_manager.list_tasks(include_completed=True)
             tasks = filter_tasks_by_date_range(tasks, days=days, weekdays_only=weekdays_only)
             tasks = [task for task in tasks if task["completed_at"] is None]
+
+            # Apply label filtering (explicit labels override default filter)
+            current_context = ContextManager.get_current_context()
+            if label_args:
+                # Apply explicit label filtering
+                from fincli.utils import evaluate_boolean_label_expression
+
+                filtered_tasks = []
+                for task in tasks:
+                    if task.get("labels"):
+                        # Clean up labels - remove empty strings and whitespace
+                        task_labels = [label.strip().lower() for label in task["labels"] if label.strip()]
+
+                        # Check if task matches any of the label criteria using boolean logic
+                        task_matches = False
+                        for label_criteria in label_args:
+                            if evaluate_boolean_label_expression(task_labels, label_criteria):
+                                task_matches = True
+                                break
+
+                        if task_matches:
+                            filtered_tasks.append(task)
+                tasks = filtered_tasks
+            else:
+                # Apply default label filter for current context if no explicit labels provided
+                default_label_filter = config.get_context_default_label_filter(current_context)
+                if default_label_filter:
+                    from fincli.utils import evaluate_boolean_label_expression
+
+                    filtered_tasks = []
+                    for task in tasks:
+                        task_labels = []
+                        if task.get("labels"):
+                            # Clean up labels - remove empty strings and whitespace
+                            task_labels = [label.strip().lower() for label in task["labels"] if label.strip()]
+
+                        # Apply the default label filter
+                        if evaluate_boolean_label_expression(task_labels, default_label_filter):
+                            filtered_tasks.append(task)
+                    tasks = filtered_tasks
 
             if verbose:
                 click.echo("🔍 Default filtering criteria:")
@@ -2309,6 +2512,16 @@ def main():
                 # Show current context
                 current_context = ContextManager.get_current_context()
                 click.echo(f"   • Context: {current_context}")
+
+                # Show label filtering information
+                if label_args:
+                    click.echo(f"   • Labels: {', '.join(label_args)}")
+                else:
+                    # Show default label filter if configured
+                    default_label_filter = config.get_context_default_label_filter(current_context)
+                    if default_label_filter:
+                        click.echo(f"   • Default label filter: {default_label_filter} (from context '{current_context}')")
+
                 click.echo()
 
         if not tasks:
@@ -2367,6 +2580,7 @@ def main():
             "done",
             "reopen",
             "toggle",
+            "dismiss",
             "list-labels",
             "cleanup-labels",
             "import",
