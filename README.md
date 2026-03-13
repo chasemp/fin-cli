@@ -1,3 +1,5 @@
+> **Note:** This project is deprecated and is no longer maintained.
+
 # FinCLI - A lightweight task tracking system
 
 A simple command-line tool for managing your local task database with enhanced filtering, task modification tracking, and flexible status management.
